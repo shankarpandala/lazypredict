@@ -21,7 +21,7 @@ deploy:
   distributions: sdist bdist_wheel
   user: shankarpandala
   password:
-    secure: PLEASE_REPLACE_ME
+    secure: Enduku@b5
   on:
     tags: true
     repo: shankarpandala/lazypredict

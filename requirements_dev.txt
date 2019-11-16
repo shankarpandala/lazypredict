@@ -6,7 +6,7 @@ flake8==3.7.9
 tox==3.14.1
 coverage==4.5.4
 Sphinx==2.2.1
-twine==1.14.0
+twine==2.0.0
 Click==7.0
 pytest==4.6.5
 pytest-runner==5.1

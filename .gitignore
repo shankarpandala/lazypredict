@@ -100,3 +100,11 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# vscode
+.vscode/
+
+# Test notebooks
+test.ipynb
+notebooks/
+notebook.ipynb

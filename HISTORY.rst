@@ -2,7 +2,12 @@
 History
 =======
 
-0.1.1 (2019-11-16)
+0.2.1 (2019-11-18)
+------------------
+
+* Release of Regression feature.
+
+0.2.0 (2019-11-17)
 ------------------
 
 * Release of Classification feature.

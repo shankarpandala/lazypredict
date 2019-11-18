@@ -12,6 +12,6 @@ pytest==5.2.4
 pytest-runner==5.2
 numpy
 pandas
-scikit-learn
+scikit-learn==0.21.3
 tqdm
 warnings

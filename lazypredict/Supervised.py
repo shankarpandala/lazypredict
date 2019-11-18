@@ -6,6 +6,7 @@ Supervised Models
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -13,15 +14,18 @@ from sklearn.compose import ColumnTransformer
 from sklearn.utils.testing import all_estimators
 from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score, r2_score, mean_squared_error
 import warnings
 warnings.filterwarnings("ignore")
-
+pd.set_option("display.precision",2)
+pd.set_option("display.float_format",lambda x: '%.2f' % x)
 
 CLASSIFIERS = [est for est in all_estimators(
 ) if issubclass(est[1], ClassifierMixin)]
 REGRESSORS = [est for est in all_estimators(
 ) if issubclass(est[1], RegressorMixin)]
+
+REGRESSORS.pop(REGRESSORS.index(('TheilSenRegressor',sklearn.linear_model.theil_sen.TheilSenRegressor)))
 
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),
@@ -30,26 +34,15 @@ numeric_transformer = Pipeline(steps=[
 
 categorical_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
-    ('encoding', OneHotEncoder(handle_unknown='ignore'))
+    ('encoding', OneHotEncoder(handle_unknown='ignore',sparse=False))
 ])
 
 # Helper class for performing classification
 
 
 class Classification:
-    """In machine learning and statistics, classification is the problem of identifying 
-    to which of a set of categories (sub-populations) a new observation belongs, on the 
-    basis of a training set of data containing observations (or instances) whose category 
-    membership is known. Examples are assigning a given email to the "spam" or "non-spam" 
-    class, and assigning a diagnosis to a given patient based on observed characteristics 
-    of the patient (sex, blood pressure, presence or absence of certain symptoms, etc.). 
-    Classification is an example of pattern recognition.
-
-    In the terminology of machine learning, classification is considered an instance of 
-    supervised learning, i.e., learning where a training set of correctly identified 
-    observations is available. The corresponding unsupervised procedure is known as 
-    clustering, and involves grouping data into categories based on some measure of 
-    inherent similarity or distance.
+    """
+    This module helps in fitting to all the classification algorithms that are available in Scikit-learn
     Parameters
     ----------
     verbose : int, optional (default=0)
@@ -60,18 +53,7 @@ class Classification:
 
     Examples
     --------
-    >>> from sklearn.datasets import load_iris
-    >>> from sklearn.linear_model import LogisticRegression
-    >>> X, y = load_iris(return_X_y=True)
-    >>> clf = LogisticRegression(random_state=0, solver='lbfgs',
-    ...                          multi_class='multinomial').fit(X, y)
-    >>> clf.predict(X[:2, :])
-    array([0, 0])
-    >>> clf.predict_proba(X[:2, :]) # doctest: +ELLIPSIS
-    array([[9.8...e-01, 1.8...e-02, 1.4...e-08],
-           [9.7...e-01, 2.8...e-02, ...e-08]])
-    >>> clf.score(X, y)
-    0.97...
+    >>> from lazypredict.Supervised import Classification
     >>> from sklearn.datasets import load_breast_cancer
     >>> from sklearn.model_selection import train_test_split
     >>> data = load_breast_cancer()
@@ -151,7 +133,7 @@ class Classification:
             X_test = pd.DataFrame(X_test)
 
         numeric_features = X_train.select_dtypes(
-            include=['int64', 'float64']).columns
+            include=['int64', 'float64','int32', 'float32']).columns
         categorical_features = X_train.select_dtypes(
             include=['object']).columns
 
@@ -201,5 +183,148 @@ class Classification:
                                "F1 Score": F1})
         scores = scores.sort_values(
             by='Balanced Accuracy', ascending=False).set_index('Model')
+
+        return scores
+
+# Helper class for performing classification
+    
+class Regression:
+    """
+    This module helps in fitting regression models that are available in Scikit-learn
+    Parameters
+    ----------
+    verbose : int, optional (default=0)
+        For the liblinear and lbfgs solvers set verbose to any positive
+        number for verbosity.
+    ignore_warnings : bool, optional (default=True)
+        When set to True, the warning related to algorigms that are not able to run are ignored.
+
+    Examples
+    --------
+    >>> from lazypredict.Supervised import Regression
+    >>> from sklearn import datasets
+    >>> from sklearn.utils import shuffle
+    >>> import numpy as np
+    >>> boston = datasets.load_boston()
+    >>> X, y = shuffle(boston.data, boston.target, random_state=13)
+    >>> X = X.astype(np.float32)
+    >>> offset = int(X.shape[0] * 0.9)
+    >>> X_train, y_train = X[:offset], y[:offset]
+    >>> X_test, y_test = X[offset:], y[offset:]
+    >>> reg = Regression()
+    >>> reg.fit(X_train, X_test, y_train, y_test)
+    | Model                         |   R-Squared |     RMSE |
+    |:------------------------------|------------:|---------:|
+    | SVR                           |   0.877199  |  2.62054 |
+    | BaggingRegressor              |   0.866372  |  2.73363 |
+    | NuSVR                         |   0.863712  |  2.7607  |
+    | GradientBoostingRegressor     |   0.855727  |  2.84042 |
+    | AdaBoostRegressor             |   0.853505  |  2.86221 |
+    | RandomForestRegressor         |   0.845089  |  2.94327 |
+    | KNeighborsRegressor           |   0.826307  |  3.1166  |
+    | HistGradientBoostingRegressor |   0.810479  |  3.25551 |
+    | ExtraTreesRegressor           |   0.807794  |  3.27849 |
+    | MLPRegressor                  |   0.752979  |  3.7167  |
+    | HuberRegressor                |   0.736973  |  3.83522 |
+    | LinearSVR                     |   0.72074   |  3.9518  |
+    | RidgeCV                       |   0.718402  |  3.9683  |
+    | BayesianRidge                 |   0.718102  |  3.97041 |
+    | Ridge                         |   0.71765   |  3.9736  |
+    | TransformedTargetRegressor    |   0.71753   |  3.97444 |
+    | LinearRegression              |   0.71753   |  3.97444 |
+    | LassoCV                       |   0.717337  |  3.9758  |
+    | ElasticNetCV                  |   0.717104  |  3.97744 |
+    | LassoLarsCV                   |   0.717045  |  3.97786 |
+    | LassoLarsIC                   |   0.716636  |  3.98073 |
+    | LarsCV                        |   0.715031  |  3.99199 |
+    | Lars                          |   0.715031  |  3.99199 |
+    | ARDRegression                 |   0.714481  |  3.99583 |
+    | SGDRegressor                  |   0.709381  |  4.03137 |
+    | ElasticNet                    |   0.690408  |  4.16088 |
+    | PLSRegression                 |   0.674203  |  4.26838 |
+    | Lasso                         |   0.662141  |  4.34668 |
+    | RANSACRegressor               |   0.64297   |  4.4683  |
+    | OrthogonalMatchingPursuitCV   |   0.591632  |  4.77877 |
+    | CCA                           |   0.520517  |  5.17817 |
+    | GaussianProcessRegressor      |   0.428298  |  5.65425 |
+    | OrthogonalMatchingPursuit     |   0.379295  |  5.89159 |
+    | DecisionTreeRegressor         |   0.340843  |  6.07134 |
+    | PassiveAggressiveRegressor    |   0.237383  |  6.53045 |
+    | ExtraTreeRegressor            |   0.199038  |  6.69262 |
+    | LassoLars                     |  -0.0215752 |  7.55832 |
+    | DummyRegressor                |  -0.0215752 |  7.55832 |
+    | PLSCanonical                  |  -3.72152   | 16.2492  |
+    | KernelRidge                   |  -8.24669   | 22.7396  |
+    """
+
+    def __init__(self, verbose=0, ignore_warnings=True):
+        self.verbose = verbose
+        self.ignore_warnings = ignore_warnings
+
+    def fit(self, X_train, X_test, y_train, y_test):
+        """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
+        Parameters
+        ----------
+        X_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        X_test : array-like,
+            Testing vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_test : array-like,
+            Testing vectors, where rows is the number of samples
+            and columns is the number of features.
+        Returns
+        -------
+        scores : Pandas DataFrame
+            Returns metrics of all the models in a Pandas DataFrame.
+        """
+        R2 = []
+        RMSE = []
+        names = []
+
+        if type(X_train) is np.ndarray:
+            X_train = pd.DataFrame(X_train)
+            X_test = pd.DataFrame(X_test)
+
+        numeric_features = X_train.select_dtypes(
+            include=['int64', 'float64','int32', 'float32']).columns
+        categorical_features = X_train.select_dtypes(
+            include=['object']).columns
+
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('numeric', numeric_transformer, numeric_features),
+                ('categorical', categorical_transformer, categorical_features)
+            ])
+
+        for name, model in tqdm(REGRESSORS):
+            try:
+                pipe = Pipeline(steps=[
+                    ('preprocessor', preprocessor),
+                    ('regressor', model())
+                ])
+                pipe.fit(X_train, y_train)
+                y_pred = pipe.predict(X_test)
+                r_squared = r2_score(y_test, y_pred)
+                rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+                names.append(name)
+                R2.append(r_squared)
+                RMSE.append(rmse)
+
+                if self.verbose > 0:
+                    print({"Model": name,
+                           "R-Squared": r_squared,
+                          "RMSE":rmse})
+            except Exception as exception:
+                if self.ignore_warnings == False:
+                    print(name + " model failed to execute")
+                    print(exception)
+
+        scores = pd.DataFrame({"Model": names,"R-Squared": R2, "RMSE":RMSE })
+        scores = scores.sort_values(by='R-Squared', ascending=False).set_index('Model')
 
         return scores

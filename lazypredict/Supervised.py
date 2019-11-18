@@ -17,15 +17,16 @@ from sklearn.base import ClassifierMixin
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score, r2_score, mean_squared_error
 import warnings
 warnings.filterwarnings("ignore")
-pd.set_option("display.precision",2)
-pd.set_option("display.float_format",lambda x: '%.2f' % x)
+pd.set_option("display.precision", 2)
+pd.set_option("display.float_format", lambda x: '%.2f' % x)
 
 CLASSIFIERS = [est for est in all_estimators(
 ) if issubclass(est[1], ClassifierMixin)]
 REGRESSORS = [est for est in all_estimators(
 ) if issubclass(est[1], RegressorMixin)]
 
-REGRESSORS.pop(REGRESSORS.index(('TheilSenRegressor',sklearn.linear_model.theil_sen.TheilSenRegressor)))
+REGRESSORS.pop(REGRESSORS.index(
+    ('TheilSenRegressor', sklearn.linear_model.theil_sen.TheilSenRegressor)))
 
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),
@@ -34,7 +35,7 @@ numeric_transformer = Pipeline(steps=[
 
 categorical_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
-    ('encoding', OneHotEncoder(handle_unknown='ignore',sparse=False))
+    ('encoding', OneHotEncoder(handle_unknown='ignore', sparse=False))
 ])
 
 # Helper class for performing classification
@@ -133,7 +134,7 @@ class Classification:
             X_test = pd.DataFrame(X_test)
 
         numeric_features = X_train.select_dtypes(
-            include=['int64', 'float64','int32', 'float32']).columns
+            include=['int64', 'float64', 'int32', 'float32']).columns
         categorical_features = X_train.select_dtypes(
             include=['object']).columns
 
@@ -187,7 +188,8 @@ class Classification:
         return scores
 
 # Helper class for performing classification
-    
+
+
 class Regression:
     """
     This module helps in fitting regression models that are available in Scikit-learn
@@ -291,7 +293,7 @@ class Regression:
             X_test = pd.DataFrame(X_test)
 
         numeric_features = X_train.select_dtypes(
-            include=['int64', 'float64','int32', 'float32']).columns
+            include=['int64', 'float64', 'int32', 'float32']).columns
         categorical_features = X_train.select_dtypes(
             include=['object']).columns
 
@@ -318,13 +320,14 @@ class Regression:
                 if self.verbose > 0:
                     print({"Model": name,
                            "R-Squared": r_squared,
-                          "RMSE":rmse})
+                           "RMSE": rmse})
             except Exception as exception:
                 if self.ignore_warnings == False:
                     print(name + " model failed to execute")
                     print(exception)
 
-        scores = pd.DataFrame({"Model": names,"R-Squared": R2, "RMSE":RMSE })
-        scores = scores.sort_values(by='R-Squared', ascending=False).set_index('Model')
+        scores = pd.DataFrame({"Model": names, "R-Squared": R2, "RMSE": RMSE})
+        scores = scores.sort_values(
+            by='R-Squared', ascending=False).set_index('Model')
 
         return scores

@@ -23,8 +23,6 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 
 import lazypredict
-from lazypredict.Supervised import Classification
-from lazypredict.Supervised import Regression
 
 # -- General configuration ---------------------------------------------
 

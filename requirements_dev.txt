@@ -14,4 +14,3 @@ numpy
 pandas
 scikit-learn
 tqdm
-warnings

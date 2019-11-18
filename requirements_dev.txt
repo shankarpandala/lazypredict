@@ -12,5 +12,6 @@ pytest==5.2.4
 pytest-runner==5.2
 numpy
 pandas
+Cython
 scikit-learn
 tqdm

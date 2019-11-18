@@ -13,5 +13,5 @@ pytest-runner==5.2
 numpy
 pandas
 scikit-learn
-tqdm
+tqdm==4.38.0
 warnings

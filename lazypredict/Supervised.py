@@ -27,7 +27,9 @@ REGRESSORS = [est for est in all_estimators(
 
 REGRESSORS.pop(REGRESSORS.index(
     ('TheilSenRegressor', sklearn.linear_model.theil_sen.TheilSenRegressor)))
-
+CLASSIFIERS.pop(CLASSIFIERS.index(
+    ('GaussianProcessClassifier',sklearn.gaussian_process.gpc.GaussianProcessClassifier)))
+    
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),
     ('scaler', StandardScaler())

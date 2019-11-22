@@ -1,7 +1,7 @@
 """
 Supervised Models
 """
-# Author: Shankar Rao Pandala <shankar.pandala@livee.com>
+# Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ REGRESSORS.pop(REGRESSORS.index(
     ('TheilSenRegressor', sklearn.linear_model.theil_sen.TheilSenRegressor)))
 CLASSIFIERS.pop(CLASSIFIERS.index(
     ('GaussianProcessClassifier',sklearn.gaussian_process.gpc.GaussianProcessClassifier)))
-    
+
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),
     ('scaler', StandardScaler())

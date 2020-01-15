@@ -6,6 +6,8 @@ Supervised Models
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import datetime
+import time
 import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
@@ -25,10 +27,32 @@ CLASSIFIERS = [est for est in all_estimators(
 REGRESSORS = [est for est in all_estimators(
 ) if issubclass(est[1], RegressorMixin)]
 
-REGRESSORS.pop(REGRESSORS.index(
-    ('TheilSenRegressor', sklearn.linear_model.theil_sen.TheilSenRegressor)))
 CLASSIFIERS.pop(CLASSIFIERS.index(
     ('GaussianProcessClassifier',sklearn.gaussian_process.gpc.GaussianProcessClassifier)))
+
+removed_regressors = [('TheilSenRegressor', sklearn.linear_model.theil_sen.TheilSenRegressor),
+ ('ARDRegression', sklearn.linear_model._bayes.ARDRegression),
+ ('CCA', sklearn.cross_decomposition._cca.CCA),
+ ('IsotonicRegression', sklearn.isotonic.IsotonicRegression),
+ ('MultiOutputRegressor', sklearn.multioutput.MultiOutputRegressor),
+ ('MultiTaskElasticNet',
+  sklearn.linear_model._coordinate_descent.MultiTaskElasticNet),
+ ('MultiTaskElasticNetCV',
+  sklearn.linear_model._coordinate_descent.MultiTaskElasticNetCV),
+ ('MultiTaskLasso', sklearn.linear_model._coordinate_descent.MultiTaskLasso),
+ ('MultiTaskLassoCV',
+  sklearn.linear_model._coordinate_descent.MultiTaskLassoCV),
+ ('PLSCanonical', sklearn.cross_decomposition._pls.PLSCanonical),
+ ('PLSRegression', sklearn.cross_decomposition._pls.PLSRegression),
+ ('RadiusNeighborsRegressor',
+  sklearn.neighbors._regression.RadiusNeighborsRegressor),
+ ('RegressorChain', sklearn.multioutput.RegressorChain),
+ ('StackingRegressor', sklearn.ensemble._stacking.StackingRegressor),
+ ('VotingRegressor', sklearn.ensemble._voting.VotingRegressor),
+ ('_SigmoidCalibration', sklearn.calibration._SigmoidCalibration)]
+
+for i in removed_regressors:
+    REGRESSORS.pop(REGRESSORS.index(i))
 
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),
@@ -288,7 +312,10 @@ class Regression:
         """
         R2 = []
         RMSE = []
+        # WIN = []
         names = []
+        TIME = []
+        predictions = {}
 
         if type(X_train) is np.ndarray:
             X_train = pd.DataFrame(X_train)
@@ -306,6 +333,7 @@ class Regression:
             ])
 
         for name, model in tqdm(REGRESSORS):
+            start = time.time()
             try:
                 pipe = Pipeline(steps=[
                     ('preprocessor', preprocessor),
@@ -315,21 +343,31 @@ class Regression:
                 y_pred = pipe.predict(X_test)
                 r_squared = r2_score(y_test, y_pred)
                 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+                # wins = sum(np.abs((y_test - y_pred) / y_test) < 0.05)/len(y_pred)
                 names.append(name)
                 R2.append(r_squared)
                 RMSE.append(rmse)
+                # WIN.append(wins)
+                TIME.append(time.time() - start)
 
                 if self.verbose > 0:
                     print({"Model": name,
                            "R-Squared": r_squared,
-                           "RMSE": rmse})
+                           "RMSE": rmse,
+                        #   "Win Rate": wins,
+                          "Time taken": time.time() - start})
+                predictions[name]=y_pred
             except Exception as exception:
                 if self.ignore_warnings == False:
                     print(name + " model failed to execute")
                     print(exception)
 
-        scores = pd.DataFrame({"Model": names, "R-Squared": R2, "RMSE": RMSE})
+        scores = pd.DataFrame({"Model": names, 
+                               "R-Squared": R2, 
+                               "RMSE": RMSE,
+                            #   "Win Rate": WIN,
+                              "Time Taken": TIME})
         scores = scores.sort_values(
             by='R-Squared', ascending=False).set_index('Model')
-
-        return scores
+        predictions_df = pd.DataFrame.from_dict(predictions)
+        return scores, predictions_df

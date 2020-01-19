@@ -2,6 +2,14 @@
 History
 =======
 
+0.2.4 (2020-01-19)
+------------------
+
+* Removed troublesome regressors from list of REGRESSORS
+* Added feature to input custom metric for evaluation
+* Added feature to return predictions as dataframe
+* Added model training time for each model
+
 0.2.3 (2019-11-22)
 ------------------
 

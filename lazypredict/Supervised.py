@@ -27,8 +27,20 @@ CLASSIFIERS = [est for est in all_estimators(
 REGRESSORS = [est for est in all_estimators(
 ) if issubclass(est[1], RegressorMixin)]
 
-CLASSIFIERS.pop(CLASSIFIERS.index(
-    ('GaussianProcessClassifier',sklearn.gaussian_process.gpc.GaussianProcessClassifier)))
+removed_classifiers = [('ClassifierChain', sklearn.multioutput.ClassifierChain),
+ ('ComplementNB', sklearn.naive_bayes.ComplementNB),
+ ('GaussianProcessClassifier',sklearn.gaussian_process.gpc.GaussianProcessClassifier),
+ ('HistGradientBoostingClassifier',
+  sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier),
+ ('MLPClassifier', sklearn.neural_network.multilayer_perceptron.MLPClassifier),
+ ('MultiOutputClassifier', sklearn.multioutput.MultiOutputClassifier),
+ ('MultinomialNB', sklearn.naive_bayes.MultinomialNB),
+ ('OneVsOneClassifier', sklearn.multiclass.OneVsOneClassifier),
+ ('OneVsRestClassifier', sklearn.multiclass.OneVsRestClassifier),
+ ('OutputCodeClassifier', sklearn.multiclass.OutputCodeClassifier),
+ ('RadiusNeighborsClassifier',
+  sklearn.neighbors.classification.RadiusNeighborsClassifier),
+ ('VotingClassifier', sklearn.ensemble.voting.VotingClassifier)]
 
 removed_regressors = [('TheilSenRegressor', sklearn.linear_model.theil_sen.TheilSenRegressor),
  ('ARDRegression', sklearn.linear_model.ARDRegression),
@@ -52,6 +64,9 @@ removed_regressors = [('TheilSenRegressor', sklearn.linear_model.theil_sen.Theil
 
 for i in removed_regressors:
     REGRESSORS.pop(REGRESSORS.index(i))
+    
+for i in removed_classifiers:
+    CLASSIFIERS.pop(CLASSIFIERS.index(i))
 
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),

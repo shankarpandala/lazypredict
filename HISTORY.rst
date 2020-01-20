@@ -2,6 +2,11 @@
 History
 =======
 
+0.2.5 (2020-01-20)
+------------------
+
+* Removed troublesome regressors from list of CLASSIFIERS
+
 0.2.4 (2020-01-19)
 ------------------
 

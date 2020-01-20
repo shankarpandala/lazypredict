@@ -83,7 +83,7 @@ class LazyClassifier:
 
     Examples
     --------
-    >>> from lazypredict.Supervised import Classification
+    >>> from lazypredict.Supervised import LazyClassifier
     >>> from sklearn.datasets import load_breast_cancer
     >>> from sklearn.model_selection import train_test_split
     >>> data = load_breast_cancer()
@@ -274,7 +274,7 @@ class LazyRegressor:
 
     Examples
     --------
-    >>> from lazypredict.Supervised import Regression
+    >>> from lazypredict.Supervised import LazyRegressor
     >>> from sklearn import datasets
     >>> from sklearn.utils import shuffle
     >>> import numpy as np

@@ -29,10 +29,13 @@ REGRESSORS = [est for est in all_estimators(
 
 removed_classifiers = [('ClassifierChain', sklearn.multioutput.ClassifierChain),
  ('ComplementNB', sklearn.naive_bayes.ComplementNB),
+ ('GradientBoostingClassifier',
+  sklearn.ensemble.gradient_boosting.GradientBoostingClassifier),
  ('GaussianProcessClassifier',sklearn.gaussian_process.gpc.GaussianProcessClassifier),
  ('HistGradientBoostingClassifier',
   sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier),
  ('MLPClassifier', sklearn.neural_network.multilayer_perceptron.MLPClassifier),
+ ('LogisticRegressionCV', sklearn.linear_model.logistic.LogisticRegressionCV),
  ('MultiOutputClassifier', sklearn.multioutput.MultiOutputClassifier),
  ('MultinomialNB', sklearn.naive_bayes.MultinomialNB),
  ('OneVsOneClassifier', sklearn.multiclass.OneVsOneClassifier),

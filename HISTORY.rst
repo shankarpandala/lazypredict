@@ -2,6 +2,11 @@
 History
 =======
 
+0.2.6 (2020-01-22)
+------------------
+
+* Added xgboost, lightgbm, catboost regressors and classifiers
+
 0.2.5 (2020-01-20)
 ------------------
 

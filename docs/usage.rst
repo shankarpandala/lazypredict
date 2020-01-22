@@ -6,11 +6,12 @@ To use Lazy Predict in a project::
 
     import lazypredict
 
+==============
+Classification
+==============
+
 Example ::
 
-    Classification
-    --------
-    from lazypredict.Supervised import Classification
     from lazypredict.Supervised import LazyClassifier
     from sklearn.datasets import load_breast_cancer
     from sklearn.model_selection import train_test_split
@@ -21,6 +22,8 @@ Example ::
     clf = LazyClassifier(verbose=0,ignore_warnings=True, custom_metric=None)
     models,predictions = clf.fit(X_train, X_test, y_train, y_test)
     models
+
+
     | Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
     |:-------------------------------|-----------:|--------------------:|----------:|-----------:|-------------:|
     | LinearSVC                      |   0.989474 |            0.987544 |  0.987544 |   0.989462 |    0.0150008 |
@@ -54,9 +57,12 @@ Example ::
     | CheckingClassifier             |   0.361404 |            0.5      |  0.5      |   0.191879 |    0.0170043 |
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
     
-    Regression
-    --------
-    from lazypredict.Supervised import Regression
+==========
+Regression
+==========
+
+Example ::
+
     from lazypredict.Supervised import LazyRegressor
     from sklearn import datasets
     from sklearn.utils import shuffle
@@ -69,6 +75,8 @@ Example ::
     X_test, y_test = X[offset:], y[offset:]
     reg = LazyRegressor(verbose=0,ignore_warnings=False, custom_metric=None )
     models,predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+
     | Model                         |   R-Squared |     RMSE |   Time Taken |
     |:------------------------------|------------:|---------:|-------------:|
     | SVR                           |   0.877199  |  2.62054 |    0.0330021 |

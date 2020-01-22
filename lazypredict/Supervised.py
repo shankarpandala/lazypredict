@@ -18,6 +18,14 @@ from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score, r2_score, mean_squared_error
 import warnings
+libnames = ['xgboost', 'catboost', 'lightgbm']
+for libname in libnames:
+    try:
+        lib = __import__(libname)
+    except:
+        print(sys.exc_info())
+    else:
+        globals()[libname] = lib
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
 pd.set_option("display.float_format", lambda x: '%.2f' % x)
@@ -70,6 +78,14 @@ for i in removed_regressors:
     
 for i in removed_classifiers:
     CLASSIFIERS.pop(CLASSIFIERS.index(i))
+
+REGRESSORS.append(('XGBRegressor', xgboost.XGBRegressor))
+REGRESSORS.append(('LGBMRegressor',lightgbm.LGBMRegressor))
+REGRESSORS.append(('CatBoostRegressor',catboost.CatBoostRegressor))
+    
+CLASSIFIERS.append(('XGBClassifier',xgboost.XGBClassifier))
+CLASSIFIERS.append(('LGBMClassifier',lightgbm.LGBMClassifier))
+CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
 
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),

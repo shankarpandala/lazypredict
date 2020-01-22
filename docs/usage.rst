@@ -10,11 +10,8 @@ Example ::
 
     Classification
     --------
-<<<<<<< HEAD
     from lazypredict.Supervised import Classification
-=======
     from lazypredict.Supervised import LazyClassifier
->>>>>>> origin/master
     from sklearn.datasets import load_breast_cancer
     from sklearn.model_selection import train_test_split
     data = load_breast_cancer()
@@ -59,11 +56,8 @@ Example ::
     
     Regression
     --------
-<<<<<<< HEAD
     from lazypredict.Supervised import Regression
-=======
     from lazypredict.Supervised import LazyRegressor
->>>>>>> origin/master
     from sklearn import datasets
     from sklearn.utils import shuffle
     import numpy as np

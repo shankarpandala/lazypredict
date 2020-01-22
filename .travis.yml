@@ -2,6 +2,12 @@ os:
   - linux
   - osx
   - windows
+  
+jobs:
+  allow_failures:
+    - os: osx
+    - os: windows
+  
 language: python
 python:
 - 3.8

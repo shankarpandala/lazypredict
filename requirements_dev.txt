@@ -13,5 +13,5 @@ pytest-runner>=5.2
 numpy
 pandas
 Cython
-scikit-learn
+scikit-learn==0.22.2
 tqdm

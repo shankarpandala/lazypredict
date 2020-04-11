@@ -161,11 +161,12 @@ class LazyClassifier:
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
     """
 
-    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False):
+    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False,random_state=42):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
         self.predictions = predictions
+        self.random_state =random_state
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -221,7 +222,7 @@ class LazyClassifier:
             try:
                 pipe = Pipeline(steps=[
                     ('preprocessor', preprocessor),
-                    ('classifier', model())
+                    ('classifier', model(self.random_state))
                 ])
                 pipe.fit(X_train, y_train)
                 y_pred = pipe.predict(X_test)
@@ -360,11 +361,12 @@ class LazyRegressor:
     | KernelRidge                   |  -8.24669   | 22.7396  |    0.0309792 |
     """
 
-    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False):
+    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False,random_state=42):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
         self.predictions = predictions
+        self.random_state = random_state
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -419,7 +421,7 @@ class LazyRegressor:
             try:
                 pipe = Pipeline(steps=[
                     ('preprocessor', preprocessor),
-                    ('regressor', model())
+                    ('regressor', model(self.random_state))
                 ])
                 pipe.fit(X_train, y_train)
                 y_pred = pipe.predict(X_test)

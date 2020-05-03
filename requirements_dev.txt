@@ -10,7 +10,7 @@ twine>=2.0.0
 Click>=7.0
 pytest>=5.2.4
 pytest-runner>=5.2
-numpy
+numpy==1.18.4
 pandas
 Cython
 scikit-learn

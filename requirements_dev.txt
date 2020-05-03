@@ -14,4 +14,4 @@ numpy
 pandas
 Cython
 scikit-learn
-tqdm
+tqdm==4.46.0

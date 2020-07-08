@@ -2,6 +2,11 @@
 History
 =======
 
+0.2.7 (2020-07-09)
+------------------
+
+* Removed catboost regressor and classifier
+
 0.2.6 (2020-01-22)
 ------------------
 

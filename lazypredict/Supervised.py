@@ -100,7 +100,7 @@ categorical_transformer_low = Pipeline(steps=[
 categorical_transformer_high = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
     # 'OrdianlEncoder' Raise a ValueError when encounters an unknown value. Check https://github.com/scikit-learn/scikit-learn/pull/13423
-    ('encoding', OrdinalEncoder()) 
+    ('encoding', OrdinalEncoder())
 ])
 
 

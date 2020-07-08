@@ -18,14 +18,10 @@ from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score, r2_score, mean_squared_error
 import warnings
-libnames = ['xgboost', 'catboost', 'lightgbm']
-for libname in libnames:
-    try:
-        lib = __import__(libname)
-    except:
-        print(sys.exc_info())
-    else:
-        globals()[libname] = lib
+import xgboost
+# import catboost
+import lightgbm
+
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
 pd.set_option("display.float_format", lambda x: '%.2f' % x)
@@ -81,11 +77,11 @@ for i in removed_classifiers:
 
 REGRESSORS.append(('XGBRegressor', xgboost.XGBRegressor))
 REGRESSORS.append(('LGBMRegressor',lightgbm.LGBMRegressor))
-REGRESSORS.append(('CatBoostRegressor',catboost.CatBoostRegressor))
+# REGRESSORS.append(('CatBoostRegressor',catboost.CatBoostRegressor))
     
 CLASSIFIERS.append(('XGBClassifier',xgboost.XGBClassifier))
 CLASSIFIERS.append(('LGBMClassifier',lightgbm.LGBMClassifier))
-CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
+# CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
 
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),
@@ -220,10 +216,17 @@ class LazyClassifier:
         for name, model in tqdm(CLASSIFIERS):
             start = time.time()
             try:
-                pipe = Pipeline(steps=[
-                    ('preprocessor', preprocessor),
-                    ('classifier', model(self.random_state))
-                ])
+                if 'random_state' in model().get_params().keys():
+                    pipe = Pipeline(steps=[
+                        ('preprocessor', preprocessor),
+                        ('classifier', model(random_state = self.random_state))
+                    ])
+                else:
+                    pipe = Pipeline(steps=[
+                        ('preprocessor', preprocessor),
+                        ('classifier', model())
+                    ])
+
                 pipe.fit(X_train, y_train)
                 y_pred = pipe.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
@@ -419,9 +422,15 @@ class LazyRegressor:
         for name, model in tqdm(REGRESSORS):
             start = time.time()
             try:
-                pipe = Pipeline(steps=[
+                if 'random_state' in model().get_params().keys():
+                    pipe = Pipeline(steps=[
+                        ('preprocessor', preprocessor),
+                        ('regressor', model(random_state = self.random_state))
+                    ])
+                else:
+                    pipe = Pipeline(steps=[
                     ('preprocessor', preprocessor),
-                    ('regressor', model(self.random_state))
+                    ('regressor', model())
                 ])
                 pipe.fit(X_train, y_train)
                 y_pred = pipe.predict(X_test)

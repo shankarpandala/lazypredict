@@ -11,7 +11,7 @@ click==7.1.2
 colorama==0.4.3
 coverage==5.2
 cycler==0.10.0
-Cython==0.29.20
+Cython==0.29.21
 distlib==0.3.1
 docutils==0.16
 filelock==3.0.12

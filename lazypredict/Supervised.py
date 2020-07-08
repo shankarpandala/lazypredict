@@ -11,7 +11,7 @@ import time
 import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.utils.testing import all_estimators
 from sklearn.base import RegressorMixin
@@ -92,13 +92,45 @@ numeric_transformer = Pipeline(steps=[
     ('scaler', StandardScaler())
 ])
 
-categorical_transformer = Pipeline(steps=[
+categorical_transformer_low = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
     ('encoding', OneHotEncoder(handle_unknown='ignore', sparse=False))
 ])
 
-# Helper class for performing classification
+categorical_transformer_high = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
+    # 'OrdianlEncoder' Raise a ValueError when encounters an unknown value. Check https://github.com/scikit-learn/scikit-learn/pull/13423
+    ('encoding', OrdinalEncoder()) 
+])
 
+
+# Helper function
+
+def get_card_split(df, cols, n=11):
+    """
+    Splits categorical columns into 2 lists based on cardinality (i.e # of unique values)
+    Parameters
+    ----------
+    df : Pandas DataFrame
+        DataFrame from which the cardinality of the columns is calculated.
+    cols : list-like
+        Categorical columns to list
+    n : int, optional (default=11)
+        The value of 'n' will be used to split columns.
+    Returns
+    -------
+    card_low : list-like
+        Columns with cardinality < n
+    card_high : list-like
+        Columns with cardinality >= n
+    """
+    cond = df[cols].nunique() > n
+    card_high = cols[cond]
+    card_low  = cols[~cond]
+    return card_low, card_high
+
+
+# Helper class for performing classification
 
 class LazyClassifier:
     """
@@ -209,11 +241,14 @@ class LazyClassifier:
             include=['int64', 'float64', 'int32', 'float32']).columns
         categorical_features = X_train.select_dtypes(
             include=['object']).columns
+        
+        categorical_low, categorical_high = get_card_split(X_train, categorical_features)
 
         preprocessor = ColumnTransformer(
             transformers=[
                 ('numeric', numeric_transformer, numeric_features),
-                ('categorical', categorical_transformer, categorical_features)
+                ('categorical_low', categorical_transformer_low, categorical_low),
+                ('categorical_high', categorical_transformer_high, categorical_high)
             ])
 
         for name, model in tqdm(CLASSIFIERS):
@@ -407,11 +442,14 @@ class LazyRegressor:
             include=['int64', 'float64', 'int32', 'float32']).columns
         categorical_features = X_train.select_dtypes(
             include=['object']).columns
+        
+        categorical_low, categorical_high = get_card_split(X_train, categorical_features)
 
         preprocessor = ColumnTransformer(
             transformers=[
                 ('numeric', numeric_transformer, numeric_features),
-                ('categorical', categorical_transformer, categorical_features)
+                ('categorical_low', categorical_transformer_low, categorical_low),
+                ('categorical_high', categorical_transformer_high, categorical_high)
             ])
 
         for name, model in tqdm(REGRESSORS):

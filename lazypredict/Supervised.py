@@ -18,14 +18,10 @@ from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score, r2_score, mean_squared_error
 import warnings
-libnames = ['xgboost', 'catboost', 'lightgbm']
-for libname in libnames:
-    try:
-        lib = __import__(libname)
-    except:
-        print(sys.exc_info())
-    else:
-        globals()[libname] = lib
+import xgboost
+# import catboost
+import lightgbm
+
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
 pd.set_option("display.float_format", lambda x: '%.2f' % x)
@@ -81,11 +77,11 @@ for i in removed_classifiers:
 
 REGRESSORS.append(('XGBRegressor', xgboost.XGBRegressor))
 REGRESSORS.append(('LGBMRegressor',lightgbm.LGBMRegressor))
-REGRESSORS.append(('CatBoostRegressor',catboost.CatBoostRegressor))
+# REGRESSORS.append(('CatBoostRegressor',catboost.CatBoostRegressor))
     
 CLASSIFIERS.append(('XGBClassifier',xgboost.XGBClassifier))
 CLASSIFIERS.append(('LGBMClassifier',lightgbm.LGBMClassifier))
-CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
+# CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
 
 numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='mean')),
@@ -161,11 +157,12 @@ class LazyClassifier:
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
     """
 
-    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False):
+    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False,random_state=42):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
         self.predictions = predictions
+        self.random_state =random_state
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -219,10 +216,17 @@ class LazyClassifier:
         for name, model in tqdm(CLASSIFIERS):
             start = time.time()
             try:
-                pipe = Pipeline(steps=[
-                    ('preprocessor', preprocessor),
-                    ('classifier', model())
-                ])
+                if 'random_state' in model().get_params().keys():
+                    pipe = Pipeline(steps=[
+                        ('preprocessor', preprocessor),
+                        ('classifier', model(random_state = self.random_state))
+                    ])
+                else:
+                    pipe = Pipeline(steps=[
+                        ('preprocessor', preprocessor),
+                        ('classifier', model())
+                    ])
+
                 pipe.fit(X_train, y_train)
                 y_pred = pipe.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
@@ -360,11 +364,12 @@ class LazyRegressor:
     | KernelRidge                   |  -8.24669   | 22.7396  |    0.0309792 |
     """
 
-    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False):
+    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False,random_state=42):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
         self.predictions = predictions
+        self.random_state = random_state
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -417,7 +422,13 @@ class LazyRegressor:
         for name, model in tqdm(REGRESSORS):
             start = time.time()
             try:
-                pipe = Pipeline(steps=[
+                if 'random_state' in model().get_params().keys():
+                    pipe = Pipeline(steps=[
+                        ('preprocessor', preprocessor),
+                        ('regressor', model(random_state = self.random_state))
+                    ])
+                else:
+                    pipe = Pipeline(steps=[
                     ('preprocessor', preprocessor),
                     ('regressor', model())
                 ])

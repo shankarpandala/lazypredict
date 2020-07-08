@@ -13,11 +13,9 @@ Lazy Predict
         :target: https://lazypredict.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-
-.. image:: https://pyup.io/repos/github/shankarpandala/lazypredict/shield.svg
-     :target: https://pyup.io/repos/github/shankarpandala/lazypredict/
-     :alt: Updates
-
+.. image:: https://pepy.tech/badge/lazypredict
+     :target: https://pepy.tech/project/lazypredict
+     :alt: Downloads
 
 
 Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning

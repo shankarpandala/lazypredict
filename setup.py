@@ -20,14 +20,12 @@ test_requirements = ['pytest>=3', ]
 setup(
     author="Shankar Rao Pandala",
     author_email='shankar.pandala@live.com',
-    python_requires='>=3.6, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
+    python_requires='>=3.8, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
     description="Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning",

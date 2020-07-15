@@ -63,7 +63,7 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
 threadpoolctl==2.1.0
 toml==0.10.1
-tox==3.16.1
+tox==3.17.1
 tqdm==4.47.0
 twine==3.2.0
 urllib3==1.25.9

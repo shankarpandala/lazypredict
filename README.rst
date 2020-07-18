@@ -18,11 +18,19 @@ Lazy Predict
      :alt: Downloads
 
 
-Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning
+Lazy Predict helps build a lot of basic models without much code and helps understand which models works better without any parameter tuning.
 
 
 * Free software: MIT license
 * Documentation: https://lazypredict.readthedocs.io.
+
+============
+Installation
+============
+
+To install `lazypredict`::
+
+    pip install lazypredict
 
 =====
 Usage

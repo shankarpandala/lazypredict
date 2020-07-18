@@ -28,7 +28,7 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 Installation
 ============
 
-To install ::lazypredict:: ::
+To install :lazypredict: ::
 
     pip install lazypredict
 

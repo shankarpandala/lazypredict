@@ -16,7 +16,7 @@ distlib==0.3.1
 docutils==0.16
 filelock==3.0.12
 flake8==3.8.3
-graphviz==0.14
+graphviz==0.14.1
 idna==2.10
 imagesize==1.2.0
 Jinja2==2.11.2

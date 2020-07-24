@@ -25,7 +25,7 @@ keyring==21.2.1
 kiwisolver==1.2.0
 lightgbm==2.3.1
 MarkupSafe==1.1.1
-matplotlib==3.2.2
+matplotlib==3.3.0
 mccabe==0.6.1
 more-itertools==8.4.0
 numpy==1.19.1

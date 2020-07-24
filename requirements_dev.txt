@@ -28,7 +28,7 @@ MarkupSafe==1.1.1
 matplotlib==3.2.2
 mccabe==0.6.1
 more-itertools==8.4.0
-numpy==1.19.0
+numpy==1.19.1
 packaging==20.4
 pandas==1.0.5
 pathtools==0.1.2

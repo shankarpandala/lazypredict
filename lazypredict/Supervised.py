@@ -227,10 +227,10 @@ class LazyClassifier:
         TIME = []
         predictions = {}
         
-        if self.custom_metric != None:
+        if self.custom_metric is not None:
             CUSTOM_METRIC = []
             
-        if type(X_train) is np.ndarray:
+        if isinstance(X_train,np.ndarray):
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
@@ -271,7 +271,7 @@ class LazyClassifier:
                     roc_auc = roc_auc_score(y_test, y_pred)
                 except Exception as exception:
                     roc_auc = None
-                    if self.ignore_warnings == False:
+                    if self.ignore_warnings is False:
                         print("ROC AUC couldn't be calculated for "+name)
                         print(exception)
                 names.append(name)
@@ -280,11 +280,11 @@ class LazyClassifier:
                 ROC_AUC.append(roc_auc)
                 F1.append(f1)
                 TIME.append(time.time() - start)
-                if self.custom_metric != None:
+                if self.custom_metric is not None:
                     custom_metric = self.custom_metric(y_test, y_pred)
                     CUSTOM_METRIC.append(custom_metric)
                 if self.verbose > 0:
-                    if self.custom_metric != None:
+                    if self.custom_metric is not None:
                         print({"Model": name,
                                "Accuracy": accuracy,
                                "Balanced Accuracy": b_accuracy,
@@ -299,13 +299,13 @@ class LazyClassifier:
                                "ROC AUC": roc_auc,
                                "F1 Score": f1,
                               "Time taken": time.time() - start})
-                if self.predictions == True:
+                if self.predictions:
                     predictions[name]=y_pred
             except Exception as exception:
-                if self.ignore_warnings == False:
+                if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
-        if self.custom_metric == None:
+        if self.custom_metric is None:
             scores = pd.DataFrame({"Model": names,
                                    "Accuracy": Accuracy,
                                    "Balanced Accuracy": B_Accuracy,
@@ -323,9 +323,9 @@ class LazyClassifier:
         scores = scores.sort_values(
             by='Balanced Accuracy', ascending=False).set_index('Model')
 
-        if self.predictions == True:
+        if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
-        return scores, predictions_df if self.predictions == True else scores
+        return scores, predictions_df if self.predictions is True else scores
 
 # Helper class for performing classification
 
@@ -436,10 +436,10 @@ class LazyRegressor:
         TIME = []
         predictions = {}
         
-        if self.custom_metric != None:
+        if self.custom_metric is not None:
             CUSTOM_METRIC = []
 
-        if type(X_train) is np.ndarray:
+        if isinstance(X_train,np.ndarray):
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
@@ -478,12 +478,12 @@ class LazyRegressor:
                 R2.append(r_squared)
                 RMSE.append(rmse)
                 TIME.append(time.time() - start)
-                if self.custom_metric != None:
+                if self.custom_metric is not None:
                     custom_metric = self.custom_metric(y_test, y_pred)
                     CUSTOM_METRIC.append(custom_metric)
 
                 if self.verbose > 0:
-                    if self.custom_metric != None:
+                    if self.custom_metric is not None:
                         print({"Model": name,
                                "R-Squared": r_squared,
                                "RMSE": rmse,
@@ -494,14 +494,14 @@ class LazyRegressor:
                                "R-Squared": r_squared,
                                "RMSE": rmse,
                               "Time taken": time.time() - start})
-                if self.predictions == True:
+                if self.predictions:
                     predictions[name]=y_pred
             except Exception as exception:
-                if self.ignore_warnings == False:
+                if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
                     
-        if self.custom_metric == None:
+        if self.custom_metric is None:
             scores = pd.DataFrame({"Model": names, 
                                    "R-Squared": R2, 
                                    "RMSE": RMSE,
@@ -515,9 +515,9 @@ class LazyRegressor:
         scores = scores.sort_values(
             by='R-Squared', ascending=False).set_index('Model')
         
-        if self.predictions == True:
+        if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
-        return scores, predictions_df if self.predictions == True else scores
+        return scores, predictions_df if self.predictions is True else scores
 
 Regression = LazyRegressor
 Classification = LazyClassifier

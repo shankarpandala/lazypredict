@@ -17,7 +17,10 @@ Lazy Predict
      :target: https://pepy.tech/project/lazypredict
      :alt: Downloads
 
-
+.. image:: https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge
+   :target: https://www.codefactor.io/repository/github/shankarpandala/lazypredict
+   :alt: CodeFactor
+   
 Lazy Predict helps build a lot of basic models without much code and helps understand which models works better without any parameter tuning.
 
 

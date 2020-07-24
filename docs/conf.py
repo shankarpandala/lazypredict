@@ -49,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Lazy Predict'
-copyright = u"2019, Shankar Rao Pandala"
+copyright = u"2020, Shankar Rao Pandala"
 author = u"Shankar Rao Pandala"
 
 # The version info for the project you're documenting, acts as replacement
@@ -159,6 +159,3 @@ texinfo_documents = [
      'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-

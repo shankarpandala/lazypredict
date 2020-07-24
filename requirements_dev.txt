@@ -33,7 +33,7 @@ packaging==20.4
 pandas==1.0.5
 pathtools==0.1.2
 pkginfo==1.5.0.1
-plotly==4.8.2
+plotly==4.9.0
 pluggy==0.13.1
 py==1.9.0
 pycodestyle==2.6.0

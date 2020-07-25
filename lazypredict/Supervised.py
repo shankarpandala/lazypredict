@@ -16,91 +16,110 @@ from sklearn.compose import ColumnTransformer
 from sklearn.utils.testing import all_estimators
 from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score, r2_score, mean_squared_error
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    roc_auc_score,
+    f1_score,
+    r2_score,
+    mean_squared_error,
+)
 import warnings
 import xgboost
+
 # import catboost
 import lightgbm
 
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
-pd.set_option("display.float_format", lambda x: '%.2f' % x)
+pd.set_option("display.float_format", lambda x: "%.2f" % x)
 
-CLASSIFIERS = [est for est in all_estimators(
-) if issubclass(est[1], ClassifierMixin)]
-REGRESSORS = [est for est in all_estimators(
-) if issubclass(est[1], RegressorMixin)]
+CLASSIFIERS = [est for est in all_estimators() if issubclass(est[1], ClassifierMixin)]
+REGRESSORS = [est for est in all_estimators() if issubclass(est[1], RegressorMixin)]
 
-removed_classifiers = [('ClassifierChain', sklearn.multioutput.ClassifierChain),
- ('ComplementNB', sklearn.naive_bayes.ComplementNB),
- ('GradientBoostingClassifier',
-  sklearn.ensemble.gradient_boosting.GradientBoostingClassifier),
- ('GaussianProcessClassifier',sklearn.gaussian_process.gpc.GaussianProcessClassifier),
- ('HistGradientBoostingClassifier',
-  sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier),
- ('MLPClassifier', sklearn.neural_network.multilayer_perceptron.MLPClassifier),
- ('LogisticRegressionCV', sklearn.linear_model.logistic.LogisticRegressionCV),
- ('MultiOutputClassifier', sklearn.multioutput.MultiOutputClassifier),
- ('MultinomialNB', sklearn.naive_bayes.MultinomialNB),
- ('OneVsOneClassifier', sklearn.multiclass.OneVsOneClassifier),
- ('OneVsRestClassifier', sklearn.multiclass.OneVsRestClassifier),
- ('OutputCodeClassifier', sklearn.multiclass.OutputCodeClassifier),
- ('RadiusNeighborsClassifier',
-  sklearn.neighbors.classification.RadiusNeighborsClassifier),
- ('VotingClassifier', sklearn.ensemble.voting.VotingClassifier)]
+removed_classifiers = [
+    ("ClassifierChain", sklearn.multioutput.ClassifierChain),
+    ("ComplementNB", sklearn.naive_bayes.ComplementNB),
+    (
+        "GradientBoostingClassifier",
+        sklearn.ensemble.gradient_boosting.GradientBoostingClassifier,
+    ),
+    (
+        "GaussianProcessClassifier",
+        sklearn.gaussian_process.gpc.GaussianProcessClassifier,
+    ),
+    (
+        "HistGradientBoostingClassifier",
+        sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier,
+    ),
+    ("MLPClassifier", sklearn.neural_network.multilayer_perceptron.MLPClassifier),
+    ("LogisticRegressionCV", sklearn.linear_model.logistic.LogisticRegressionCV),
+    ("MultiOutputClassifier", sklearn.multioutput.MultiOutputClassifier),
+    ("MultinomialNB", sklearn.naive_bayes.MultinomialNB),
+    ("OneVsOneClassifier", sklearn.multiclass.OneVsOneClassifier),
+    ("OneVsRestClassifier", sklearn.multiclass.OneVsRestClassifier),
+    ("OutputCodeClassifier", sklearn.multiclass.OutputCodeClassifier),
+    (
+        "RadiusNeighborsClassifier",
+        sklearn.neighbors.classification.RadiusNeighborsClassifier,
+    ),
+    ("VotingClassifier", sklearn.ensemble.voting.VotingClassifier),
+]
 
-removed_regressors = [('TheilSenRegressor', sklearn.linear_model.theil_sen.TheilSenRegressor),
- ('ARDRegression', sklearn.linear_model.ARDRegression),
- ('CCA', sklearn.cross_decomposition.CCA),
- ('IsotonicRegression', sklearn.isotonic.IsotonicRegression),
- ('MultiOutputRegressor', sklearn.multioutput.MultiOutputRegressor),
- ('MultiTaskElasticNet',
-  sklearn.linear_model.MultiTaskElasticNet),
- ('MultiTaskElasticNetCV',
-  sklearn.linear_model.MultiTaskElasticNetCV),
- ('MultiTaskLasso', sklearn.linear_model.MultiTaskLasso),
- ('MultiTaskLassoCV',
-  sklearn.linear_model.MultiTaskLassoCV),
- ('PLSCanonical', sklearn.cross_decomposition.PLSCanonical),
- ('PLSRegression', sklearn.cross_decomposition.PLSRegression),
- ('RadiusNeighborsRegressor',
-  sklearn.neighbors.RadiusNeighborsRegressor),
- ('RegressorChain', sklearn.multioutput.RegressorChain),
- ('VotingRegressor', sklearn.ensemble.VotingRegressor),
- ('_SigmoidCalibration', sklearn.calibration._SigmoidCalibration)]
+removed_regressors = [
+    ("TheilSenRegressor", sklearn.linear_model.theil_sen.TheilSenRegressor),
+    ("ARDRegression", sklearn.linear_model.ARDRegression),
+    ("CCA", sklearn.cross_decomposition.CCA),
+    ("IsotonicRegression", sklearn.isotonic.IsotonicRegression),
+    ("MultiOutputRegressor", sklearn.multioutput.MultiOutputRegressor),
+    ("MultiTaskElasticNet", sklearn.linear_model.MultiTaskElasticNet),
+    ("MultiTaskElasticNetCV", sklearn.linear_model.MultiTaskElasticNetCV),
+    ("MultiTaskLasso", sklearn.linear_model.MultiTaskLasso),
+    ("MultiTaskLassoCV", sklearn.linear_model.MultiTaskLassoCV),
+    ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
+    ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
+    ("RadiusNeighborsRegressor", sklearn.neighbors.RadiusNeighborsRegressor),
+    ("RegressorChain", sklearn.multioutput.RegressorChain),
+    ("VotingRegressor", sklearn.ensemble.VotingRegressor),
+    ("_SigmoidCalibration", sklearn.calibration._SigmoidCalibration),
+]
 
 for i in removed_regressors:
     REGRESSORS.pop(REGRESSORS.index(i))
-    
+
 for i in removed_classifiers:
     CLASSIFIERS.pop(CLASSIFIERS.index(i))
 
-REGRESSORS.append(('XGBRegressor', xgboost.XGBRegressor))
-REGRESSORS.append(('LGBMRegressor',lightgbm.LGBMRegressor))
+REGRESSORS.append(("XGBRegressor", xgboost.XGBRegressor))
+REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
 # REGRESSORS.append(('CatBoostRegressor',catboost.CatBoostRegressor))
-    
-CLASSIFIERS.append(('XGBClassifier',xgboost.XGBClassifier))
-CLASSIFIERS.append(('LGBMClassifier',lightgbm.LGBMClassifier))
+
+CLASSIFIERS.append(("XGBClassifier", xgboost.XGBClassifier))
+CLASSIFIERS.append(("LGBMClassifier", lightgbm.LGBMClassifier))
 # CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
 
-numeric_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='mean')),
-    ('scaler', StandardScaler())
-])
+numeric_transformer = Pipeline(
+    steps=[("imputer", SimpleImputer(strategy="mean")), ("scaler", StandardScaler())]
+)
 
-categorical_transformer_low = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
-    ('encoding', OneHotEncoder(handle_unknown='ignore', sparse=False))
-])
+categorical_transformer_low = Pipeline(
+    steps=[
+        ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
+        ("encoding", OneHotEncoder(handle_unknown="ignore", sparse=False)),
+    ]
+)
 
-categorical_transformer_high = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
-    # 'OrdianlEncoder' Raise a ValueError when encounters an unknown value. Check https://github.com/scikit-learn/scikit-learn/pull/13423
-    ('encoding', OrdinalEncoder())
-])
+categorical_transformer_high = Pipeline(
+    steps=[
+        ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
+        # 'OrdianlEncoder' Raise a ValueError when encounters an unknown value. Check https://github.com/scikit-learn/scikit-learn/pull/13423
+        ("encoding", OrdinalEncoder()),
+    ]
+)
 
 
 # Helper function
+
 
 def get_card_split(df, cols, n=11):
     """
@@ -122,11 +141,12 @@ def get_card_split(df, cols, n=11):
     """
     cond = df[cols].nunique() > n
     card_high = cols[cond]
-    card_low  = cols[~cond]
+    card_low = cols[~cond]
     return card_low, card_high
 
 
 # Helper class for performing classification
+
 
 class LazyClassifier:
     """
@@ -189,12 +209,19 @@ class LazyClassifier:
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
     """
 
-    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False,random_state=42):
+    def __init__(
+        self,
+        verbose=0,
+        ignore_warnings=True,
+        custom_metric=None,
+        predictions=False,
+        random_state=42,
+    ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
         self.predictions = predictions
-        self.random_state =random_state
+        self.random_state = random_state
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -226,53 +253,57 @@ class LazyClassifier:
         names = []
         TIME = []
         predictions = {}
-        
+
         if self.custom_metric is not None:
             CUSTOM_METRIC = []
-            
-        if isinstance(X_train,np.ndarray):
+
+        if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
         numeric_features = X_train.select_dtypes(
-            include=['int64', 'float64', 'int32', 'float32']).columns
-        categorical_features = X_train.select_dtypes(
-            include=['object']).columns
-        
-        categorical_low, categorical_high = get_card_split(X_train, categorical_features)
+            include=["int64", "float64", "int32", "float32"]
+        ).columns
+        categorical_features = X_train.select_dtypes(include=["object"]).columns
+
+        categorical_low, categorical_high = get_card_split(
+            X_train, categorical_features
+        )
 
         preprocessor = ColumnTransformer(
             transformers=[
-                ('numeric', numeric_transformer, numeric_features),
-                ('categorical_low', categorical_transformer_low, categorical_low),
-                ('categorical_high', categorical_transformer_high, categorical_high)
-            ])
+                ("numeric", numeric_transformer, numeric_features),
+                ("categorical_low", categorical_transformer_low, categorical_low),
+                ("categorical_high", categorical_transformer_high, categorical_high),
+            ]
+        )
 
         for name, model in tqdm(CLASSIFIERS):
             start = time.time()
             try:
-                if 'random_state' in model().get_params().keys():
-                    pipe = Pipeline(steps=[
-                        ('preprocessor', preprocessor),
-                        ('classifier', model(random_state = self.random_state))
-                    ])
+                if "random_state" in model().get_params().keys():
+                    pipe = Pipeline(
+                        steps=[
+                            ("preprocessor", preprocessor),
+                            ("classifier", model(random_state=self.random_state)),
+                        ]
+                    )
                 else:
-                    pipe = Pipeline(steps=[
-                        ('preprocessor', preprocessor),
-                        ('classifier', model())
-                    ])
+                    pipe = Pipeline(
+                        steps=[("preprocessor", preprocessor), ("classifier", model())]
+                    )
 
                 pipe.fit(X_train, y_train)
                 y_pred = pipe.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
-                f1 = f1_score(y_test, y_pred, average='weighted')
+                f1 = f1_score(y_test, y_pred, average="weighted")
                 try:
                     roc_auc = roc_auc_score(y_test, y_pred)
                 except Exception as exception:
                     roc_auc = None
                     if self.ignore_warnings is False:
-                        print("ROC AUC couldn't be calculated for "+name)
+                        print("ROC AUC couldn't be calculated for " + name)
                         print(exception)
                 names.append(name)
                 Accuracy.append(accuracy)
@@ -285,47 +316,65 @@ class LazyClassifier:
                     CUSTOM_METRIC.append(custom_metric)
                 if self.verbose > 0:
                     if self.custom_metric is not None:
-                        print({"Model": name,
-                               "Accuracy": accuracy,
-                               "Balanced Accuracy": b_accuracy,
-                               "ROC AUC": roc_auc,
-                               "F1 Score": f1,
-                               self.custom_metric.__name__: custom_metric,
-                              "Time taken": time.time() - start})
+                        print(
+                            {
+                                "Model": name,
+                                "Accuracy": accuracy,
+                                "Balanced Accuracy": b_accuracy,
+                                "ROC AUC": roc_auc,
+                                "F1 Score": f1,
+                                self.custom_metric.__name__: custom_metric,
+                                "Time taken": time.time() - start,
+                            }
+                        )
                     else:
-                        print({"Model": name,
-                               "Accuracy": accuracy,
-                               "Balanced Accuracy": b_accuracy,
-                               "ROC AUC": roc_auc,
-                               "F1 Score": f1,
-                              "Time taken": time.time() - start})
+                        print(
+                            {
+                                "Model": name,
+                                "Accuracy": accuracy,
+                                "Balanced Accuracy": b_accuracy,
+                                "ROC AUC": roc_auc,
+                                "F1 Score": f1,
+                                "Time taken": time.time() - start,
+                            }
+                        )
                 if self.predictions:
-                    predictions[name]=y_pred
+                    predictions[name] = y_pred
             except Exception as exception:
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
         if self.custom_metric is None:
-            scores = pd.DataFrame({"Model": names,
-                                   "Accuracy": Accuracy,
-                                   "Balanced Accuracy": B_Accuracy,
-                                   "ROC AUC": ROC_AUC,
-                                   "F1 Score": F1,
-                                   "Time Taken": TIME})
+            scores = pd.DataFrame(
+                {
+                    "Model": names,
+                    "Accuracy": Accuracy,
+                    "Balanced Accuracy": B_Accuracy,
+                    "ROC AUC": ROC_AUC,
+                    "F1 Score": F1,
+                    "Time Taken": TIME,
+                }
+            )
         else:
-            scores = pd.DataFrame({"Model": names,
-                                   "Accuracy": Accuracy,
-                                   "Balanced Accuracy": B_Accuracy,
-                                   "ROC AUC": ROC_AUC,
-                                   "F1 Score": F1,
-                                  self.custom_metric.__name__: CUSTOM_METRIC,
-                                  "Time Taken": TIME})
-        scores = scores.sort_values(
-            by='Balanced Accuracy', ascending=False).set_index('Model')
+            scores = pd.DataFrame(
+                {
+                    "Model": names,
+                    "Accuracy": Accuracy,
+                    "Balanced Accuracy": B_Accuracy,
+                    "ROC AUC": ROC_AUC,
+                    "F1 Score": F1,
+                    self.custom_metric.__name__: CUSTOM_METRIC,
+                    "Time Taken": TIME,
+                }
+            )
+        scores = scores.sort_values(by="Balanced Accuracy", ascending=False).set_index(
+            "Model"
+        )
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
         return scores, predictions_df if self.predictions is True else scores
+
 
 # Helper class for performing classification
 
@@ -399,7 +448,14 @@ class LazyRegressor:
     | KernelRidge                   |  -8.24669   | 22.7396  |    0.0309792 |
     """
 
-    def __init__(self, verbose=0, ignore_warnings=True, custom_metric = None, predictions = False,random_state=42):
+    def __init__(
+        self,
+        verbose=0,
+        ignore_warnings=True,
+        custom_metric=None,
+        predictions=False,
+        random_state=42,
+    ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
@@ -435,41 +491,45 @@ class LazyRegressor:
         names = []
         TIME = []
         predictions = {}
-        
+
         if self.custom_metric is not None:
             CUSTOM_METRIC = []
 
-        if isinstance(X_train,np.ndarray):
+        if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
         numeric_features = X_train.select_dtypes(
-            include=['int64', 'float64', 'int32', 'float32']).columns
-        categorical_features = X_train.select_dtypes(
-            include=['object']).columns
-        
-        categorical_low, categorical_high = get_card_split(X_train, categorical_features)
+            include=["int64", "float64", "int32", "float32"]
+        ).columns
+        categorical_features = X_train.select_dtypes(include=["object"]).columns
+
+        categorical_low, categorical_high = get_card_split(
+            X_train, categorical_features
+        )
 
         preprocessor = ColumnTransformer(
             transformers=[
-                ('numeric', numeric_transformer, numeric_features),
-                ('categorical_low', categorical_transformer_low, categorical_low),
-                ('categorical_high', categorical_transformer_high, categorical_high)
-            ])
+                ("numeric", numeric_transformer, numeric_features),
+                ("categorical_low", categorical_transformer_low, categorical_low),
+                ("categorical_high", categorical_transformer_high, categorical_high),
+            ]
+        )
 
         for name, model in tqdm(REGRESSORS):
             start = time.time()
             try:
-                if 'random_state' in model().get_params().keys():
-                    pipe = Pipeline(steps=[
-                        ('preprocessor', preprocessor),
-                        ('regressor', model(random_state = self.random_state))
-                    ])
+                if "random_state" in model().get_params().keys():
+                    pipe = Pipeline(
+                        steps=[
+                            ("preprocessor", preprocessor),
+                            ("regressor", model(random_state=self.random_state)),
+                        ]
+                    )
                 else:
-                    pipe = Pipeline(steps=[
-                    ('preprocessor', preprocessor),
-                    ('regressor', model())
-                ])
+                    pipe = Pipeline(
+                        steps=[("preprocessor", preprocessor), ("regressor", model())]
+                    )
                 pipe.fit(X_train, y_train)
                 y_pred = pipe.predict(X_test)
                 r_squared = r2_score(y_test, y_pred)
@@ -484,40 +544,51 @@ class LazyRegressor:
 
                 if self.verbose > 0:
                     if self.custom_metric is not None:
-                        print({"Model": name,
-                               "R-Squared": r_squared,
-                               "RMSE": rmse,
-                               self.custom_metric.__name__: custom_metric,
-                              "Time taken": time.time() - start})
+                        print(
+                            {
+                                "Model": name,
+                                "R-Squared": r_squared,
+                                "RMSE": rmse,
+                                self.custom_metric.__name__: custom_metric,
+                                "Time taken": time.time() - start,
+                            }
+                        )
                     else:
-                        print({"Model": name,
-                               "R-Squared": r_squared,
-                               "RMSE": rmse,
-                              "Time taken": time.time() - start})
+                        print(
+                            {
+                                "Model": name,
+                                "R-Squared": r_squared,
+                                "RMSE": rmse,
+                                "Time taken": time.time() - start,
+                            }
+                        )
                 if self.predictions:
-                    predictions[name]=y_pred
+                    predictions[name] = y_pred
             except Exception as exception:
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
-                    
+
         if self.custom_metric is None:
-            scores = pd.DataFrame({"Model": names, 
-                                   "R-Squared": R2, 
-                                   "RMSE": RMSE,
-                                   "Time Taken": TIME})
+            scores = pd.DataFrame(
+                {"Model": names, "R-Squared": R2, "RMSE": RMSE, "Time Taken": TIME}
+            )
         else:
-            scores = pd.DataFrame({"Model": names, 
-                                   "R-Squared": R2, 
-                                   "RMSE": RMSE,
-                                  self.custom_metric.__name__: CUSTOM_METRIC,
-                                  "Time Taken": TIME})
-        scores = scores.sort_values(
-            by='R-Squared', ascending=False).set_index('Model')
-        
+            scores = pd.DataFrame(
+                {
+                    "Model": names,
+                    "R-Squared": R2,
+                    "RMSE": RMSE,
+                    self.custom_metric.__name__: CUSTOM_METRIC,
+                    "Time Taken": TIME,
+                }
+            )
+        scores = scores.sort_values(by="R-Squared", ascending=False).set_index("Model")
+
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
         return scores, predictions_df if self.predictions is True else scores
+
 
 Regression = LazyRegressor
 Classification = LazyClassifier

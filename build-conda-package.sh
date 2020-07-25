@@ -8,8 +8,8 @@ echo "Building conda package ..."
 cd ~
 conda skeleton pypi $pkg
 cd $pkg
-wget https://conda.io/docs/_downloads/build1.sh
-wget https://conda.io/docs/_downloads/bld.bat
+wget https://raw.githubusercontent.com/AnacondaRecipes/conda-feedstock/master/recipe/build.sh
+wget https://raw.githubusercontent.com/AnacondaRecipes/conda-feedstock/master/recipe/bld.bat
 cd ~
 
 # building conda packages

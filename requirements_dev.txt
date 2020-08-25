@@ -12,7 +12,7 @@ colorlog==4.2.1
 dash==1.13.4
 dash-core-components==1.10.1
 dash-cytoscape==0.2.0
-dash-html-components==1.0.3
+dash-html-components==1.1.0
 dash-renderer==1.5.1
 dash-table==4.8.1
 Flask==1.1.2

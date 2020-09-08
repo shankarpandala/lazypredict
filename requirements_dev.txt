@@ -31,7 +31,7 @@ more-itertools==8.4.0
 numpy==1.19.1
 optuna==1.5.0
 packaging==20.4
-pandas==1.0.5
+pandas==1.1.2
 pbr==5.4.5
 plotly==4.9.0
 pluggy==0.13.1

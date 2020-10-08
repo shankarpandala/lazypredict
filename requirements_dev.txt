@@ -8,7 +8,7 @@ cliff==3.3.0
 cmaes==0.5.1
 cmd2==1.2.1
 colorama==0.4.3
-colorlog==4.2.1
+colorlog==4.4.0
 dash==1.13.4
 dash-core-components==1.10.1
 dash-cytoscape==0.2.0

@@ -7,7 +7,7 @@ click==7.1.2
 cliff==3.3.0
 cmaes==0.5.1
 cmd2==1.2.1
-colorama==0.4.3
+colorama==0.4.4
 colorlog==4.2.1
 dash==1.13.4
 dash-core-components==1.10.1

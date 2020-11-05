@@ -58,4 +58,4 @@ wcwidth==0.2.5
 Werkzeug==1.0.1
 xgboost==1.1.1
 zope.event==4.4
-zope.interface==5.1.0
+zope.interface==5.2.0

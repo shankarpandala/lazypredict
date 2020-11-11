@@ -261,9 +261,7 @@ class LazyClassifier:
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
-        numeric_features = X_train.select_dtypes(
-            include=["int64", "float64", "int32", "float32"]
-        ).columns
+        numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
         categorical_low, categorical_high = get_card_split(
@@ -499,9 +497,7 @@ class LazyRegressor:
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
-        numeric_features = X_train.select_dtypes(
-            include=["int64", "float64", "int32", "float32"]
-        ).columns
+        numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
         categorical_low, categorical_high = get_card_split(

@@ -35,7 +35,7 @@ pandas==1.0.5
 pbr==5.4.5
 plotly==4.9.0
 pluggy==0.13.1
-prettytable==0.7.2
+prettytable==2.0.0
 py==1.9.0
 pyparsing==2.4.7
 pyperclip==1.8.0

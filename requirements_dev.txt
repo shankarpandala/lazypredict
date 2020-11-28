@@ -30,7 +30,7 @@ MarkupSafe==1.1.1
 more-itertools==8.4.0
 numpy==1.19.1
 optuna==1.5.0
-packaging==20.4
+packaging==20.5
 pandas==1.0.5
 pbr==5.4.5
 plotly==4.9.0

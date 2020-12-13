@@ -39,7 +39,7 @@ prettytable==0.7.2
 py==1.9.0
 pyparsing==2.4.7
 pyperclip==1.8.0
-pytest==5.4.3
+pytest==6.2.0
 python-dateutil==2.8.1
 python-editor==1.0.4
 pytz==2020.1

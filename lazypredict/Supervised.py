@@ -174,6 +174,7 @@ class LazyClassifier:
     >>> X_train, X_test, y_train, y_test = train_test_split(X, y,test_size=.5,random_state =123)
     >>> clf = LazyClassifier(verbose=0,ignore_warnings=True, custom_metric=None)
     >>> models,predictions = clf.fit(X_train, X_test, y_train, y_test)
+    >>> model_dictionary = clf.provide_models(X_train,X_test,y_train,y_test)
     >>> models
     | Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
     |:-------------------------------|-----------:|--------------------:|----------:|-----------:|-------------:|
@@ -221,6 +222,7 @@ class LazyClassifier:
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
         self.predictions = predictions
+        self.models = {}
         self.random_state = random_state
 
     def fit(self, X_train, X_test, y_train, y_test):
@@ -294,6 +296,7 @@ class LazyClassifier:
                     )
 
                 pipe.fit(X_train, y_train)
+                self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
@@ -375,6 +378,35 @@ class LazyClassifier:
             predictions_df = pd.DataFrame.from_dict(predictions)
         return scores, predictions_df if self.predictions is True else scores
 
+    def provide_models(self, X_train, X_test, y_train, y_test):
+        """
+        This function returns all the model objects trained in fit function.
+        If fit is not called already, then we call fit and then return the models.
+        Parameters
+        ----------
+        X_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        X_test : array-like,
+            Testing vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_test : array-like,
+            Testing vectors, where rows is the number of samples
+            and columns is the number of features.
+        Returns
+        -------
+        models: dict-object,
+            Returns a dictionary with each model pipeline as value 
+            with key as name of models.
+        """
+        if len(self.models.keys()) == 0:
+            self.fit(X_train,X_test,y_train,y_test)
+        
+        return self.models
+
 
 # Helper class for performing classification
 
@@ -406,8 +438,10 @@ class LazyRegressor:
     >>> offset = int(X.shape[0] * 0.9)
     >>> X_train, y_train = X[:offset], y[:offset]
     >>> X_test, y_test = X[offset:], y[offset:]
-    >>> reg = LazyRegressor(verbose=0,ignore_warnings=False, custom_metric=None )
+    >>> reg = LazyRegressor(verbose=0,ignore_warnings=False, custom_metric=None )    
     >>> models,predictions = reg.fit(X_train, X_test, y_train, y_test)
+    >>> model_dictionary = clf.provide_models(X_train,X_test,y_train,y_test)
+    >>> models
     | Model                         |   R-Squared |     RMSE |   Time Taken |
     |:------------------------------|------------:|---------:|-------------:|
     | SVR                           |   0.877199  |  2.62054 |    0.0330021 |
@@ -460,6 +494,7 @@ class LazyRegressor:
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
         self.predictions = predictions
+        self.models = {}
         self.random_state = random_state
 
     def fit(self, X_train, X_test, y_train, y_test):
@@ -531,6 +566,7 @@ class LazyRegressor:
                         steps=[("preprocessor", preprocessor), ("regressor", model())]
                     )
                 pipe.fit(X_train, y_train)
+                self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
                 r_squared = r2_score(y_test, y_pred)
                 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
@@ -588,6 +624,35 @@ class LazyRegressor:
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
         return scores, predictions_df if self.predictions is True else scores
+
+    def provide_models(self, X_train, X_test, y_train, y_test):
+        """
+        This function returns all the model objects trained in fit function.
+        If fit is not called already, then we call fit and then return the models.
+        Parameters
+        ----------
+        X_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        X_test : array-like,
+            Testing vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_test : array-like,
+            Testing vectors, where rows is the number of samples
+            and columns is the number of features.
+        Returns
+        -------
+        models: dict-object,
+            Returns a dictionary with each model pipeline as value 
+            with key as name of models.
+        """
+        if len(self.models.keys()) == 0:
+            self.fit(X_train,X_test,y_train,y_test)
+
+        return self.models
 
 
 Regression = LazyRegressor

@@ -71,6 +71,7 @@ removed_regressors = [
     ("ARDRegression", sklearn.linear_model.ARDRegression),
     ("CCA", sklearn.cross_decomposition.CCA),
     ("IsotonicRegression", sklearn.isotonic.IsotonicRegression),
+    ("StackingRegressor",sklearn.ensemble.StackingRegressor),
     ("MultiOutputRegressor", sklearn.multioutput.MultiOutputRegressor),
     ("MultiTaskElasticNet", sklearn.linear_model.MultiTaskElasticNet),
     ("MultiTaskElasticNetCV", sklearn.linear_model.MultiTaskElasticNetCV),

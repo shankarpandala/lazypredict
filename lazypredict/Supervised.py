@@ -147,16 +147,17 @@ def get_card_split(df, cols, n=11):
     return card_low, card_high
 
 
-def save_model(name: str, model: Any, base_path: str) -> None:
+def save_model(name: str, model: Any, base_path: str = "", overwrite: bool = True) -> None:
     """Save trained model at specific location
 
     Args:
         name (str): model name
         model (Any): model object
         base_path (str): base path to store model
+        overwrite (bool): overwrite old model file
     """
-    file_name = f"{name.strip().lower()}{datetime.datetime.strptime(datetime.datetime.now(), '%Y%m%d%H%M%S')}.mdl"
-    dump(model, filename=file_name if base_path == "" else base_path/file_name)
+    file_name = f"{name.strip().lower()}.mdl" if overwrite else f"{name.strip().lower()}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.mdl"
+    dump(model, filename=file_name if base_path == "" else str(base_path/file_name))
 
 # Helper class for performing classification
 
@@ -235,6 +236,7 @@ class LazyClassifier:
         random_state=42,
         save_model: bool = False,
         base_path: str = "",
+        overwrite: bool = True,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -244,6 +246,7 @@ class LazyClassifier:
         self.random_state = random_state
         self.save_model = save_model
         self.base_path = base_path
+        self. overwrite = overwrite
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -261,6 +264,8 @@ class LazyClassifier:
         y_test : array-like,
             Testing vectors, where rows is the number of samples
             and columns is the number of features.
+        overwrite: bool, optional (default=True)
+            Overwrite pre-existing model files
         Returns
         -------
         scores : Pandas DataFrame
@@ -364,7 +369,7 @@ class LazyClassifier:
                 if self.predictions:
                     predictions[name] = y_pred
                 if self.save_model == True:
-                    save_model(name, model, self.base_path)
+                    save_model(name, pipe['classifier'], self.base_path, self.overwrite)
             except Exception as exception:
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
@@ -451,6 +456,8 @@ class LazyRegressor:
         Save trained model for further analysis for example feature importance
     base_path: str, optional (default="")
         Base path to store model files (with .mdl extension, joblib.load(base_path/<model file name>.mdl) could be use to load stored model)
+    overwrite: bool, optional (default=True)
+        Overwrite pre-existing model files
     Examples
     --------
     >>> from lazypredict.Supervised import LazyRegressor
@@ -516,6 +523,7 @@ class LazyRegressor:
         random_state=42,
         save_model: bool = False,
         base_path: str = "",
+        overwrite: bool = True,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -525,6 +533,7 @@ class LazyRegressor:
         self.random_state = random_state
         self.save_model = save_model
         self.base_path = base_path
+        self. overwrite = overwrite
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -630,7 +639,7 @@ class LazyRegressor:
                 if self.predictions:
                     predictions[name] = y_pred
                 if self.save_model == True:
-                    save_model(name, model, self.base_path)
+                    save_model(name, pipe['regressor'], self.base_path, self.overwrite)
             except Exception as exception:
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")

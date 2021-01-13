@@ -147,7 +147,6 @@ def get_card_split(df, cols, n=11):
 
 # Helper class for performing classification
 
-
 class LazyClassifier:
     """
     This module helps in fitting to all the classification algorithms that are available in Scikit-learn
@@ -404,8 +403,12 @@ class LazyClassifier:
         """
         if len(self.models.keys()) == 0:
             self.fit(X_train,X_test,y_train,y_test)
-        
+
         return self.models
+
+
+def adjusted_rsquared(r2, n, p):
+    return 1 - (1-r2) * ((n-1) / (n-p-1))
 
 
 # Helper class for performing classification
@@ -521,13 +524,14 @@ class LazyRegressor:
             Returns predictions of all the models in a Pandas DataFrame.
         """
         R2 = []
+        ADJR2 = []
         RMSE = []
         # WIN = []
         names = []
         TIME = []
         predictions = {}
 
-        if self.custom_metric is not None:
+        if self.custom_metric:
             CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
@@ -565,39 +569,38 @@ class LazyRegressor:
                     pipe = Pipeline(
                         steps=[("preprocessor", preprocessor), ("regressor", model())]
                     )
+
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
+
                 r_squared = r2_score(y_test, y_pred)
+                adj_rsquared = adjusted_rsquared(r_squared, X_test.shape[0], X_test.shape[1])
                 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
                 names.append(name)
                 R2.append(r_squared)
+                ADJR2.append(adj_rsquared)
                 RMSE.append(rmse)
                 TIME.append(time.time() - start)
-                if self.custom_metric is not None:
+
+                if self.custom_metric:
                     custom_metric = self.custom_metric(y_test, y_pred)
                     CUSTOM_METRIC.append(custom_metric)
 
                 if self.verbose > 0:
-                    if self.custom_metric is not None:
-                        print(
-                            {
-                                "Model": name,
-                                "R-Squared": r_squared,
-                                "RMSE": rmse,
-                                self.custom_metric.__name__: custom_metric,
-                                "Time taken": time.time() - start,
-                            }
-                        )
-                    else:
-                        print(
-                            {
-                                "Model": name,
-                                "R-Squared": r_squared,
-                                "RMSE": rmse,
-                                "Time taken": time.time() - start,
-                            }
-                        )
+                    scores_verbose = {
+                        "Model": name,
+                        "R-Squared": r_squared,
+                        "Adjusted R-Squared": adj_rsquared,
+                        "RMSE": rmse,
+                        "Time taken": time.time() - start,
+                    }
+
+                    if self.custom_metric:
+                        scores_verbose[self.custom_metric.__name__] = custom_metric
+
+                    print(scores_verbose)
                 if self.predictions:
                     predictions[name] = y_pred
             except Exception as exception:
@@ -605,21 +608,19 @@ class LazyRegressor:
                     print(name + " model failed to execute")
                     print(exception)
 
-        if self.custom_metric is None:
-            scores = pd.DataFrame(
-                {"Model": names, "R-Squared": R2, "RMSE": RMSE, "Time Taken": TIME}
-            )
-        else:
-            scores = pd.DataFrame(
-                {
-                    "Model": names,
-                    "R-Squared": R2,
-                    "RMSE": RMSE,
-                    self.custom_metric.__name__: CUSTOM_METRIC,
-                    "Time Taken": TIME,
-                }
-            )
-        scores = scores.sort_values(by="R-Squared", ascending=False).set_index("Model")
+        scores = {
+            "Model": names,
+            "Adjusted R-Squared": ADJR2,
+            "R-Squared": R2,
+            "RMSE": RMSE,
+            "Time Taken": TIME
+        }
+
+        if self.custom_metric:
+            scores[self.custom_metric.__name__] = CUSTOM_METRIC
+
+        scores = pd.DataFrame(scores)
+        scores = scores.sort_values(by="Adjusted R-Squared", ascending=False).set_index("Model")
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)

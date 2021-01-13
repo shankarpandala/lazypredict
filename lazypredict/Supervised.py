@@ -444,7 +444,7 @@ class LazyRegressor:
     >>> X_test, y_test = X[offset:], y[offset:]
     >>> reg = LazyRegressor(verbose=0,ignore_warnings=False, custom_metric=None )    
     >>> models,predictions = reg.fit(X_train, X_test, y_train, y_test)
-    >>> model_dictionary = clf.provide_models(X_train,X_test,y_train,y_test)
+    >>> model_dictionary = reg.provide_models(X_train,X_test,y_train,y_test)
     >>> models
     | Model                         |   R-Squared |     RMSE |   Time Taken |
     |:------------------------------|------------:|---------:|-------------:|

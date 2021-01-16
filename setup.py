@@ -11,21 +11,7 @@ with open("README.rst") as readme_file:
 with open("HISTORY.rst") as history_file:
     history = history_file.read()
 
-requirements = [
-    "click>=7.1.2",
-    "joblib>=0.16.0",
-    "lightgbm>=2.3.1",
-    "numpy>=1.19.1",
-    "optuna>=1.5.0",
-    "pandas>=1.0.5",
-    "pytest>=5.4.3",
-    "PyYAML>=5.3.1",
-    "scikit-learn>=0.23.1",
-    "scipy>=1.5.2",
-    "six>=1.15.0",
-    "tqdm>=4.48.0",
-    "xgboost>=1.1.1",
-]
+requirements = [requirement for requirement in open('requirements.txt')]
 
 setup_requirements = [
     "pytest-runner",
@@ -38,7 +24,7 @@ test_requirements = [
 setup(
     author="Shankar Rao Pandala",
     author_email="shankar.pandala@live.com",
-    python_requires=">=3.8, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
+    python_requires=">=3.8",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",

@@ -225,7 +225,7 @@ class LazyClassifier:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.classifiers = CLASSIFIERS
+        self.classifiers = classifiers
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -526,7 +526,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = REGRESSORS
+        self.regressors = regressors
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.

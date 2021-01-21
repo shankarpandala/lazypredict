@@ -280,7 +280,21 @@ class LazyClassifier:
             ]
         )
 
-        for name, model in tqdm(CLASSIFIERS):
+        # Here is for issue #114, if you do not want to choose all classifiers
+        # you can call LazyClassifier as shown below: 
+        # LazyClassifier(classifiers=["DecisionTreeClassifier", "RandomForestClassifier"])
+        temp_list = []
+        if self.classifiers is not CLASSIFIERS:
+            for name, model in all_estimators(): # an example of all_estimators() ↓↓↓↓
+                for classifier in self.classifiers: # ('SVC', <class 'sklearn.svm._classes.SVC'>)
+                    if classifier is name:
+                        full_name = (name, model)
+                        temp_list.append(full_name)
+                        self.classifiers = temp_list.copy()
+                    if not self.classifiers:
+                        print("Invalid Classifier(s)")
+
+        for name, model in tqdm(self.classifiers):
             start = time.time()
             try:
                 if "random_state" in model().get_params().keys():
@@ -502,6 +516,7 @@ class LazyRegressor:
         custom_metric=None,
         predictions=False,
         random_state=42,
+        regressors=REGRESSORS,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -509,6 +524,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
+        self.regressors = REGRESSORS
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -565,7 +581,21 @@ class LazyRegressor:
             ]
         )
 
-        for name, model in tqdm(REGRESSORS):
+        # Here is for issue #114, if you do not want to choose all regressors
+        # you can call LazyRegressor as shown below: 
+        # LazyRegressor(regressors=["DecisionTreeRegressor", "RandomForestRegressor", "Ridge"])
+        temp_list = []
+        if self.regressors is not REGRESSORS:
+            for name, model in all_estimators(): # an example of all_estimators() ↓↓↓↓
+                for regressor in self.regressors: # ('SVC', <class 'sklearn.svm._classes.SVC'>)
+                    if regressor is name:
+                        full_name = (name, model)
+                        temp_list.append(full_name)
+                        self.regressors = temp_list.copy()
+                    if not self.regressors:
+                        print("Invalid Regressor(s)")
+
+        for name, model in tqdm(self.regressors):
             start = time.time()
             try:
                 if "random_state" in model().get_params().keys():

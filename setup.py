@@ -24,13 +24,13 @@ test_requirements = [
 setup(
     author="Shankar Rao Pandala",
     author_email="shankar.pandala@live.com",
-    python_requires=">=3.8",
+    python_requires=">=3.6",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.6",
     ],
     description="Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning",
     entry_points={"console_scripts": ["lazypredict=lazypredict.cli:main",],},

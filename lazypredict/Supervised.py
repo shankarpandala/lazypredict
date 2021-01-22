@@ -162,6 +162,8 @@ class LazyClassifier:
         When function is provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
+    classifiers : list, optional (default="all")
+    	When function is provided, trains the chosen classifier(s).
 
     Examples
     --------
@@ -217,7 +219,7 @@ class LazyClassifier:
         custom_metric=None,
         predictions=False,
         random_state=42,
-        classifiers = CLASSIFIERS
+        classifiers = "all"
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -282,20 +284,18 @@ class LazyClassifier:
             ]
         )
 
-        # Here is for issue #114, if you do not want to choose all classifiers
-        # you can call LazyClassifier as shown below: 
-        # LazyClassifier(classifiers=["DecisionTreeClassifier", "RandomForestClassifier"])
-        temp_list = []
-        if self.classifiers is not CLASSIFIERS:
-            for name, model in all_estimators(): # an example of all_estimators() ↓↓↓↓
-                for classifier in self.classifiers: # ('SVC', <class 'sklearn.svm._classes.SVC'>)
-                    if classifier is name:
-                        full_name = (name, model)
-                        temp_list.append(full_name)
-                        self.classifiers = temp_list.copy()
-                    if not self.classifiers:
-                        print("Invalid Classifier(s)")
-
+        if self.classifiers == "all":
+        	self.classifiers = CLASSIFIERS
+        else:
+        	try:
+    			temp_list=[]
+        		for classifier in self.classifiers:
+        			full_name = (classifier.__class__.__name__, classifier)
+        			temp_list.append(full_name)
+        		self.classifiers = temp_list
+        	except Exception as exception:
+        		print(exception)
+        		print("Invalid Classifier(s)")
         for name, model in tqdm(self.classifiers):
             start = time.time()
             try:
@@ -445,6 +445,8 @@ class LazyRegressor:
         When function is provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
+    regressors : list, optional (default="all")
+    	When function is provided, trains the chosen regressor(s).
 
     Examples
     --------
@@ -518,7 +520,7 @@ class LazyRegressor:
         custom_metric=None,
         predictions=False,
         random_state=42,
-        regressors=REGRESSORS,
+        regressors="all",
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -526,7 +528,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = regressors
+        self.regressors = regressors 
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -583,19 +585,18 @@ class LazyRegressor:
             ]
         )
 
-        # Here is for issue #114, if you do not want to choose all regressors
-        # you can call LazyRegressor as shown below: 
-        # LazyRegressor(regressors=["DecisionTreeRegressor", "RandomForestRegressor", "Ridge"])
-        temp_list = []
-        if self.regressors is not REGRESSORS:
-            for name, model in all_estimators(): # an example of all_estimators() ↓↓↓↓
-                for regressor in self.regressors: # ('SVC', <class 'sklearn.svm._classes.SVC'>)
-                    if regressor is name:
-                        full_name = (name, model)
-                        temp_list.append(full_name)
-                        self.regressors = temp_list.copy()
-                    if not self.regressors:
-                        print("Invalid Regressor(s)")
+        if self.regressors == "all": 
+        	self.regressors = REGRESSORS
+        else:
+        	try:
+        		temp_list = []
+        		for regressor in self.regressors:
+        			full_name = (regressor.__class__.__name__, regressor)
+        			temp_list.append(full_name)
+        		self.regressors = temp_list
+        	except Exception as exception:
+        		print(exception)
+        		print("Invalid Regressor(s)")
 
         for name, model in tqdm(self.regressors):
             start = time.time()

@@ -19,7 +19,7 @@ Flask==1.1.2
 Flask-Compress==1.5.0
 future==0.18.2
 gevent==20.6.2
-greenlet==0.4.16
+greenlet==1.0.0
 idna==2.10
 itsdangerous==1.1.0
 Jinja2==2.11.2

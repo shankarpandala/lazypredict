@@ -27,7 +27,7 @@ joblib==0.16.0
 lightgbm==2.3.1
 Mako==1.1.3
 MarkupSafe==1.1.1
-more-itertools==8.4.0
+more-itertools==8.6.0
 numpy==1.19.1
 optuna==1.5.0
 packaging==20.8

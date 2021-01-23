@@ -5,7 +5,7 @@ certifi==2020.6.20
 chardet==4.0.0
 click==7.1.2
 cliff==3.3.0
-cmaes==0.5.1
+cmaes==0.7.0
 cmd2==1.2.1
 colorama==0.4.3
 colorlog==4.2.1

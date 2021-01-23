@@ -38,6 +38,7 @@ CLASSIFIERS = [est for est in all_estimators() if issubclass(est[1], ClassifierM
 REGRESSORS = [est for est in all_estimators() if issubclass(est[1], RegressorMixin)]
 
 removed_classifiers = [
+    ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
     ("ClassifierChain", sklearn.multioutput.ClassifierChain),
     ("ComplementNB", sklearn.naive_bayes.ComplementNB),
     (

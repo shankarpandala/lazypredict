@@ -163,7 +163,7 @@ class LazyClassifier:
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
     classifiers : list, optional (default="all")
-    	When function is provided, trains the chosen classifier(s).
+        When function is provided, trains the chosen classifier(s).
 
     Examples
     --------
@@ -285,17 +285,18 @@ class LazyClassifier:
         )
 
         if self.classifiers == "all":
-        	self.classifiers = CLASSIFIERS
+            self.classifiers = CLASSIFIERS
         else:
-        	try:
-    			temp_list=[]
-        		for classifier in self.classifiers:
-        			full_name = (classifier.__class__.__name__, classifier)
-        			temp_list.append(full_name)
-        		self.classifiers = temp_list
-        	except Exception as exception:
-        		print(exception)
-        		print("Invalid Classifier(s)")
+            try:
+                temp_list = []
+                for classifier in self.classifiers:
+                    full_name = (classifier.__class__.__name__, classifier)
+                    temp_list.append(full_name)
+                self.classifiers = temp_list
+            except Exception as exception:
+                print(exception)
+                print("Invalid Classifier(s)")
+
         for name, model in tqdm(self.classifiers):
             start = time.time()
             try:
@@ -446,7 +447,7 @@ class LazyRegressor:
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
     regressors : list, optional (default="all")
-    	When function is provided, trains the chosen regressor(s).
+        When function is provided, trains the chosen regressor(s).
 
     Examples
     --------
@@ -586,17 +587,17 @@ class LazyRegressor:
         )
 
         if self.regressors == "all": 
-        	self.regressors = REGRESSORS
+            self.regressors = REGRESSORS
         else:
-        	try:
-        		temp_list = []
-        		for regressor in self.regressors:
-        			full_name = (regressor.__class__.__name__, regressor)
-        			temp_list.append(full_name)
-        		self.regressors = temp_list
-        	except Exception as exception:
-        		print(exception)
-        		print("Invalid Regressor(s)")
+            try:
+                temp_list = []
+                for regressor in self.regressors:
+                    full_name = (regressor.__class__.__name__, regressor)
+                    temp_list.append(full_name)
+                self.regressors = temp_list
+            except Exception as exception:
+                print(exception)
+                print("Invalid Regressor(s)")
 
         for name, model in tqdm(self.regressors):
             start = time.time()

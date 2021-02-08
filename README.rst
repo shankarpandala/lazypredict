@@ -17,12 +17,23 @@ Lazy Predict
      :target: https://pepy.tech/project/lazypredict
      :alt: Downloads
 
+.. image:: https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge
+   :target: https://www.codefactor.io/repository/github/shankarpandala/lazypredict
+   :alt: CodeFactor
 
-Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning
+Lazy Predict helps build a lot of basic models without much code and helps understand which models works better without any parameter tuning.
 
 
 * Free software: MIT license
 * Documentation: https://lazypredict.readthedocs.io.
+
+============
+Installation
+============
+
+To install Lazy Predict::
+
+    pip install lazypredict
 
 =====
 Usage
@@ -41,13 +52,17 @@ Example ::
     from lazypredict.Supervised import LazyClassifier
     from sklearn.datasets import load_breast_cancer
     from sklearn.model_selection import train_test_split
+
     data = load_breast_cancer()
     X = data.data
     y= data.target
+
     X_train, X_test, y_train, y_test = train_test_split(X, y,test_size=.5,random_state =123)
+
     clf = LazyClassifier(verbose=0,ignore_warnings=True, custom_metric=None)
     models,predictions = clf.fit(X_train, X_test, y_train, y_test)
-    models
+
+    print(models)
 
 
     | Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
@@ -93,54 +108,66 @@ Example ::
     from sklearn import datasets
     from sklearn.utils import shuffle
     import numpy as np
+
     boston = datasets.load_boston()
     X, y = shuffle(boston.data, boston.target, random_state=13)
     X = X.astype(np.float32)
+
     offset = int(X.shape[0] * 0.9)
+
     X_train, y_train = X[:offset], y[:offset]
     X_test, y_test = X[offset:], y[offset:]
-    reg = LazyRegressor(verbose=0,ignore_warnings=False, custom_metric=None )
-    models,predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+    reg = LazyRegressor(verbose=0, ignore_warnings=False, custom_metric=None)
+    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+    print(models)
 
 
-    | Model                         |   R-Squared |     RMSE |   Time Taken |
-    |:------------------------------|------------:|---------:|-------------:|
-    | SVR                           |   0.877199  |  2.62054 |    0.0330021 |
-    | RandomForestRegressor         |   0.874429  |  2.64993 |    0.0659981 |
-    | ExtraTreesRegressor           |   0.867566  |  2.72138 |    0.0570002 |
-    | AdaBoostRegressor             |   0.865851  |  2.73895 |    0.144999  |
-    | NuSVR                         |   0.863712  |  2.7607  |    0.0340044 |
-    | GradientBoostingRegressor     |   0.858693  |  2.81107 |    0.13      |
-    | KNeighborsRegressor           |   0.826307  |  3.1166  |    0.0179954 |
-    | HistGradientBoostingRegressor |   0.810479  |  3.25551 |    0.820995  |
-    | BaggingRegressor              |   0.800056  |  3.34383 |    0.0579946 |
-    | MLPRegressor                  |   0.750536  |  3.73503 |    0.725997  |
-    | HuberRegressor                |   0.736973  |  3.83522 |    0.0370018 |
-    | LinearSVR                     |   0.71914   |  3.9631  |    0.0179989 |
-    | RidgeCV                       |   0.718402  |  3.9683  |    0.018003  |
-    | BayesianRidge                 |   0.718102  |  3.97041 |    0.0159984 |
-    | Ridge                         |   0.71765   |  3.9736  |    0.0149941 |
-    | LinearRegression              |   0.71753   |  3.97444 |    0.0190051 |
-    | TransformedTargetRegressor    |   0.71753   |  3.97444 |    0.012001  |
-    | LassoCV                       |   0.717337  |  3.9758  |    0.0960066 |
-    | ElasticNetCV                  |   0.717104  |  3.97744 |    0.0860076 |
-    | LassoLarsCV                   |   0.717045  |  3.97786 |    0.0490005 |
-    | LassoLarsIC                   |   0.716636  |  3.98073 |    0.0210001 |
-    | LarsCV                        |   0.715031  |  3.99199 |    0.0450008 |
-    | Lars                          |   0.715031  |  3.99199 |    0.0269964 |
-    | SGDRegressor                  |   0.714362  |  3.99667 |    0.0210009 |
-    | RANSACRegressor               |   0.707849  |  4.04198 |    0.111998  |
-    | ElasticNet                    |   0.690408  |  4.16088 |    0.0190012 |
-    | Lasso                         |   0.662141  |  4.34668 |    0.0180018 |
-    | OrthogonalMatchingPursuitCV   |   0.591632  |  4.77877 |    0.0180008 |
-    | ExtraTreeRegressor            |   0.583314  |  4.82719 |    0.0129974 |
-    | PassiveAggressiveRegressor    |   0.556668  |  4.97914 |    0.0150032 |
-    | GaussianProcessRegressor      |   0.428298  |  5.65425 |    0.0580051 |
-    | OrthogonalMatchingPursuit     |   0.379295  |  5.89159 |    0.0180039 |
-    | DecisionTreeRegressor         |   0.318767  |  6.17217 |    0.0230272 |
-    | DummyRegressor                |  -0.0215752 |  7.55832 |    0.0140116 |
-    | LassoLars                     |  -0.0215752 |  7.55832 |    0.0180008 |
-    | KernelRidge                   |  -8.24669   | 22.7396  |    0.0309792 |
+    | Model                         | Adjusted R-Squared | R-Squared |  RMSE | Time Taken |
+    |:------------------------------|-------------------:|----------:|------:|-----------:|
+    | SVR                           |               0.83 |      0.88 |  2.62 |       0.01 |
+    | BaggingRegressor              |               0.83 |      0.88 |  2.63 |       0.03 |
+    | NuSVR                         |               0.82 |      0.86 |  2.76 |       0.03 |
+    | RandomForestRegressor         |               0.81 |      0.86 |  2.78 |       0.21 |
+    | XGBRegressor                  |               0.81 |      0.86 |  2.79 |       0.06 |
+    | GradientBoostingRegressor     |               0.81 |      0.86 |  2.84 |       0.11 |
+    | ExtraTreesRegressor           |               0.79 |      0.84 |  2.98 |       0.12 |
+    | AdaBoostRegressor             |               0.78 |      0.83 |  3.04 |       0.07 |
+    | HistGradientBoostingRegressor |               0.77 |      0.83 |  3.06 |       0.17 |
+    | PoissonRegressor              |               0.77 |      0.83 |  3.11 |       0.01 |
+    | LGBMRegressor                 |               0.77 |      0.83 |  3.11 |       0.07 |
+    | KNeighborsRegressor           |               0.77 |      0.83 |  3.12 |       0.01 |
+    | DecisionTreeRegressor         |               0.65 |      0.74 |  3.79 |       0.01 |
+    | MLPRegressor                  |               0.65 |      0.74 |  3.80 |       1.63 |
+    | HuberRegressor                |               0.64 |      0.74 |  3.84 |       0.01 |
+    | GammaRegressor                |               0.64 |      0.73 |  3.88 |       0.01 |
+    | LinearSVR                     |               0.62 |      0.72 |  3.96 |       0.01 |
+    | RidgeCV                       |               0.62 |      0.72 |  3.97 |       0.01 |
+    | BayesianRidge                 |               0.62 |      0.72 |  3.97 |       0.01 |
+    | Ridge                         |               0.62 |      0.72 |  3.97 |       0.01 |
+    | TransformedTargetRegressor    |               0.62 |      0.72 |  3.97 |       0.01 |
+    | LinearRegression              |               0.62 |      0.72 |  3.97 |       0.01 |
+    | ElasticNetCV                  |               0.62 |      0.72 |  3.98 |       0.04 |
+    | LassoCV                       |               0.62 |      0.72 |  3.98 |       0.06 |
+    | LassoLarsIC                   |               0.62 |      0.72 |  3.98 |       0.01 |
+    | LassoLarsCV                   |               0.62 |      0.72 |  3.98 |       0.02 |
+    | Lars                          |               0.61 |      0.72 |  3.99 |       0.01 |
+    | LarsCV                        |               0.61 |      0.71 |  4.02 |       0.04 |
+    | SGDRegressor                  |               0.60 |      0.70 |  4.07 |       0.01 |
+    | TweedieRegressor              |               0.59 |      0.70 |  4.12 |       0.01 |
+    | GeneralizedLinearRegressor    |               0.59 |      0.70 |  4.12 |       0.01 |
+    | ElasticNet                    |               0.58 |      0.69 |  4.16 |       0.01 |
+    | Lasso                         |               0.54 |      0.66 |  4.35 |       0.02 |
+    | RANSACRegressor               |               0.53 |      0.65 |  4.41 |       0.04 |
+    | OrthogonalMatchingPursuitCV   |               0.45 |      0.59 |  4.78 |       0.02 |
+    | PassiveAggressiveRegressor    |               0.37 |      0.54 |  5.09 |       0.01 |
+    | GaussianProcessRegressor      |               0.23 |      0.43 |  5.65 |       0.03 |
+    | OrthogonalMatchingPursuit     |               0.16 |      0.38 |  5.89 |       0.01 |
+    | ExtraTreeRegressor            |               0.08 |      0.32 |  6.17 |       0.01 |
+    | DummyRegressor                |              -0.38 |     -0.02 |  7.56 |       0.01 |
+    | LassoLars                     |              -0.38 |     -0.02 |  7.56 |       0.01 |
+    | KernelRidge                   |             -11.50 |     -8.25 | 22.74 |       0.01 |
 
 
 .. warning::

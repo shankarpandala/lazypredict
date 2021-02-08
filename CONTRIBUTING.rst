@@ -69,6 +69,7 @@ Ready to contribute? Here's how to set up `lazypredict` for local development.
     $ mkvirtualenv lazypredict
     $ cd lazypredict/
     $ python setup.py develop
+    $ pip install -r requirements_dev.txt
 
 4. Create a branch for local development::
 

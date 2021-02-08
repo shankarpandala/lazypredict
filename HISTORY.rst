@@ -2,6 +2,18 @@
 History
 =======
 
+0.2.8 (2021-02-06)
+------------------
+
+* Removed StackingRegressor and CheckingClassifier.
+* Added provided_models method.
+* Added adjusted r-squared metric.
+* Added cardinality check to split categorical columns into low and high cardinality features. 
+* Added different transformation pipeline for low and high cardinality features.
+* Included all number dtypes as inputs.
+* Fixed dependencies.
+* Improved documentation.
+
 0.2.7 (2020-07-09)
 ------------------
 

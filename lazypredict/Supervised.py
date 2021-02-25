@@ -289,7 +289,7 @@ class LazyClassifier:
             try:
                 temp_list = []
                 for classifier in self.classifiers:
-                    full_name = (classifier.__class__.__name__, classifier)
+                    full_name = (classifier.__class__.__name__, classifier.__class__)
                     temp_list.append(full_name)
                 self.classifiers = temp_list
             except Exception as exception:
@@ -415,7 +415,7 @@ class LazyClassifier:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
@@ -528,7 +528,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = regressors 
+        self.regressors = regressors
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -583,7 +583,7 @@ class LazyRegressor:
             ]
         )
 
-        if self.regressors == "all": 
+        if self.regressors == "all":
             self.regressors = REGRESSORS
         else:
             try:
@@ -688,7 +688,7 @@ class LazyRegressor:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:

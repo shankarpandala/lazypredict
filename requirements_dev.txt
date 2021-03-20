@@ -11,7 +11,7 @@ gevent==20.6.2
 greenlet==1.0.0
 idna==2.10
 itsdangerous==1.1.0
-Jinja2==2.11.2
+Jinja2==2.11.3
 joblib==1.0.0
 lightgbm==2.3.1
 Mako==1.1.3

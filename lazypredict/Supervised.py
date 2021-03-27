@@ -278,11 +278,11 @@ class LazyClassifier:
                 X_train, categorical_features
             )
 
-            if categorical_low > 0:
+            if len(categorical_low) > 0:
                 transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
-            if categorical_high > 0:
+            if len(categorical_high) > 0:
                 transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
-
+        
         preprocessor = ColumnTransformer(transformers=transformers)
 
         if self.classifiers == "all":
@@ -580,9 +580,9 @@ class LazyRegressor:
                 X_train, categorical_features
             )
 
-            if categorical_low > 0:
+            if len(categorical_low) > 0:
                 transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
-            if categorical_high > 0:
+            if len(categorical_high) > 0:
                 transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
 
         preprocessor = ColumnTransformer(transformers=transformers)

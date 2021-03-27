@@ -260,9 +260,7 @@ class LazyClassifier:
         names = []
         TIME = []
         predictions = {}
-
-        if self.custom_metric is not None:
-            CUSTOM_METRIC = []
+        CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -271,17 +269,21 @@ class LazyClassifier:
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        categorical_low, categorical_high = get_card_split(
-            X_train, categorical_features
-        )
+        transformers = []
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
-            ]
-        )
+        if len(numeric_features) > 0:
+            transformers.append(("numeric", numeric_transformer, numeric_features))
+        if len(categorical_features) > 0:
+            categorical_low, categorical_high = get_card_split(
+                X_train, categorical_features
+            )
+
+            if categorical_low > 0:
+                transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
+            if categorical_high > 0:
+                transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
+
+        preprocessor = ColumnTransformer(transformers=transformers)
 
         if self.classifiers == "all":
             self.classifiers = CLASSIFIERS
@@ -560,9 +562,7 @@ class LazyRegressor:
         names = []
         TIME = []
         predictions = {}
-
-        if self.custom_metric:
-            CUSTOM_METRIC = []
+        CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -571,17 +571,21 @@ class LazyRegressor:
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        categorical_low, categorical_high = get_card_split(
-            X_train, categorical_features
-        )
+        transformers = []
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
-            ]
-        )
+        if len(numeric_features) > 0:
+            transformers.append(("numeric", numeric_transformer, numeric_features))
+        if len(categorical_features) > 0:
+            categorical_low, categorical_high = get_card_split(
+                X_train, categorical_features
+            )
+
+            if categorical_low > 0:
+                transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
+            if categorical_high > 0:
+                transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
+
+        preprocessor = ColumnTransformer(transformers=transformers)
 
         if self.regressors == "all": 
             self.regressors = REGRESSORS

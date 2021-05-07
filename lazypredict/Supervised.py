@@ -13,7 +13,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.utils.testing import all_estimators
+from sklearn.utils import all_estimators
 from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import (
@@ -38,23 +38,23 @@ CLASSIFIERS = [est for est in all_estimators() if issubclass(est[1], ClassifierM
 REGRESSORS = [est for est in all_estimators() if issubclass(est[1], RegressorMixin)]
 
 removed_classifiers = [
-    ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
+    # ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
     ("ClassifierChain", sklearn.multioutput.ClassifierChain),
     ("ComplementNB", sklearn.naive_bayes.ComplementNB),
     (
         "GradientBoostingClassifier",
-        sklearn.ensemble.gradient_boosting.GradientBoostingClassifier,
+        sklearn.ensemble.GradientBoostingClassifier,
     ),
     (
         "GaussianProcessClassifier",
-        sklearn.gaussian_process.gpc.GaussianProcessClassifier,
+        sklearn.gaussian_process.GaussianProcessClassifier,
     ),
     (
         "HistGradientBoostingClassifier",
         sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier,
     ),
-    ("MLPClassifier", sklearn.neural_network.multilayer_perceptron.MLPClassifier),
-    ("LogisticRegressionCV", sklearn.linear_model.logistic.LogisticRegressionCV),
+    ("MLPClassifier", sklearn.neural_network.MLPClassifier),
+    ("LogisticRegressionCV", sklearn.linear_model.LogisticRegressionCV),
     ("MultiOutputClassifier", sklearn.multioutput.MultiOutputClassifier),
     ("MultinomialNB", sklearn.naive_bayes.MultinomialNB),
     ("OneVsOneClassifier", sklearn.multiclass.OneVsOneClassifier),
@@ -62,13 +62,13 @@ removed_classifiers = [
     ("OutputCodeClassifier", sklearn.multiclass.OutputCodeClassifier),
     (
         "RadiusNeighborsClassifier",
-        sklearn.neighbors.classification.RadiusNeighborsClassifier,
+        sklearn.neighbors.RadiusNeighborsClassifier,
     ),
-    ("VotingClassifier", sklearn.ensemble.voting.VotingClassifier),
+    ("VotingClassifier", sklearn.ensemble.VotingClassifier),
 ]
 
 removed_regressors = [
-    ("TheilSenRegressor", sklearn.linear_model.theil_sen.TheilSenRegressor),
+    ("TheilSenRegressor", sklearn.linear_model.TheilSenRegressor),
     ("ARDRegression", sklearn.linear_model.ARDRegression),
     ("CCA", sklearn.cross_decomposition.CCA),
     ("IsotonicRegression", sklearn.isotonic.IsotonicRegression),
@@ -83,7 +83,7 @@ removed_regressors = [
     ("RadiusNeighborsRegressor", sklearn.neighbors.RadiusNeighborsRegressor),
     ("RegressorChain", sklearn.multioutput.RegressorChain),
     ("VotingRegressor", sklearn.ensemble.VotingRegressor),
-    ("_SigmoidCalibration", sklearn.calibration._SigmoidCalibration),
+    # ("_SigmoidCalibration", sklearn.calibration._SigmoidCalibration),
 ]
 
 for i in removed_regressors:
@@ -260,7 +260,9 @@ class LazyClassifier:
         names = []
         TIME = []
         predictions = {}
-        CUSTOM_METRIC = []
+
+        if self.custom_metric is not None:
+            CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -269,21 +271,17 @@ class LazyClassifier:
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        transformers = []
+        categorical_low, categorical_high = get_card_split(
+            X_train, categorical_features
+        )
 
-        if len(numeric_features) > 0:
-            transformers.append(("numeric", numeric_transformer, numeric_features))
-        if len(categorical_features) > 0:
-            categorical_low, categorical_high = get_card_split(
-                X_train, categorical_features
-            )
-
-            if len(categorical_low) > 0:
-                transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
-            if len(categorical_high) > 0:
-                transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
-        
-        preprocessor = ColumnTransformer(transformers=transformers)
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ("numeric", numeric_transformer, numeric_features),
+                ("categorical_low", categorical_transformer_low, categorical_low),
+                ("categorical_high", categorical_transformer_high, categorical_high),
+            ]
+        )
 
         if self.classifiers == "all":
             self.classifiers = CLASSIFIERS
@@ -291,7 +289,7 @@ class LazyClassifier:
             try:
                 temp_list = []
                 for classifier in self.classifiers:
-                    full_name = (classifier.__class__.__name__, classifier.__class__)
+                    full_name = (classifier.__class__.__name__, classifier)
                     temp_list.append(full_name)
                 self.classifiers = temp_list
             except Exception as exception:
@@ -417,7 +415,7 @@ class LazyClassifier:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value
+            Returns a dictionary with each model pipeline as value 
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
@@ -530,7 +528,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = regressors
+        self.regressors = regressors 
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -562,7 +560,9 @@ class LazyRegressor:
         names = []
         TIME = []
         predictions = {}
-        CUSTOM_METRIC = []
+
+        if self.custom_metric:
+            CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -571,23 +571,19 @@ class LazyRegressor:
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        transformers = []
+        categorical_low, categorical_high = get_card_split(
+            X_train, categorical_features
+        )
 
-        if len(numeric_features) > 0:
-            transformers.append(("numeric", numeric_transformer, numeric_features))
-        if len(categorical_features) > 0:
-            categorical_low, categorical_high = get_card_split(
-                X_train, categorical_features
-            )
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ("numeric", numeric_transformer, numeric_features),
+                ("categorical_low", categorical_transformer_low, categorical_low),
+                ("categorical_high", categorical_transformer_high, categorical_high),
+            ]
+        )
 
-            if len(categorical_low) > 0:
-                transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
-            if len(categorical_high) > 0:
-                transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
-
-        preprocessor = ColumnTransformer(transformers=transformers)
-
-        if self.regressors == "all":
+        if self.regressors == "all": 
             self.regressors = REGRESSORS
         else:
             try:
@@ -692,7 +688,7 @@ class LazyRegressor:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value
+            Returns a dictionary with each model pipeline as value 
             with key as name of models.
         """
         if len(self.models.keys()) == 0:

@@ -8,14 +8,12 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 import time
-import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.utils.testing import all_estimators
-from sklearn.base import RegressorMixin
-from sklearn.base import ClassifierMixin
+from sklearn.utils import all_estimators
+from sklearn.base import RegressorMixin, ClassifierMixin
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -34,63 +32,46 @@ warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
 pd.set_option("display.float_format", lambda x: "%.2f" % x)
 
-CLASSIFIERS = [est for est in all_estimators() if issubclass(est[1], ClassifierMixin)]
-REGRESSORS = [est for est in all_estimators() if issubclass(est[1], RegressorMixin)]
-
 removed_classifiers = [
-    ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
-    ("ClassifierChain", sklearn.multioutput.ClassifierChain),
-    ("ComplementNB", sklearn.naive_bayes.ComplementNB),
-    (
-        "GradientBoostingClassifier",
-        sklearn.ensemble.gradient_boosting.GradientBoostingClassifier,
-    ),
-    (
-        "GaussianProcessClassifier",
-        sklearn.gaussian_process.gpc.GaussianProcessClassifier,
-    ),
-    (
-        "HistGradientBoostingClassifier",
-        sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier,
-    ),
-    ("MLPClassifier", sklearn.neural_network.multilayer_perceptron.MLPClassifier),
-    ("LogisticRegressionCV", sklearn.linear_model.logistic.LogisticRegressionCV),
-    ("MultiOutputClassifier", sklearn.multioutput.MultiOutputClassifier),
-    ("MultinomialNB", sklearn.naive_bayes.MultinomialNB),
-    ("OneVsOneClassifier", sklearn.multiclass.OneVsOneClassifier),
-    ("OneVsRestClassifier", sklearn.multiclass.OneVsRestClassifier),
-    ("OutputCodeClassifier", sklearn.multiclass.OutputCodeClassifier),
-    (
-        "RadiusNeighborsClassifier",
-        sklearn.neighbors.classification.RadiusNeighborsClassifier,
-    ),
-    ("VotingClassifier", sklearn.ensemble.voting.VotingClassifier),
+    "ClassifierChain",
+    "ComplementNB",
+    "GradientBoostingClassifier",
+    "GaussianProcessClassifier",
+    "HistGradientBoostingClassifier",
+    "MLPClassifier",
+    "LogisticRegressionCV",
+    "MultiOutputClassifier",
+    "MultinomialNB",
+    "OneVsOneClassifier",
+    "OneVsRestClassifier",
+    "OutputCodeClassifier",
+    "RadiusNeighborsClassifier",
+    "VotingClassifier",
 ]
 
 removed_regressors = [
-    ("TheilSenRegressor", sklearn.linear_model.theil_sen.TheilSenRegressor),
-    ("ARDRegression", sklearn.linear_model.ARDRegression),
-    ("CCA", sklearn.cross_decomposition.CCA),
-    ("IsotonicRegression", sklearn.isotonic.IsotonicRegression),
-    ("StackingRegressor",sklearn.ensemble.StackingRegressor),
-    ("MultiOutputRegressor", sklearn.multioutput.MultiOutputRegressor),
-    ("MultiTaskElasticNet", sklearn.linear_model.MultiTaskElasticNet),
-    ("MultiTaskElasticNetCV", sklearn.linear_model.MultiTaskElasticNetCV),
-    ("MultiTaskLasso", sklearn.linear_model.MultiTaskLasso),
-    ("MultiTaskLassoCV", sklearn.linear_model.MultiTaskLassoCV),
-    ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
-    ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
-    ("RadiusNeighborsRegressor", sklearn.neighbors.RadiusNeighborsRegressor),
-    ("RegressorChain", sklearn.multioutput.RegressorChain),
-    ("VotingRegressor", sklearn.ensemble.VotingRegressor),
-    ("_SigmoidCalibration", sklearn.calibration._SigmoidCalibration),
+    "TheilSenRegressor",
+    "ARDRegression",
+    "CCA",
+    "IsotonicRegression",
+    "StackingRegressor",
+    "MultiOutputRegressor",
+    "MultiTaskElasticNet",
+    "MultiTaskElasticNetCV",
+    "MultiTaskLasso",
+    "MultiTaskLassoCV",
+    "PLSCanonical",
+    "PLSRegression",
+    "RadiusNeighborsRegressor",
+    "RegressorChain",
+    "VotingRegressor",
 ]
 
-for i in removed_regressors:
-    REGRESSORS.pop(REGRESSORS.index(i))
+CLASSIFIERS = [est for est in all_estimators() if
+               (issubclass(est[1], ClassifierMixin) and (est[0] not in removed_classifiers))]
 
-for i in removed_classifiers:
-    CLASSIFIERS.pop(CLASSIFIERS.index(i))
+REGRESSORS = [est for est in all_estimators() if
+              (issubclass(est[1], RegressorMixin) and (est[0] not in removed_regressors))]
 
 REGRESSORS.append(("XGBRegressor", xgboost.XGBRegressor))
 REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
@@ -282,7 +263,7 @@ class LazyClassifier:
                 transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
             if len(categorical_high) > 0:
                 transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
-        
+
         preprocessor = ColumnTransformer(transformers=transformers)
 
         if self.classifiers == "all":

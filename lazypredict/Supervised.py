@@ -8,7 +8,6 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 import time
-import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
@@ -33,9 +32,6 @@ import lightgbm
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
 pd.set_option("display.float_format", lambda x: "%.2f" % x)
-
-CLASSIFIERS = [est for est in all_estimators() if issubclass(est[1], ClassifierMixin)]
-REGRESSORS = [est for est in all_estimators() if issubclass(est[1], RegressorMixin)]
 
 removed_classifiers = [
     # ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
@@ -86,11 +82,11 @@ removed_regressors = [
     # ("_SigmoidCalibration", sklearn.calibration._SigmoidCalibration),
 ]
 
-for i in removed_regressors:
-    REGRESSORS.pop(REGRESSORS.index(i))
+CLASSIFIERS = [est for est in all_estimators() if
+               (issubclass(est[1], ClassifierMixin) and (est[0] not in removed_classifiers))]
 
-for i in removed_classifiers:
-    CLASSIFIERS.pop(CLASSIFIERS.index(i))
+REGRESSORS = [est for est in all_estimators() if
+              (issubclass(est[1], RegressorMixin) and (est[0] not in removed_regressors))]
 
 REGRESSORS.append(("XGBRegressor", xgboost.XGBRegressor))
 REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))

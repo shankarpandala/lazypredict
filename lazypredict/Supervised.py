@@ -13,7 +13,8 @@ from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.utils import all_estimators
-from sklearn.base import RegressorMixin, ClassifierMixin
+from sklearn.base import RegressorMixin
+from sklearn.base import ClassifierMixin
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -33,38 +34,52 @@ pd.set_option("display.precision", 2)
 pd.set_option("display.float_format", lambda x: "%.2f" % x)
 
 removed_classifiers = [
-    "ClassifierChain",
-    "ComplementNB",
-    "GradientBoostingClassifier",
-    "GaussianProcessClassifier",
-    "HistGradientBoostingClassifier",
-    "MLPClassifier",
-    "LogisticRegressionCV",
-    "MultiOutputClassifier",
-    "MultinomialNB",
-    "OneVsOneClassifier",
-    "OneVsRestClassifier",
-    "OutputCodeClassifier",
-    "RadiusNeighborsClassifier",
-    "VotingClassifier",
+    # ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
+    ("ClassifierChain", sklearn.multioutput.ClassifierChain),
+    ("ComplementNB", sklearn.naive_bayes.ComplementNB),
+    (
+        "GradientBoostingClassifier",
+        sklearn.ensemble.GradientBoostingClassifier,
+    ),
+    (
+        "GaussianProcessClassifier",
+        sklearn.gaussian_process.GaussianProcessClassifier,
+    ),
+    (
+        "HistGradientBoostingClassifier",
+        sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier,
+    ),
+    ("MLPClassifier", sklearn.neural_network.MLPClassifier),
+    ("LogisticRegressionCV", sklearn.linear_model.LogisticRegressionCV),
+    ("MultiOutputClassifier", sklearn.multioutput.MultiOutputClassifier),
+    ("MultinomialNB", sklearn.naive_bayes.MultinomialNB),
+    ("OneVsOneClassifier", sklearn.multiclass.OneVsOneClassifier),
+    ("OneVsRestClassifier", sklearn.multiclass.OneVsRestClassifier),
+    ("OutputCodeClassifier", sklearn.multiclass.OutputCodeClassifier),
+    (
+        "RadiusNeighborsClassifier",
+        sklearn.neighbors.RadiusNeighborsClassifier,
+    ),
+    ("VotingClassifier", sklearn.ensemble.VotingClassifier),
 ]
 
 removed_regressors = [
-    "TheilSenRegressor",
-    "ARDRegression",
-    "CCA",
-    "IsotonicRegression",
-    "StackingRegressor",
-    "MultiOutputRegressor",
-    "MultiTaskElasticNet",
-    "MultiTaskElasticNetCV",
-    "MultiTaskLasso",
-    "MultiTaskLassoCV",
-    "PLSCanonical",
-    "PLSRegression",
-    "RadiusNeighborsRegressor",
-    "RegressorChain",
-    "VotingRegressor",
+    ("TheilSenRegressor", sklearn.linear_model.TheilSenRegressor),
+    ("ARDRegression", sklearn.linear_model.ARDRegression),
+    ("CCA", sklearn.cross_decomposition.CCA),
+    ("IsotonicRegression", sklearn.isotonic.IsotonicRegression),
+    ("StackingRegressor",sklearn.ensemble.StackingRegressor),
+    ("MultiOutputRegressor", sklearn.multioutput.MultiOutputRegressor),
+    ("MultiTaskElasticNet", sklearn.linear_model.MultiTaskElasticNet),
+    ("MultiTaskElasticNetCV", sklearn.linear_model.MultiTaskElasticNetCV),
+    ("MultiTaskLasso", sklearn.linear_model.MultiTaskLasso),
+    ("MultiTaskLassoCV", sklearn.linear_model.MultiTaskLassoCV),
+    ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
+    ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
+    ("RadiusNeighborsRegressor", sklearn.neighbors.RadiusNeighborsRegressor),
+    ("RegressorChain", sklearn.multioutput.RegressorChain),
+    ("VotingRegressor", sklearn.ensemble.VotingRegressor),
+    # ("_SigmoidCalibration", sklearn.calibration._SigmoidCalibration),
 ]
 
 CLASSIFIERS = [est for est in all_estimators() if
@@ -241,7 +256,9 @@ class LazyClassifier:
         names = []
         TIME = []
         predictions = {}
-        CUSTOM_METRIC = []
+
+        if self.custom_metric is not None:
+            CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -250,21 +267,17 @@ class LazyClassifier:
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        transformers = []
+        categorical_low, categorical_high = get_card_split(
+            X_train, categorical_features
+        )
 
-        if len(numeric_features) > 0:
-            transformers.append(("numeric", numeric_transformer, numeric_features))
-        if len(categorical_features) > 0:
-            categorical_low, categorical_high = get_card_split(
-                X_train, categorical_features
-            )
-
-            if len(categorical_low) > 0:
-                transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
-            if len(categorical_high) > 0:
-                transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
-
-        preprocessor = ColumnTransformer(transformers=transformers)
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ("numeric", numeric_transformer, numeric_features),
+                ("categorical_low", categorical_transformer_low, categorical_low),
+                ("categorical_high", categorical_transformer_high, categorical_high),
+            ]
+        )
 
         if self.classifiers == "all":
             self.classifiers = CLASSIFIERS
@@ -272,7 +285,7 @@ class LazyClassifier:
             try:
                 temp_list = []
                 for classifier in self.classifiers:
-                    full_name = (classifier.__class__.__name__, classifier.__class__)
+                    full_name = (classifier.__class__.__name__, classifier)
                     temp_list.append(full_name)
                 self.classifiers = temp_list
             except Exception as exception:
@@ -398,7 +411,7 @@ class LazyClassifier:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value
+            Returns a dictionary with each model pipeline as value 
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
@@ -511,7 +524,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = regressors
+        self.regressors = regressors 
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -543,7 +556,9 @@ class LazyRegressor:
         names = []
         TIME = []
         predictions = {}
-        CUSTOM_METRIC = []
+
+        if self.custom_metric:
+            CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -552,23 +567,19 @@ class LazyRegressor:
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        transformers = []
+        categorical_low, categorical_high = get_card_split(
+            X_train, categorical_features
+        )
 
-        if len(numeric_features) > 0:
-            transformers.append(("numeric", numeric_transformer, numeric_features))
-        if len(categorical_features) > 0:
-            categorical_low, categorical_high = get_card_split(
-                X_train, categorical_features
-            )
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ("numeric", numeric_transformer, numeric_features),
+                ("categorical_low", categorical_transformer_low, categorical_low),
+                ("categorical_high", categorical_transformer_high, categorical_high),
+            ]
+        )
 
-            if len(categorical_low) > 0:
-                transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
-            if len(categorical_high) > 0:
-                transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
-
-        preprocessor = ColumnTransformer(transformers=transformers)
-
-        if self.regressors == "all":
+        if self.regressors == "all": 
             self.regressors = REGRESSORS
         else:
             try:
@@ -673,7 +684,7 @@ class LazyRegressor:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value
+            Returns a dictionary with each model pipeline as value 
             with key as name of models.
         """
         if len(self.models.keys()) == 0:

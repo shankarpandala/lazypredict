@@ -8,6 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 import time
+import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
@@ -25,9 +26,15 @@ from sklearn.metrics import (
 )
 import warnings
 import xgboost
-
 # import catboost
+from catboost import CatBoostRegressor
+
 import lightgbm
+import sklearn.multioutput
+import sklearn.naive_bayes
+import sklearn.ensemble
+import sklearn.gaussian_process
+
 
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
@@ -62,7 +69,6 @@ removed_classifiers = [
     ),
     ("VotingClassifier", sklearn.ensemble.VotingClassifier),
 ]
-
 removed_regressors = [
     ("TheilSenRegressor", sklearn.linear_model.TheilSenRegressor),
     ("ARDRegression", sklearn.linear_model.ARDRegression),
@@ -84,7 +90,6 @@ removed_regressors = [
 
 CLASSIFIERS = [est for est in all_estimators() if
                (issubclass(est[1], ClassifierMixin) and (est[0] not in removed_classifiers))]
-
 REGRESSORS = [est for est in all_estimators() if
               (issubclass(est[1], RegressorMixin) and (est[0] not in removed_regressors))]
 
@@ -95,6 +100,26 @@ REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
 CLASSIFIERS.append(("XGBClassifier", xgboost.XGBClassifier))
 CLASSIFIERS.append(("LGBMClassifier", lightgbm.LGBMClassifier))
 # CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
+
+# REGRESSORS=[('Linear regression', sklearn.linear_model._base.LinearRegression),
+#       ('AdaBoostRegressor', sklearn.ensemble._weight_boosting.AdaBoostRegressor),
+#       ('Support vector machine', sklearn.svm._classes.SVR),
+#       ('NuSVR', sklearn.svm._classes.NuSVR),
+#       ('LinearSVR', sklearn.svm._classes.LinearSVR),
+#       ('BaggingRegressor', sklearn.ensemble._bagging.BaggingRegressor),
+#       ('Decision tree',sklearn.tree._classes.DecisionTreeRegressor),
+#       ('Random forest', sklearn.ensemble._forest.RandomForestRegressor),
+#       ('Gradient boosting Regressor', sklearn.ensemble._gb.GradientBoostingRegressor),
+#       ('LightGBM', lightgbm.LGBMRegressor),
+#       ('XGBoost', xgboost.XGBRegressor),
+#       ('ExtraTreesRegressor', sklearn.ensemble._forest.ExtraTreesRegressor),
+#       ('KNeighborsRegressor', sklearn.neighbors._regression.KNeighborsRegressor),
+#       ('Lasso Regression',sklearn.linear_model.Lasso),
+#       ('Ridge Regression', sklearn.linear_model.Ridge),
+#       ('CatboostRegressor', CatBoostRegressor),
+      
+# ]
+
 
 numeric_transformer = Pipeline(
     steps=[("imputer", SimpleImputer(strategy="mean")), ("scaler", StandardScaler())]
@@ -142,6 +167,246 @@ def get_card_split(df, cols, n=11):
     card_low = cols[~cond]
     return card_low, card_high
 
+
+# metrics function
+def adjusted_rsquared(r2, n, p):
+    return 1 - (1-r2) * ((n-1) / (n-p-1))
+
+def bias(evaluation, simulation):
+    if (len(evaluation) == len(simulation)):
+        obs, sim = np.array(evaluation), np.array(simulation)
+        bias = np.nansum(obs - sim) / len(obs)
+        return float(bias)
+
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def pbias(evaluation, simulation):    
+    if len(evaluation) == len(simulation):
+        sim = np.array(simulation)
+        obs = np.array(evaluation)
+        return 100 * (float(np.nansum(sim - obs)) / float(np.nansum(obs)))
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def nashsutcliffe(evaluation, simulation):    
+    if len(evaluation) == len(simulation):
+        s, e = np.array(simulation), np.array(evaluation)
+        # s,e=simulation,evaluation
+        mean_observed = np.nanmean(e)
+        # compute numerator and denominator
+        numerator = np.nansum((e - s) ** 2)
+        denominator = np.nansum((e - mean_observed)**2)
+        # compute coefficient
+        return 1 - (numerator / denominator)
+
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def lognashsutcliffe(evaluation, simulation, epsilon=0):
+    
+    if len(evaluation) == len(simulation):
+        s, e = np.array(simulation)+epsilon, np.array(evaluation)+epsilon
+        return float(1 - sum((np.log(s) - np.log(e))**2) / sum((np.log(e) - np.mean(np.log(e)))**2))
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def log_p(evaluation, simulation):
+    scale = np.mean(evaluation) / 10
+    if scale < .01:
+        scale = .01
+    if len(evaluation) == len(simulation):
+        y = (np.array(evaluation) - np.array(simulation)) / scale
+        normpdf = -y**2 / 2 - np.log(np.sqrt(2 * np.pi))
+        return np.mean(normpdf)
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def correlationcoefficient(evaluation, simulation):    
+    if len(evaluation) == len(simulation):
+        correlation_coefficient = np.corrcoef(evaluation, simulation)[0, 1]
+        return correlation_coefficient
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def rsquared(evaluation, simulation):
+    
+    if len(evaluation) == len(simulation):
+        return (correlationcoefficient(evaluation, simulation)**2)
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def mse(evaluation, simulation):
+
+    if len(evaluation) == len(simulation):
+        obs, sim = np.array(evaluation), np.array(simulation)
+        mse = np.nanmean((obs - sim)**2)
+        return mse
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def rmse(evaluation, simulation):
+    
+    if len(evaluation) == len(simulation) > 0:
+        return np.sqrt(mse(evaluation, simulation))
+    else:
+        logging.warning("evaluation and simulation lists do not have the same length.")
+        return np.nan
+
+
+def mae(evaluation, simulation):
+    
+    if len(evaluation) == len(simulation) > 0:
+        obs, sim = np.array(evaluation), np.array(simulation)
+        mae = np.mean(np.abs(sim - obs))
+        return mae
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def rrmse(evaluation, simulation):
+    """Relative Root Mean Squared Error"""
+
+    if len(evaluation) == len(simulation):
+        rrmse = rmse(evaluation, simulation) / np.mean(evaluation)
+        return rrmse
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def agreementindex(evaluation, simulation):
+    
+    if len(evaluation) == len(simulation):
+        simulation, evaluation = np.array(simulation), np.array(evaluation)
+        Agreement_index = 1 - (np.sum((evaluation - simulation)**2)) / (np.sum(
+            (np.abs(simulation - np.mean(evaluation)) + np.abs(evaluation - np.mean(evaluation)))**2))
+        return Agreement_index
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def covariance(evaluation, simulation):
+    
+    if len(evaluation) == len(simulation):
+        obs, sim = np.array(evaluation), np.array(simulation)
+        obs_mean = np.mean(obs)
+        sim_mean = np.mean(sim)
+        covariance = np.mean((obs - obs_mean)*(sim - sim_mean))
+        return covariance
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def decomposed_mse(evaluation, simulation):
+
+    if len(evaluation) == len(simulation):
+        e_std = np.std(evaluation)
+        s_std = np.std(simulation)
+
+        bias_squared = bias(evaluation, simulation)**2
+        sdsd = (e_std - s_std)**2
+        lcs = 2 * e_std * s_std * (1 - correlationcoefficient(evaluation, simulation))
+
+        decomposed_mse = bias_squared + sdsd + lcs
+
+        return decomposed_mse
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def kge(evaluation, simulation, return_all=False):
+    
+    if len(evaluation) == len(simulation):
+        cc = np.corrcoef(evaluation, simulation)[0, 1]
+        alpha = np.std(simulation) / np.std(evaluation)
+        beta = np.sum(simulation) / np.sum(evaluation)
+        kge = 1 - np.sqrt((cc - 1)**2 + (alpha - 1)**2 + (beta - 1)**2)
+        if return_all:
+            return kge, cc, alpha, beta
+        else:
+            return kge
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+def _spearmann_corr(x, y):
+    
+    col = [list(a) for a in zip(x, y)]
+    xy = sorted(col, key=lambda x: x[0], reverse=False)
+    # rang of x-value
+    for i, row in enumerate(xy):
+        row.append(i+1)
+
+    a = sorted(xy, key=lambda x: x[1], reverse=False)
+    # rang of y-value
+    for i, row in enumerate(a):
+        row.append(i+1)
+
+    MW_rank_x = np.nanmean(np.array(a)[:,2])
+    MW_rank_y = np.nanmean(np.array(a)[:,3])
+
+    numerator = np.nansum([float((a[j][2]-MW_rank_x)*(a[j][3]-MW_rank_y)) for j in range(len(a))])
+    denominator1 = np.sqrt(np.nansum([(a[j][2]-MW_rank_x)**2. for j in range(len(a))]))
+    denominator2 = np.sqrt(np.nansum([(a[j][3]-MW_rank_x)**2. for j in range(len(a))]))
+    return float(numerator/(denominator1*denominator2))
+
+def kge_non_parametric(evaluation, simulation, return_all=False):
+    
+    if len(evaluation) == len(simulation):
+        
+        cc = _spearmann_corr(evaluation, simulation)
+
+        fdc_sim = np.sort(simulation / (np.nanmean(simulation)*len(simulation)))
+        fdc_obs = np.sort(evaluation / (np.nanmean(evaluation)*len(evaluation)))
+        alpha = 1 - 0.5 * np.nanmean(np.abs(fdc_sim - fdc_obs))
+
+        beta = np.mean(simulation) / np.mean(evaluation)
+        kge = 1 - np.sqrt((cc - 1)**2 + (alpha - 1)**2 + (beta - 1)**2)
+        if return_all:
+            return kge, cc, alpha, beta
+        else:
+            return kge
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+def rsr(evaluation, simulation):
+    if len(evaluation) == len(simulation):
+        rsr = rmse(evaluation, simulation) / np.std(evaluation)
+        return rsr
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
+
+
+def volume_error(evaluation, simulation):
+    if len(evaluation) == len(simulation):
+        ve = np.sum(simulation - evaluation) / np.sum(evaluation)
+        return float(ve)
+    else:
+        logging.warning("evaluation and simulation lists does not have the same length.")
+        return np.nan
 
 # Helper class for performing classification
 
@@ -509,12 +774,13 @@ class LazyRegressor:
     | KernelRidge                   |             -11.50 |     -8.25 | 22.74 |       0.01 |
     """
 
+ 
     def __init__(
         self,
-        verbose=0,
+        verbose=False,
         ignore_warnings=True,
         custom_metric=None,
-        predictions=False,
+        predictions=True,
         random_state=42,
         regressors="all",
     ):
@@ -524,7 +790,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = regressors 
+        self.regressors = regressors
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -549,16 +815,34 @@ class LazyRegressor:
         predictions : Pandas DataFrame
             Returns predictions of all the models in a Pandas DataFrame.
         """
+        actual=[]
+        pred=[]
         R2 = []
         ADJR2 = []
         RMSE = []
+        MSE2= []
+        MAE2= []
         # WIN = []
         names = []
         TIME = []
+        correlationcoeff=[]
         predictions = {}
+        CUSTOM_METRIC = []
+        decomp_mse= []
+        rr_mse=[]
+        co_var=[] 
+        bi_as= []
+        r_sr= []
+        k_ge= []
+        p_bias = []
+        l_ogp= []
+        volume_err= []
+        agree_index= []
+        log_nashsutcliffe= []
+        nash_sutcliffe= [] 
+        k=1
+        
 
-        if self.custom_metric:
-            CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -567,19 +851,23 @@ class LazyRegressor:
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        categorical_low, categorical_high = get_card_split(
-            X_train, categorical_features
-        )
+        transformers = []
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
-            ]
-        )
+        if len(numeric_features) > 0:
+            transformers.append(("numeric", numeric_transformer, numeric_features))
+        if len(categorical_features) > 0:
+            categorical_low, categorical_high = get_card_split(
+                X_train, categorical_features
+            )
 
-        if self.regressors == "all": 
+            if len(categorical_low) > 0:
+                transformers.append(("categorical_low", categorical_transformer_low, categorical_low))
+            if len(categorical_high) > 0:
+                transformers.append(("categorical_high", categorical_transformer_high, categorical_high))
+
+        preprocessor = ColumnTransformer(transformers=transformers)
+
+        if self.regressors == "all":
             self.regressors = REGRESSORS
         else:
             try:
@@ -611,15 +899,55 @@ class LazyRegressor:
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
 
-                r_squared = r2_score(y_test, y_pred)
-                adj_rsquared = adjusted_rsquared(r_squared, X_test.shape[0], X_test.shape[1])
-                rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 
+                r_squared = round( r2_score(y_test, y_pred), 3)
+                mean_sq=round(mean_squared_error(y_test,y_pred) , 3)
+                adj_rsquared = adjusted_rsquared(r_squared, X_test.shape[0], X_test.shape[1])
+                rmse = round( np.sqrt(mean_squared_error(y_test, y_pred)), 3)
+                mean_abs=mae(y_test,y_pred)
+                covar= covariance(y_test, y_pred)
+                r2mse=rrmse(y_test,y_pred)
+                bia=bias(y_test,y_pred)
+                corr=correlationcoefficient(y_test,y_pred)
+                decompmse= decomposed_mse(y_test,y_pred)
+                r_s_r=rsr(y_test,y_pred)
+                k_g_e =kge(y_test,y_pred)
+                p_b_ias=pbias(y_test,y_pred)
+                l_o_gp = log_p(y_test,y_pred)
+                vol_err= volume_error(y_test,y_pred)
+                agreeindex=agreementindex(y_test, y_pred)
+                lognashcl= lognashsutcliffe(y_test,y_pred)
+                nascl= nashsutcliffe(y_test,y_pred)
+
+                
+
+                actual.append(y_test)
+                pred.append(y_pred)
                 names.append(name)
                 R2.append(r_squared)
                 ADJR2.append(adj_rsquared)
                 RMSE.append(rmse)
-                TIME.append(time.time() - start)
+                MSE2.append(mean_sq)
+                MAE2.append(mean_abs)
+                co_var.append(covar)
+                rr_mse.append(r2mse)
+                bi_as.append(bia)
+                correlationcoeff.append(corr)
+                decomp_mse.append(decompmse)
+                r_sr.append(r_s_r)
+                k_ge.append(k_g_e)
+                p_bias.append(p_b_ias)
+                l_ogp.append(l_o_gp)
+                volume_err.append(vol_err)
+                agree_index.append(agreeindex)
+                log_nashsutcliffe.append(lognashcl)
+                nash_sutcliffe.append(nascl)
+
+
+                # aggrement_index.append(aggrement_index)
+                
+                dur= round( time.time() - start, 3)
+                TIME.append(dur )
 
                 if self.custom_metric:
                     custom_metric = self.custom_metric(y_test, y_pred)
@@ -628,10 +956,29 @@ class LazyRegressor:
                 if self.verbose > 0:
                     scores_verbose = {
                         "Model": name,
+                        # "Actual":y_test,
+                        # "Predicted(U)":y_pred,
                         "R-Squared": r_squared,
                         "Adjusted R-Squared": adj_rsquared,
                         "RMSE": rmse,
-                        "Time taken": time.time() - start,
+                        "MSE":mean_sq,
+                        "MAE":mean_abs,
+                        "Correlation": corr,
+                        "Covariance": covar,
+                        "Decomposed MSE": decompmse,
+                        "Realtive RMSE": r2mse,
+                        "Bias":bia,
+                        "RMSE S.D ratio":r_s_r,
+                        "Pbias": p_b_ias,
+                        "LogP": l_o_gp,
+                        "Volume Error": vol_err,
+                        "Agreement Index": agreeindex,
+                        "LogNashsutCliffe": lognashcl,
+                        "NashSutCliffe": nascl,
+                        
+
+                        "KGE":k_g_e,
+                        "Time taken": round( time.time() - start, 3),
                     }
 
                     if self.custom_metric:
@@ -647,9 +994,30 @@ class LazyRegressor:
 
         scores = {
             "Model": names,
+            # "Actual": actual,
+            # "Predicted":pred,
             "Adjusted R-Squared": ADJR2,
             "R-Squared": R2,
             "RMSE": RMSE,
+            "MSE":MSE2,
+            "MAE":MAE2,
+            "Covariance": co_var,
+            "Relative RMSE": rr_mse,
+            "Decomposed MSE": decomp_mse,
+            "Bias": bi_as,
+            "RMSE S.D ratio":r_sr,
+            "Pbias": p_bias,
+            "LogP": l_ogp,
+            "Volume Error": volume_err,
+            "KGE": k_ge,
+            "Correlation coeff":correlationcoeff,
+            "Agreement Index": agree_index,
+            "NashSutCliffe": nash_sutcliffe,
+            "LogNashsutCliffe": log_nashsutcliffe,
+            
+
+          
+            # "Bias":bias,
             "Time Taken": TIME
         }
 
@@ -684,14 +1052,13 @@ class LazyRegressor:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
             self.fit(X_train,X_test,y_train,y_test)
 
         return self.models
-
 
 Regression = LazyRegressor
 Classification = LazyClassifier

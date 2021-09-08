@@ -19,7 +19,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.naive_bayes import (ComplementNB, MultinomialNB)
 from sklearn.multioutput import ClassifierChain
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import HistGradientBoostingClassifier
+# from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.isotonic import IsotonicRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.cross_decomposition import CCA
@@ -56,10 +56,10 @@ removed_classifiers = [
         "GaussianProcessClassifier",
         GaussianProcessClassifier,
     ),
-    (
-        "HistGradientBoostingClassifier",
-        HistGradientBoostingClassifier,
-    ),
+    # (
+    #     "HistGradientBoostingClassifier",
+    #     HistGradientBoostingClassifier,
+    # ),
     ("MLPClassifier", MLPClassifier),
     ("LogisticRegressionCV", sklearn.linear_model.LogisticRegressionCV),
     ("MultiOutputClassifier", sklearn.multioutput.MultiOutputClassifier),
@@ -85,8 +85,8 @@ removed_regressors = [
     ("MultiTaskElasticNetCV", sklearn.linear_model.MultiTaskElasticNetCV),
     ("MultiTaskLasso", sklearn.linear_model.MultiTaskLasso),
     ("MultiTaskLassoCV", sklearn.linear_model.MultiTaskLassoCV),
-    # ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
-    # ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
+    ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
+    ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
     ("RadiusNeighborsRegressor", sklearn.neighbors.RadiusNeighborsRegressor),
     ("RegressorChain", sklearn.multioutput.RegressorChain),
     ("VotingRegressor", sklearn.ensemble.VotingRegressor),

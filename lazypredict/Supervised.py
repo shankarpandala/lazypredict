@@ -15,6 +15,15 @@ from sklearn.compose import ColumnTransformer
 from sklearn.utils import all_estimators
 from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
+from sklearn.multioutput import MultiOutputRegressor
+from sklearn.naive_bayes import (ComplementNB, MultinomialNB)
+from sklearn.multioutput import ClassifierChain
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.isotonic import IsotonicRegression
+from sklearn.neural_network import MLPClassifier
+from sklearn.cross_decomposition import CCA
+from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -23,6 +32,8 @@ from sklearn.metrics import (
     r2_score,
     mean_squared_error,
 )
+import sklearn
+from sklearn.utils._testing import ignore_warnings
 import warnings
 import xgboost
 
@@ -35,24 +46,24 @@ pd.set_option("display.float_format", lambda x: "%.2f" % x)
 
 removed_classifiers = [
     # ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
-    ("ClassifierChain", sklearn.multioutput.ClassifierChain),
-    ("ComplementNB", sklearn.naive_bayes.ComplementNB),
+    ("ClassifierChain", ClassifierChain),
+    ("ComplementNB", ComplementNB),
     (
         "GradientBoostingClassifier",
-        sklearn.ensemble.GradientBoostingClassifier,
+        GradientBoostingClassifier,
     ),
     (
         "GaussianProcessClassifier",
-        sklearn.gaussian_process.GaussianProcessClassifier,
+        GaussianProcessClassifier,
     ),
     (
         "HistGradientBoostingClassifier",
-        sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier,
+        HistGradientBoostingClassifier,
     ),
-    ("MLPClassifier", sklearn.neural_network.MLPClassifier),
+    ("MLPClassifier", MLPClassifier),
     ("LogisticRegressionCV", sklearn.linear_model.LogisticRegressionCV),
     ("MultiOutputClassifier", sklearn.multioutput.MultiOutputClassifier),
-    ("MultinomialNB", sklearn.naive_bayes.MultinomialNB),
+    ("MultinomialNB", MultinomialNB),
     ("OneVsOneClassifier", sklearn.multiclass.OneVsOneClassifier),
     ("OneVsRestClassifier", sklearn.multiclass.OneVsRestClassifier),
     ("OutputCodeClassifier", sklearn.multiclass.OutputCodeClassifier),
@@ -66,16 +77,16 @@ removed_classifiers = [
 removed_regressors = [
     ("TheilSenRegressor", sklearn.linear_model.TheilSenRegressor),
     ("ARDRegression", sklearn.linear_model.ARDRegression),
-    ("CCA", sklearn.cross_decomposition.CCA),
+    ("CCA", CCA),
     ("IsotonicRegression", sklearn.isotonic.IsotonicRegression),
     ("StackingRegressor",sklearn.ensemble.StackingRegressor),
-    ("MultiOutputRegressor", sklearn.multioutput.MultiOutputRegressor),
+    ("MultiOutputRegressor", MultiOutputRegressor),
     ("MultiTaskElasticNet", sklearn.linear_model.MultiTaskElasticNet),
     ("MultiTaskElasticNetCV", sklearn.linear_model.MultiTaskElasticNetCV),
     ("MultiTaskLasso", sklearn.linear_model.MultiTaskLasso),
     ("MultiTaskLassoCV", sklearn.linear_model.MultiTaskLassoCV),
-    ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
-    ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
+    # ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
+    # ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
     ("RadiusNeighborsRegressor", sklearn.neighbors.RadiusNeighborsRegressor),
     ("RegressorChain", sklearn.multioutput.RegressorChain),
     ("VotingRegressor", sklearn.ensemble.VotingRegressor),

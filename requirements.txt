@@ -4,7 +4,7 @@ lightgbm==2.3.1
 numpy==1.19.1
 pandas==1.0.5
 pytest==5.4.3
-PyYAML==5.3.1
+PyYAML==5.4
 scikit-learn==0.23.1
 scipy==1.5.4
 six==1.15.0

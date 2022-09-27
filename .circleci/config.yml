@@ -1,27 +1,26 @@
-os:
-  - linux
-  - osx
-  - windows
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
 
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  allow_failures:
-    # - os: osx
-    # - os: windows
+  say-hello:
+    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+    docker:
+      - image: cimg/base:stable
+    # Add steps to the job
+    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+    steps:
+      - checkout
+      - run:
+          name: "Say hello"
+          command: "echo Hello, World!"
 
-language: python
-python:
-- 3.8
-
-install: pip install -U tox-travis
-script: tox
-deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  skip_existing: true
-  user: __token__
-  password:
-    secure: lDbbKlxoBx1Q2FHlTAETm1J/p3UDzTXkWlkStmJ4f4+URVpg+mIYS24qIljTkPY01ViRA4gt9XRS8D4l4OjAP6hpJZNGhUCAEvnVJk7g2xSCiRWLwy+UjuSjCCE9P1ZeYBxJ1qNA1RsBFso6fSSP0taMyPnGMxBIUUKTCfnicqbJYoMJulxhYDzWFzKtMSEhrmpStPEJ0YHufbmmhIxbMiQ8HRAL6RefoVx4rTMk+n+wseHRr69iIvvFRyK6ocwndiXbu/uiiGyQoEw0y3KwIBv55O+VSJzI+DHoDefDjUv4ol/CZ02LQEZAhpWLDHYBrCNFWmvii3wtxDO1h4Lpe4QAUptJxT/6jGDn0+gN2rD1yCvP9g/w/Xy/aFU/McLqi/vNXU/8UOtQ+qSSm5PMCdaasRu6rk0//6bo9Fir4v7Ww5AycWznDagR6pcyrRNQar4mVzwbx0PKzDmLYqnuaNcnRVxDVcv/j571l6oZUJL/ry+HYir+fbnvkPGwDBbwRpp8BlyJ6JWtdVvX2Fe81UTXB9NMFAHqLiOsmV5TVOAeGhlicfbv+OqGLb+aeulWSuiENUPQ51YGZdaEdOZYvg3y+zWx62QUORxbF2mqK8CpPyDqT7owDjjtgHyVnjnuPR5YG+i/3ruAGRpB678UNz1bghDTSMgyXf+9ylqHEWg=
-  on:
-    tags: true
-    repo: shankarpandala/lazypredict
-    python: 3.8
+# Invoke jobs via workflows
+# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+workflows:
+  say-hello-workflow:
+    jobs:
+      - say-hello

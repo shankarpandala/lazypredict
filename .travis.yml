@@ -5,8 +5,8 @@ os:
 
 jobs:
   allow_failures:
-    - os: osx
-    - os: windows
+    # - os: osx
+    # - os: windows
 
 language: python
 python:

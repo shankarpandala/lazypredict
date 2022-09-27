@@ -147,7 +147,7 @@ class LazyClassifier:
         For the liblinear and lbfgs solvers set verbose to any positive
         number for verbosity.
     ignore_warnings : bool, optional (default=True)
-        When set to True, the warning related to algorigms that are not able to run are ignored.
+        When set to True, the warning related to algorithms that are not able to run are ignored.
     custom_metric : function, optional (default=None)
         When function is provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)
@@ -429,7 +429,7 @@ class LazyRegressor:
         For the liblinear and lbfgs solvers set verbose to any positive
         number for verbosity.
     ignore_warnings : bool, optional (default=True)
-        When set to True, the warning related to algorigms that are not able to run are ignored.
+        When set to True, the warning related to algorithms that are not able to run are ignored.
     custom_metric : function, optional (default=None)
         When function is provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)

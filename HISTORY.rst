@@ -2,6 +2,12 @@
 History
 =======
 
+0.2.10 (2022-02-06)
+------------------
+
+* Fixed issue with older version of Scikit-learn
+* Reduced dependencies sctrictly to few 
+
 0.2.8 (2021-02-06)
 ------------------
 

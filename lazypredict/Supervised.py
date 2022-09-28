@@ -8,12 +8,11 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 import time
-import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.utils.testing import all_estimators
+from sklearn.utils import all_estimators
 from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import (
@@ -34,63 +33,52 @@ warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
 pd.set_option("display.float_format", lambda x: "%.2f" % x)
 
-CLASSIFIERS = [est for est in all_estimators() if issubclass(est[1], ClassifierMixin)]
-REGRESSORS = [est for est in all_estimators() if issubclass(est[1], RegressorMixin)]
-
 removed_classifiers = [
-    ("CheckingClassifier", sklearn.utils._mocking.CheckingClassifier),
-    ("ClassifierChain", sklearn.multioutput.ClassifierChain),
-    ("ComplementNB", sklearn.naive_bayes.ComplementNB),
-    (
-        "GradientBoostingClassifier",
-        sklearn.ensemble.gradient_boosting.GradientBoostingClassifier,
-    ),
-    (
-        "GaussianProcessClassifier",
-        sklearn.gaussian_process.gpc.GaussianProcessClassifier,
-    ),
-    (
-        "HistGradientBoostingClassifier",
-        sklearn.ensemble._hist_gradient_boosting.gradient_boosting.HistGradientBoostingClassifier,
-    ),
-    ("MLPClassifier", sklearn.neural_network.multilayer_perceptron.MLPClassifier),
-    ("LogisticRegressionCV", sklearn.linear_model.logistic.LogisticRegressionCV),
-    ("MultiOutputClassifier", sklearn.multioutput.MultiOutputClassifier),
-    ("MultinomialNB", sklearn.naive_bayes.MultinomialNB),
-    ("OneVsOneClassifier", sklearn.multiclass.OneVsOneClassifier),
-    ("OneVsRestClassifier", sklearn.multiclass.OneVsRestClassifier),
-    ("OutputCodeClassifier", sklearn.multiclass.OutputCodeClassifier),
-    (
-        "RadiusNeighborsClassifier",
-        sklearn.neighbors.classification.RadiusNeighborsClassifier,
-    ),
-    ("VotingClassifier", sklearn.ensemble.voting.VotingClassifier),
+    "ClassifierChain",
+    "ComplementNB",
+    "GradientBoostingClassifier",
+    "GaussianProcessClassifier",
+    "HistGradientBoostingClassifier",
+    "MLPClassifier",
+    "LogisticRegressionCV", 
+    "MultiOutputClassifier", 
+    "MultinomialNB", 
+    "OneVsOneClassifier",
+    "OneVsRestClassifier",
+    "OutputCodeClassifier",
+    "RadiusNeighborsClassifier",
+    "VotingClassifier",
 ]
 
 removed_regressors = [
-    ("TheilSenRegressor", sklearn.linear_model.theil_sen.TheilSenRegressor),
-    ("ARDRegression", sklearn.linear_model.ARDRegression),
-    ("CCA", sklearn.cross_decomposition.CCA),
-    ("IsotonicRegression", sklearn.isotonic.IsotonicRegression),
-    ("StackingRegressor",sklearn.ensemble.StackingRegressor),
-    ("MultiOutputRegressor", sklearn.multioutput.MultiOutputRegressor),
-    ("MultiTaskElasticNet", sklearn.linear_model.MultiTaskElasticNet),
-    ("MultiTaskElasticNetCV", sklearn.linear_model.MultiTaskElasticNetCV),
-    ("MultiTaskLasso", sklearn.linear_model.MultiTaskLasso),
-    ("MultiTaskLassoCV", sklearn.linear_model.MultiTaskLassoCV),
-    ("PLSCanonical", sklearn.cross_decomposition.PLSCanonical),
-    ("PLSRegression", sklearn.cross_decomposition.PLSRegression),
-    ("RadiusNeighborsRegressor", sklearn.neighbors.RadiusNeighborsRegressor),
-    ("RegressorChain", sklearn.multioutput.RegressorChain),
-    ("VotingRegressor", sklearn.ensemble.VotingRegressor),
-    ("_SigmoidCalibration", sklearn.calibration._SigmoidCalibration),
+    "TheilSenRegressor",
+    "ARDRegression", 
+    "CCA", 
+    "IsotonicRegression", 
+    "StackingRegressor",
+    "MultiOutputRegressor", 
+    "MultiTaskElasticNet", 
+    "MultiTaskElasticNetCV", 
+    "MultiTaskLasso", 
+    "MultiTaskLassoCV", 
+    "PLSCanonical", 
+    "PLSRegression", 
+    "RadiusNeighborsRegressor", 
+    "RegressorChain", 
+    "VotingRegressor", 
 ]
 
-for i in removed_regressors:
-    REGRESSORS.pop(REGRESSORS.index(i))
+CLASSIFIERS = [
+    est
+    for est in all_estimators()
+    if (issubclass(est[1], ClassifierMixin) and (est[0] not in removed_classifiers))
+]
 
-for i in removed_classifiers:
-    CLASSIFIERS.pop(CLASSIFIERS.index(i))
+REGRESSORS = [
+    est
+    for est in all_estimators()
+    if (issubclass(est[1], RegressorMixin) and (est[0] not in removed_regressors))
+]
 
 REGRESSORS.append(("XGBRegressor", xgboost.XGBRegressor))
 REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
@@ -148,6 +136,7 @@ def get_card_split(df, cols, n=11):
 
 
 # Helper class for performing classification
+
 
 class LazyClassifier:
     """
@@ -220,7 +209,7 @@ class LazyClassifier:
         custom_metric=None,
         predictions=False,
         random_state=42,
-        classifiers = "all"
+        classifiers="all",
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -289,7 +278,7 @@ class LazyClassifier:
             try:
                 temp_list = []
                 for classifier in self.classifiers:
-                    full_name = (classifier.__class__.__name__, classifier)
+                    full_name = (classifier.__name__, classifier)
                     temp_list.append(full_name)
                 self.classifiers = temp_list
             except Exception as exception:
@@ -419,13 +408,13 @@ class LazyClassifier:
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
-            self.fit(X_train,X_test,y_train,y_test)
+            self.fit(X_train, X_test, y_train, y_test)
 
         return self.models
 
 
 def adjusted_rsquared(r2, n, p):
-    return 1 - (1-r2) * ((n-1) / (n-p-1))
+    return 1 - (1 - r2) * ((n - 1) / (n - p - 1))
 
 
 # Helper class for performing classification
@@ -528,7 +517,7 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = regressors 
+        self.regressors = regressors
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -583,13 +572,13 @@ class LazyRegressor:
             ]
         )
 
-        if self.regressors == "all": 
+        if self.regressors == "all":
             self.regressors = REGRESSORS
         else:
             try:
                 temp_list = []
                 for regressor in self.regressors:
-                    full_name = (regressor.__class__.__name__, regressor)
+                    full_name = (regressor.__name__, regressor)
                     temp_list.append(full_name)
                 self.regressors = temp_list
             except Exception as exception:
@@ -616,7 +605,9 @@ class LazyRegressor:
                 y_pred = pipe.predict(X_test)
 
                 r_squared = r2_score(y_test, y_pred)
-                adj_rsquared = adjusted_rsquared(r_squared, X_test.shape[0], X_test.shape[1])
+                adj_rsquared = adjusted_rsquared(
+                    r_squared, X_test.shape[0], X_test.shape[1]
+                )
                 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 
                 names.append(name)
@@ -654,14 +645,16 @@ class LazyRegressor:
             "Adjusted R-Squared": ADJR2,
             "R-Squared": R2,
             "RMSE": RMSE,
-            "Time Taken": TIME
+            "Time Taken": TIME,
         }
 
         if self.custom_metric:
             scores[self.custom_metric.__name__] = CUSTOM_METRIC
 
         scores = pd.DataFrame(scores)
-        scores = scores.sort_values(by="Adjusted R-Squared", ascending=False).set_index("Model")
+        scores = scores.sort_values(by="Adjusted R-Squared", ascending=False).set_index(
+            "Model"
+        )
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
@@ -692,7 +685,7 @@ class LazyRegressor:
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
-            self.fit(X_train,X_test,y_train,y_test)
+            self.fit(X_train, X_test, y_train, y_test)
 
         return self.models
 

@@ -26,4 +26,4 @@ deploy:
   on:
     tags: true
     repo: shankarpandala/lazypredict
-    python: 3.x
+    python: 3.9

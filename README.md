@@ -1,7 +1,7 @@
 # Lazy Predict
 
 [![image](https://img.shields.io/pypi/v/lazypredict.svg)](https://pypi.python.org/pypi/lazypredict)
-[![image](https://img.shields.io/travis/shankarpandala/lazypredict.svg)](https://travis-ci.org/shankarpandala/lazypredict)
+[![Build Status](https://app.travis-ci.com/shankarpandala/lazypredict.svg)](https://app.travis-ci.com/shankarpandala/lazypredict)
 [![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
 [![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)

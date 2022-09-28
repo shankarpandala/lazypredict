@@ -3,6 +3,11 @@ os:
   - osx
   - windows
 
+dist:
+  - bionic
+  - focal
+  - Jammy
+
 jobs:
   allow_failures:
     - os: osx

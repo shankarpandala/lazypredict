@@ -43,14 +43,14 @@ templates_path = ["_templates"]
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = ".md"
 
 # The master toctree document.
 master_doc = "index"
 
 # General information about the project.
 project = u"Lazy Predict"
-copyright = u"2020, Shankar Rao Pandala"
+copyright = u"2022, Shankar Rao Pandala"
 author = u"Shankar Rao Pandala"
 
 # The version info for the project you're documenting, acts as replacement

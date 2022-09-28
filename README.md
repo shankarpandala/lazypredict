@@ -1,53 +1,36 @@
-============
-Lazy Predict
-============
+# Lazy Predict
 
+[![image](https://img.shields.io/pypi/v/lazypredict.svg)](https://pypi.python.org/pypi/lazypredict)
 
-.. image:: https://img.shields.io/pypi/v/lazypredict.svg
-        :target: https://pypi.python.org/pypi/lazypredict
+[![image](https://img.shields.io/travis/shankarpandala/lazypredict.svg)](https://travis-ci.org/shankarpandala/lazypredict)
 
-.. image:: https://img.shields.io/travis/shankarpandala/lazypredict.svg
-        :target: https://travis-ci.org/shankarpandala/lazypredict
+[![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
 
-.. image:: https://readthedocs.org/projects/lazypredict/badge/?version=latest
-        :target: https://lazypredict.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
+[![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
 
-.. image:: https://pepy.tech/badge/lazypredict
-     :target: https://pepy.tech/project/lazypredict
-     :alt: Downloads
+[![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)
 
-.. image:: https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge
-   :target: https://www.codefactor.io/repository/github/shankarpandala/lazypredict
-   :alt: CodeFactor
+Lazy Predict helps build a lot of basic models without much code and
+helps understand which models works better without any parameter tuning.
 
-Lazy Predict helps build a lot of basic models without much code and helps understand which models works better without any parameter tuning.
+-   Free software: MIT license
+-   Documentation: <https://lazypredict.readthedocs.io>.
 
+# Installation
 
-* Free software: MIT license
-* Documentation: https://lazypredict.readthedocs.io.
-
-============
-Installation
-============
-
-To install Lazy Predict::
+To install Lazy Predict:
 
     pip install lazypredict
 
-=====
-Usage
-=====
+# Usage
 
-To use Lazy Predict in a project::
+To use Lazy Predict in a project:
 
     import lazypredict
 
-==============
-Classification
-==============
+# Classification
 
-Example ::
+Example :
 
     from lazypredict.Supervised import LazyClassifier
     from sklearn.datasets import load_breast_cancer
@@ -97,12 +80,10 @@ Example ::
     | ExtraTreeClassifier            |   0.922807 |            0.912168 |  0.912168 |   0.922462 |    0.0109999 |
     | CheckingClassifier             |   0.361404 |            0.5      |  0.5      |   0.191879 |    0.0170043 |
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
-    
-==========
-Regression
-==========
 
-Example ::
+# Regression
+
+Example :
 
     from lazypredict.Supervised import LazyRegressor
     from sklearn import datasets
@@ -168,10 +149,5 @@ Example ::
     | DummyRegressor                |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | LassoLars                     |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | KernelRidge                   |             -11.50 |     -8.25 | 22.74 |       0.01 |
-
-
-.. warning::
-    Regression and Classification are replaced with LazyRegressor and LazyClassifier.
-    Regression and Classification classes will be removed in next release
 
 

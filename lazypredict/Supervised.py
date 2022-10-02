@@ -8,6 +8,8 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 import time
+from sklearnex import patch_sklearn
+patch_sklearn()
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder

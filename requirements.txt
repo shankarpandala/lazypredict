@@ -1,5 +1,6 @@
 click
 scikit-learn
+scikit-learn-intelex
 pandas
 tqdm
 joblib

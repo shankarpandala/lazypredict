@@ -154,6 +154,9 @@ class LazyClassifier:
         When set to True, the predictions of all the models models are returned as dataframe.
     classifiers : list, optional (default="all")
         When function is provided, trains the chosen classifier(s).
+    hyperparameters_dict=False: dict, optional (default={})
+        A dictionary which the keys are the names of the model classes desired to pass the hyperparameters
+        and the value is another dictionary with the hyperparameters names and values for the model.
 
     Examples
     --------
@@ -210,6 +213,7 @@ class LazyClassifier:
         predictions=False,
         random_state=42,
         classifiers="all",
+        hyperparameters_dict={}
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -218,6 +222,7 @@ class LazyClassifier:
         self.models = {}
         self.random_state = random_state
         self.classifiers = classifiers
+        self.hyperparameters_dict = hyperparameters_dict
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -288,18 +293,18 @@ class LazyClassifier:
         for name, model in tqdm(self.classifiers):
             start = time.time()
             try:
-                if "random_state" in model().get_params().keys():
-                    pipe = Pipeline(
-                        steps=[
-                            ("preprocessor", preprocessor),
-                            ("classifier", model(random_state=self.random_state)),
-                        ]
-                    )
+                if model.__name__ in list(self.hyperparameters_dict.keys()):
+                    model_hyperparameters = self.hyperparameters_dict[model.__name__]
+                elif "random_state" in model().get_params().keys():
+                    model_hyperparameters = {"random_state": self.random_state}
                 else:
-                    pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), ("classifier", model())]
-                    )
-
+                    model_hyperparameters = {}
+                pipe = Pipeline(
+                    steps=[
+                        ("preprocessor", preprocessor),
+                        ("classifier", model(**model_hyperparameters))
+                    ]
+                )
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)

@@ -7,8 +7,11 @@ import pytest
 
 from click.testing import CliRunner
 
-from lazypredict import cli
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
 
+from lazypredict import cli
+from lazypredict.Supervised import LazyClassifier
 
 @pytest.fixture
 def response():
@@ -35,3 +38,23 @@ def test_command_line_interface():
     help_result = runner.invoke(cli.main, ["--help"])
     assert help_result.exit_code == 0
     assert "--help  Show this message and exit." in help_result.output
+
+def test_hyperparameter_set():
+
+    X, y = make_classification(
+        n_samples=500, n_features=10, n_informative=10, n_redundant=0, random_state=42
+    )
+
+    train_samples = 100  # Samples used for training the models
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        shuffle=False,
+        test_size=500 - train_samples,
+    )
+
+    clf = LazyClassifier(
+            verbose=0,
+            ignore_warnings=True,
+            hyperparameters_dict={"DecisionTreeClassifier": {"max_depth": 4}})
+    _ , _ = clf.fit(X_train, X_test, y_train, y_test)

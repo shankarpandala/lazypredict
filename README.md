@@ -26,8 +26,9 @@ To use Lazy Predict in a project:
 
 # Classification
 
-Example :
+Example:
 
+```python
     from lazypredict.Supervised import LazyClassifier
     from sklearn.datasets import load_breast_cancer
     from sklearn.model_selection import train_test_split
@@ -76,11 +77,13 @@ Example :
     | ExtraTreeClassifier            |   0.922807 |            0.912168 |  0.912168 |   0.922462 |    0.0109999 |
     | CheckingClassifier             |   0.361404 |            0.5      |  0.5      |   0.191879 |    0.0170043 |
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
+```
 
 # Regression
 
-Example :
+Example:
 
+```python
     from lazypredict.Supervised import LazyRegressor
     from sklearn import datasets
     from sklearn.utils import shuffle
@@ -145,5 +148,5 @@ Example :
     | DummyRegressor                |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | LassoLars                     |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | KernelRidge                   |             -11.50 |     -8.25 | 22.74 |       0.01 |
-
+```
 

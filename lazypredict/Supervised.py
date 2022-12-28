@@ -65,7 +65,8 @@ removed_regressors = [
     "PLSRegression", 
     "RadiusNeighborsRegressor", 
     "RegressorChain", 
-    "VotingRegressor", 
+    "VotingRegressor",
+    "QuantileRegressor"
 ]
 
 CLASSIFIERS = [

@@ -3,6 +3,9 @@ Supervised Models
 """
 # Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
+import contextlib
+import signal
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -110,6 +113,21 @@ categorical_transformer_high = Pipeline(
 
 # Helper function
 
+@contextlib.contextmanager
+def timeout_ctx(timeout: int, model_name: str):
+    if not isinstance(timeout, int) and timeout <= 0:
+        raise TypeError("timeout parameter must be an integer and greater than 0.")
+
+    def _handle_timeout(signum, frame):
+        raise TimeoutError(f"{model_name!r} timed out")
+
+    signal.signal(signal.SIGALRM, _handle_timeout)
+    signal.alarm(timeout)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
 
 def get_card_split(df, cols, n=11):
     """
@@ -154,6 +172,9 @@ class LazyClassifier:
         When set to True, the predictions of all the models models are returned as dataframe.
     classifiers : list, optional (default="all")
         When function is provided, trains the chosen classifier(s).
+    timeout : int, optional (default=None)
+        Timeout parameter set for each model fit. If not None and > 0, the model will be fitting for a maximum of
+        `timout` seconds, before raising a `TimeoutError` and moving onto the next model.
 
     Examples
     --------
@@ -210,6 +231,7 @@ class LazyClassifier:
         predictions=False,
         random_state=42,
         classifiers="all",
+        timeout=None,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -218,6 +240,7 @@ class LazyClassifier:
         self.models = {}
         self.random_state = random_state
         self.classifiers = classifiers
+        self.timeout = timeout
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -300,7 +323,12 @@ class LazyClassifier:
                         steps=[("preprocessor", preprocessor), ("classifier", model())]
                     )
 
-                pipe.fit(X_train, y_train)
+                if self.timeout is not None:
+                    with timeout_ctx(self.timeout, model_name=name):
+                        pipe.fit(X_train, y_train)
+                else:
+                    pipe.fit(X_train, y_train)
+
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
@@ -436,6 +464,9 @@ class LazyRegressor:
         When set to True, the predictions of all the models models are returned as dataframe.
     regressors : list, optional (default="all")
         When function is provided, trains the chosen regressor(s).
+    timeout : int, optional (default=None)
+        Timeout parameter set for each model fit. If not None and > 0, the model will be fitting for a maximum of
+        `timout` seconds, before raising a `TimeoutError` and moving onto the next model.
 
     Examples
     --------
@@ -510,6 +541,7 @@ class LazyRegressor:
         predictions=False,
         random_state=42,
         regressors="all",
+        timeout=None,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -518,6 +550,7 @@ class LazyRegressor:
         self.models = {}
         self.random_state = random_state
         self.regressors = regressors
+        self.timeout = timeout
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -600,7 +633,12 @@ class LazyRegressor:
                         steps=[("preprocessor", preprocessor), ("regressor", model())]
                     )
 
-                pipe.fit(X_train, y_train)
+                if self.timeout is not None:
+                    with timeout_ctx(self.timeout, model_name=name):
+                        pipe.fit(X_train, y_train)
+                else:
+                    pipe.fit(X_train, y_train)
+
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
 

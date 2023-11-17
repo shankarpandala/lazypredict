@@ -36,7 +36,8 @@ jobs:
 
   build-macos:
     macos:
-      xcode: "11.3.0"  # Adjust the Xcode version as needed
+      xcode: "14.2.0"  # Specify the Xcode version here
+    resource_class: macos.m1.medium.gen1  # Specify the resource class here
     steps:
       - checkout
       - run:

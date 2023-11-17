@@ -30,8 +30,9 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install Python
+          name: Uninstall Existing Python and Install Desired Version
           command: |
+            choco uninstall python -y
             choco install python --version=<< parameters.python-version >> --allow-downgrade -y
       - run:
           name: Install Dependencies and Run Tests

@@ -32,7 +32,7 @@ jobs:
       - run:
           name: Uninstall Existing Python and Install Desired Version
           command: |
-            choco uninstall python -y
+            choco uninstall python --allversions -y
             choco install python --version=<< parameters.python-version >> --allow-downgrade -y
       - run:
           name: Install Dependencies and Run Tests

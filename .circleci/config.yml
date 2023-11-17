@@ -5,8 +5,11 @@ orbs:
 
 jobs:
   build-linux:
+    parameters:
+      python-version:
+        type: string
     docker:
-      - image: cimg/python:3.8  # Use an image with the required Python version
+      - image: cimg/python:<< parameters.python-version >>  # Use an image with the required Python version
     steps:
       - checkout
       - run:
@@ -19,6 +22,9 @@ jobs:
           command: pytest
 
   build-windows:
+    parameters:
+      python-version:
+        type: string
     executor:
       name: win/default
     steps:
@@ -26,7 +32,7 @@ jobs:
       - run:
           name: Install Python
           command: |
-            choco install python --version=3.8.0 --allow-downgrade -y
+            choco install python --version=<< parameters.python-version >> --allow-downgrade -y
       - run:
           name: Install Dependencies and Run Tests
           command: |
@@ -38,5 +44,11 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - build-linux
-      - build-windows
+      - build-linux:
+          matrix:
+            parameters:
+              python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+      - build-windows:
+          matrix:
+            parameters:
+              python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]

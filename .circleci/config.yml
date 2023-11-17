@@ -3,6 +3,11 @@ jobs:
     build:
         docker:
             - image: cimg/python:3.8  # Use an image with the required Python version
+        parallelism: 3  # Set the parallelism level to 3 for running tests on different OS types
+        matrix:
+            - OS_TYPE: linux
+            - OS_TYPE: windows
+            - OS_TYPE: macos
         steps:
             - checkout
             - run:
@@ -12,4 +17,4 @@ jobs:
                         pip install pytest  # Install pytest
             - run:
                     name: Run Tests
-                    command: pytest  # Replace with your test command
+                    command: pytest --os-type $OS_TYPE  # Replace with your test command, passing the OS type as an argument

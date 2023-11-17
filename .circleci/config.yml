@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@5.0
+
 jobs:
   build-linux:
     docker:
@@ -16,8 +19,8 @@ jobs:
           command: pytest
 
   build-windows:
-    machine:
-      image: windows-server-2019-vs2019:stable
+    executor:
+      name: win/default
     steps:
       - checkout
       - run:

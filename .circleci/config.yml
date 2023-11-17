@@ -1,26 +1,13 @@
 version: 2.1
-
 jobs:
-    say-hello:
+    build:
         docker:
-            - image: cimg/base:stable
+            - image: cimg/python:3.8  # Use an image with the required Python version
         steps:
             - checkout
             - run:
-                    name: "Say hello"
-                    command: "echo Hello, World!"
-
-    run-tests:
-        docker:
-            - image: cimg/base:stable
-        steps:
-            - checkout
+                    name: Install Dependencies
+                    command: pip install -r requirements.txt  # Install dependencies
             - run:
-                    name: "Run unit tests"
-                    command: "python -m unittest discover"
-
-workflows:
-    say-hello-workflow:
-        jobs:
-            - say-hello
-            - run-tests
+                    name: Run Tests
+                    command: pytest  # Replace with your test command

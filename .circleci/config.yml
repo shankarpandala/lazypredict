@@ -34,29 +34,9 @@ jobs:
             python -m pip install pytest
             python -m pytest
 
-  build-macos:
-    macos:
-      xcode: "14.2.0"  # Specify the Xcode version here
-    resource_class: macos.m1.large.gen1  # Specify the resource class here
-    steps:
-      - checkout
-      - run:
-          name: Install Python
-          command: |
-            brew install python@3.8
-            echo 'export PATH="/usr/local/opt/python@3.8/bin:$PATH"' >> $BASH_ENV
-            source $BASH_ENV
-      - run:
-          name: Install Dependencies and Run Tests
-          command: |
-            python3 -m pip install -r requirements.txt
-            python3 -m pip install pytest
-            python3 -m pytest
-
 workflows:
   version: 2
   build-and-test:
     jobs:
       - build-linux
       - build-windows
-      - build-macos

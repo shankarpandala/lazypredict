@@ -1,20 +1,58 @@
 version: 2.1
+
 jobs:
-    build:
-        docker:
-            - image: cimg/python:3.8  # Use an image with the required Python version
-        parallelism: 3  # Set the parallelism level to 3 for running tests on different OS types
-        matrix:
-            - OS_TYPE: linux
-            - OS_TYPE: windows
-            - OS_TYPE: macos
-        steps:
-            - checkout
-            - run:
-                    name: Install Dependencies
-                    command: |
-                        pip install -r requirements.txt  # Install dependencies
-                        pip install pytest  # Install pytest
-            - run:
-                    name: Run Tests
-                    command: pytest --os-type $OS_TYPE  # Replace with your test command, passing the OS type as an argument
+  build-linux:
+    docker:
+      - image: cimg/python:3.8  # Use an image with the required Python version
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: |
+            pip install -r requirements.txt
+            pip install pytest
+      - run:
+          name: Run Tests
+          command: pytest
+
+  build-windows:
+    machine:
+      image: windows-server-2019-vs2019:stable
+    steps:
+      - checkout
+      - run:
+          name: Install Python
+          command: |
+            choco install python --version=3.8.0
+      - run:
+          name: Install Dependencies and Run Tests
+          command: |
+            python -m pip install -r requirements.txt
+            python -m pip install pytest
+            python -m pytest
+
+  build-macos:
+    macos:
+      xcode: "11.3.0"  # Adjust the Xcode version as needed
+    steps:
+      - checkout
+      - run:
+          name: Install Python
+          command: |
+            brew install python@3.8
+            echo 'export PATH="/usr/local/opt/python@3.8/bin:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Install Dependencies and Run Tests
+          command: |
+            python3 -m pip install -r requirements.txt
+            python3 -m pip install pytest
+            python3 -m pytest
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - build-linux
+      - build-windows
+      - build-macos

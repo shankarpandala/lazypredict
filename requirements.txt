@@ -5,3 +5,4 @@ tqdm
 joblib
 lightgbm
 xgboost
+markupsafe <=2.1.4

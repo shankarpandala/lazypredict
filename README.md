@@ -16,7 +16,7 @@ helps understand which models works better without any parameter tuning.
 
 To install Lazy Predict:
 
-    pip install lazypredict
+    pip install lazypredict-nightly
 
 # Usage
 

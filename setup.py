@@ -48,10 +48,8 @@ setup(
     include_package_data=True,
     keywords=["lazypredict", "lazypredict-nightly"],
     name="lazypredict-nightly",
-    packages=find_packages(include=["lazypredict", "lazypredict.*"]),
     setup_requires=setup_requirements,
     test_suite="tests",
-    tests_require=test_requirements,
     url="https://github.com/nityansuman/lazypredict-nightly",
     version='0.3.0',
     zip_safe=False

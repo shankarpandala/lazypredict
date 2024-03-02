@@ -2,6 +2,10 @@
 title: History
 ---
 
+# 0.3.0
+
+-   Fixed OneHotEncoder Bug
+
 # 0.2.11 (2022-02-06)
 
 -   Updated the default version to 3.9

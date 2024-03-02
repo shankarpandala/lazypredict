@@ -1,13 +1,6 @@
 # Lazy Predict
 
-[![image](https://img.shields.io/pypi/v/lazypredict.svg)](https://pypi.python.org/pypi/lazypredict)
-[![Build Status](https://app.travis-ci.com/shankarpandala/lazypredict.svg)](https://app.travis-ci.com/shankarpandala/lazypredict)
-[![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
-[![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
-[![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)
-
-Lazy Predict helps build a lot of basic models without much code and
-helps understand which models works better without any parameter tuning.
+[Nightly Updated] Lazy Predict 2.0 to help you benchmark models without much code and understand what works better without any hyyper-parameter tuning.
 
 -   Free software: MIT license
 -   Documentation: <https://lazypredict.readthedocs.io>.

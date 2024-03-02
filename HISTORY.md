@@ -1,8 +1,8 @@
 ---
-title: History
+History
 ---
 
-# 0.3.0
+# 0.3.0 (2024-03-03)
 
 -   Fixed OneHotEncoder Bug
 

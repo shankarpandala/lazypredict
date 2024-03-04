@@ -55,3 +55,4 @@ setup(
     version='0.2.12',
     zip_safe=False,
 )
+

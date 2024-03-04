@@ -13,6 +13,9 @@ from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.utils import all_estimators
+from lazypredict.Supervised import LazyRegressor
+
+
 from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
 from sklearn.metrics import (
@@ -48,6 +51,7 @@ removed_classifiers = [
     "OutputCodeClassifier",
     "RadiusNeighborsClassifier",
     "VotingClassifier",
+    "SVC",  # Add SVC to the list of removed classifiers
 ]
 
 removed_regressors = [
@@ -66,6 +70,7 @@ removed_regressors = [
     "RadiusNeighborsRegressor", 
     "RegressorChain", 
     "VotingRegressor", 
+    "Ridge",  # Add Ridge to the list of removed regressors
 ]
 
 CLASSIFIERS = [

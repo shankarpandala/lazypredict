@@ -2,6 +2,10 @@
 History
 ---
 
+# 0.3.1 (2024-03-03)
+
+-   Minor cleanups
+
 # 0.3.0 (2024-03-03)
 
 -   Fixed OneHotEncoder Bug

@@ -1,8 +1,8 @@
 ---
-title: Credits
+Credits
 ---
 
-# Maintaines
+# Maintainer
 - Kumar Nityan Suman \<<nityan.suman@gmail.com>\>
 
 # Inspired Work From

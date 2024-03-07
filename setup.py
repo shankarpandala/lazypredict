@@ -11,7 +11,7 @@ with open("README.md") as readme_file:
 with open("HISTORY.md") as history_file:
     history = history_file.read()
 
-requirements = [requirement for requirement in open('requirements.txt')]
+requirements = [requirement for requirement in open("requirements.txt")]
 
 setup_requirements = [
     "pytest-runner",
@@ -30,11 +30,11 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
@@ -51,6 +51,6 @@ setup(
     setup_requires=setup_requirements,
     test_suite="tests",
     url="https://github.com/nityansuman/lazypredict-nightly",
-    version='0.3.0',
+    version="0.3.1",
     zip_safe=False
 )

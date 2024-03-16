@@ -2,25 +2,28 @@
 
 [Nightly Updated] Lazy Predict 2.0 to help you benchmark models without much code and understand what works better without any hyyper-parameter tuning.
 
--   Free software: MIT license
--   Documentation: <https://lazypredict.readthedocs.io>.
+# Coming soon
 
-# Installation
+- [ ] LLM based task benchmarking
+    - [ ] Text Classification
+    - [ ] Token Classification
+    - [ ] Text Summarization
+    - [ ] Text Similarity
+- [ ] Stats model benchmarking
 
-To install Lazy Predict:
+# Getting started
+
+To install Lazy Predict Nightly:
 
     pip install lazypredict-nightly
-
-# Usage
 
 To use Lazy Predict in a project:
 
     import lazypredict
 
-# Classification
+## Classification
 
-Example :
-
+```
     # Old Way
     from lazypredict.Supervised import LazyClassifier
     # New Way
@@ -73,11 +76,11 @@ Example :
     | ExtraTreeClassifier            |   0.922807 |            0.912168 |  0.912168 |   0.922462 |    0.0109999 |
     | CheckingClassifier             |   0.361404 |            0.5      |  0.5      |   0.191879 |    0.0170043 |
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
+```
 
-# Regression
+## Regression
 
-Example :
-
+```
     # Original Way
     from lazypredict.Supervised import LazyRegressor
     # Alternate Way
@@ -146,5 +149,4 @@ Example :
     | DummyRegressor                |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | LassoLars                     |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | KernelRidge                   |             -11.50 |     -8.25 | 22.74 |       0.01 |
-
-
+```

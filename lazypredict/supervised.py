@@ -101,8 +101,6 @@ categorical_transformer_high = Pipeline(
 
 
 # Helper function
-
-
 def get_card_split(df, cols, n=11):
     """
     Splits categorical columns into 2 lists based on cardinality (i.e # of unique values)
@@ -680,7 +678,3 @@ class LazyRegressor:
             self.fit(X_train, X_test, y_train, y_test)
 
         return self.models
-
-
-Regression = LazyRegressor
-Classification = LazyClassifier

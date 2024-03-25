@@ -41,7 +41,6 @@ setup(
     ],
     description="[Updated] Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning",
     long_description_content_type="text/markdown",
-    entry_points={"console_scripts": ["lazypredict=lazypredict.cli:main",],},
     install_requires=requirements,
     license="MIT license",
     long_description=readme + "\n\n" + history,
@@ -51,6 +50,6 @@ setup(
     setup_requires=setup_requirements,
     test_suite="tests",
     url="https://github.com/nityansuman/lazypredict-nightly",
-    version="0.3.1",
+    version="0.3.2",
     zip_safe=False
 )

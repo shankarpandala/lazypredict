@@ -24,9 +24,6 @@ To use Lazy Predict in a project:
 ## Classification
 
 ```
-    # Old Way
-    from lazypredict.Supervised import LazyClassifier
-    # New Way
     from lazypredict import LazyClassifier
 
     from sklearn.datasets import load_breast_cancer
@@ -81,9 +78,6 @@ To use Lazy Predict in a project:
 ## Regression
 
 ```
-    # Original Way
-    from lazypredict.Supervised import LazyRegressor
-    # Alternate Way
     from lazypredict import LazyRegressor
 
     from sklearn import datasets

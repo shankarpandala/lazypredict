@@ -1,6 +1,6 @@
 # Lazy Predict
 
-[Nightly Updated] Lazy Predict 2.0 to help you benchmark models without much code and understand what works better without any hyyper-parameter tuning.
+[Nightly Updated] Lazy Predict 2.0 to help you benchmark models without much code and understand what works better without any hyper-parameter tuning.
 
 # Coming soon
 

@@ -1,18 +1,19 @@
-# Lazy Predict
+# Lazy Predict [Nightly]
 
-[Nightly Updated] Lazy Predict 2.0 to help you benchmark models without much code and understand what works better without any hyper-parameter tuning.
+Lazy Predict 2.0 to help you benchmark models without much code and understand what works better without any hyper-parameter tuning.
 
 [![image](https://img.shields.io/pypi/v/lazypredict-nightly.svg)](https://pypi.python.org/pypi/lazypredict-nightly)
 [![Downloads](https://pepy.tech/badge/lazypredict-nightly)](https://pepy.tech/project/lazypredict-nightly)
 
 # Coming soon
 
-- [ ] LLM based task benchmarking
+- [ ] LLM Benchmarking - Foundational
+- [ ] LLM Benchmarking - Task Specific
     - [ ] Text Classification
     - [ ] Token Classification
     - [ ] Text Summarization
     - [ ] Text Similarity
-- [ ] Stats model benchmarking
+- [ ] Statistical Model Benchmarking
 
 # Getting started
 

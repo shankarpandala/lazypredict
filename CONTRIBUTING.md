@@ -11,7 +11,7 @@ You can contribute in many ways:
 
 ## Report Bugs
 
-Report bugs at <https://github.com/shankarpandala/lazypredict/issues>.
+Report bugs at <https://github.com/nityansuman/lazypredict-nightly/issues>.
 
 If you are reporting a bug, please include:
 
@@ -40,7 +40,7 @@ posts, articles, and such.
 ## Submit Feedback
 
 The best way to send feedback is to file an issue at
-<https://github.com/shankarpandala/lazypredict/issues>.
+<https://github.com/nityansuman/lazypredict-nightly/issues>.
 
 If you are proposing a feature:
 
@@ -52,15 +52,15 @@ If you are proposing a feature:
 
 # Get Started!
 
-Ready to contribute? Here\'s how to set up [lazypredict]{.title-ref} for
+Ready to contribute? Here\'s how to set up [lazypredict-nightly]{.title-ref} for
 local development.
 
-1.  Fork the [lazypredict]{.title-ref} repo on GitHub.
+1.  Fork the [lazypredict-nightly]{.title-ref} repo on GitHub.
 
 2.  Clone your fork locally:
 
     ``` shell
-    $ git clone git@github.com:your_name_here/lazypredict.git
+    $ git clone git@github.com:your_name_here/lazypredict-nightly.git
     ```
 
 3.  Install your local copy into a virtualenv. Assuming you have
@@ -68,8 +68,8 @@ local development.
     local development:
 
     ``` shell
-    $ mkvirtualenv lazypredict
-    $ cd lazypredict/
+    $ mkvirtualenv lazypredict-nightly
+    $ cd lazypredict-nightly/
     $ python setup.py develop
     $ pip install -r requirements_dev.txt
     ```
@@ -87,7 +87,7 @@ local development.
     tox:
 
     ``` shell
-    $ flake8 lazypredict tests
+    $ flake8 lazypredict-nightly tests
     $ python setup.py test or pytest
     $ tox
     ```
@@ -114,7 +114,7 @@ Before you submit a pull request, check that it meets these guidelines:
     the feature to the list in README.rst.
 3.  The pull request should work for Python 2.7, 3.5, 3.6, 3.7 and 3.8,
     and for PyPy. Check
-    <https://travis-ci.org/shankarpandala/lazypredict/pull_requests> and
+    <https://travis-ci.org/nityansuman/lazypredict-nightly/pull_requests> and
     make sure that the tests pass for all supported Python versions.
 
 # Tips

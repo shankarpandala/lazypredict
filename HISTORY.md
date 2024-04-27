@@ -1,6 +1,19 @@
 ---
-title: History
+History
 ---
+
+# 0.3.2 (2024-03-25)
+
+-   Major import bug fix
+-   Cleanup
+
+# 0.3.1 (2024-03-03)
+
+-   Minor cleanups
+
+# 0.3.0 (2024-03-03)
+
+-   Fixed OneHotEncoder Bug
 
 # 0.2.11 (2022-02-06)
 

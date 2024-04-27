@@ -1,11 +1,10 @@
 ---
-title: Credits
+Credits
 ---
 
-# Development Lead
+# Maintainer
+- Kumar Nityan Suman \<<nityan.suman@gmail.com>\>
 
--   Shankar Rao Pandala \<<shankar.pandala@live.com>\>
-
-# Contributors
-
--   Breno Batista da Silva \<<brenophp@gmail.com>\>
+# Inspired Work From
+- Shankar Rao Pandala \<<shankar.pandala@live.com>\>
+- Breno Batista da Silva \<<brenophp@gmail.com>\>

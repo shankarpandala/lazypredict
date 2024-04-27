@@ -1,34 +1,35 @@
-# Lazy Predict
+# Lazy Predict [Nightly]
 
-[![image](https://img.shields.io/pypi/v/lazypredict.svg)](https://pypi.python.org/pypi/lazypredict)
-[![Build Status](https://app.travis-ci.com/shankarpandala/lazypredict.svg)](https://app.travis-ci.com/shankarpandala/lazypredict)
-[![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
-[![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
-[![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)
+Lazy Predict 2.0 to help you benchmark models without much code and understand what works better without any hyper-parameter tuning.
 
-Lazy Predict helps build a lot of basic models without much code and
-helps understand which models works better without any parameter tuning.
+[![image](https://img.shields.io/pypi/v/lazypredict-nightly.svg)](https://pypi.python.org/pypi/lazypredict-nightly)
+[![Downloads](https://pepy.tech/badge/lazypredict-nightly)](https://pepy.tech/project/lazypredict-nightly)
 
--   Free software: MIT license
--   Documentation: <https://lazypredict.readthedocs.io>.
+# Coming soon
 
-# Installation
+- [ ] LLM Benchmarking - Foundational
+- [ ] LLM Benchmarking - Task Specific
+    - [ ] Text Classification
+    - [ ] Token Classification
+    - [ ] Text Summarization
+    - [ ] Text Similarity
+- [ ] Statistical Model Benchmarking
 
-To install Lazy Predict:
+# Getting started
 
-    pip install lazypredict
+To install Lazy Predict Nightly:
 
-# Usage
+    pip install lazypredict-nightly
 
 To use Lazy Predict in a project:
 
     import lazypredict
 
-# Classification
+## Classification
 
-Example :
+```
+    from lazypredict import LazyClassifier
 
-    from lazypredict.Supervised import LazyClassifier
     from sklearn.datasets import load_breast_cancer
     from sklearn.model_selection import train_test_split
 
@@ -76,12 +77,13 @@ Example :
     | ExtraTreeClassifier            |   0.922807 |            0.912168 |  0.912168 |   0.922462 |    0.0109999 |
     | CheckingClassifier             |   0.361404 |            0.5      |  0.5      |   0.191879 |    0.0170043 |
     | DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
+```
 
-# Regression
+## Regression
 
-Example :
+```
+    from lazypredict import LazyRegressor
 
-    from lazypredict.Supervised import LazyRegressor
     from sklearn import datasets
     from sklearn.utils import shuffle
     import numpy as np
@@ -145,5 +147,4 @@ Example :
     | DummyRegressor                |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | LassoLars                     |              -0.38 |     -0.02 |  7.56 |       0.01 |
     | KernelRidge                   |             -11.50 |     -8.25 | 22.74 |       0.01 |
-
-
+```

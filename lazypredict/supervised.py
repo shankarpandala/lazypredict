@@ -19,6 +19,10 @@ from sklearn.metrics import (
 )
 import warnings
 import xgboost
+
+from collections import defaultdict
+
+# import catboost
 import lightgbm
 
 warnings.filterwarnings("ignore")
@@ -138,8 +142,8 @@ class LazyClassifier:
         number for verbosity.
     ignore_warnings : bool, optional (default=True)
         When set to True, the warning related to algorigms that are not able to run are ignored.
-    custom_metric : function, optional (default=None)
-        When function is provided, models are evaluated based on the custom evaluation metric provided.
+    custom_metric : function or list[function], optional (default=None)
+        When function or list of functions are provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
     classifiers : list, optional (default="all")
@@ -240,8 +244,11 @@ class LazyClassifier:
         TIME = []
         predictions = {}
 
+        if type(self.custom_metric) != list and self.custom_metric is not None:
+            self.custom_metric = [self.custom_metric]
+
         if self.custom_metric is not None:
-            CUSTOM_METRIC = []
+            CUSTOM_METRIC = defaultdict(list)
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -309,62 +316,50 @@ class LazyClassifier:
                 ROC_AUC.append(roc_auc)
                 F1.append(f1)
                 TIME.append(time.time() - start)
+
                 if self.custom_metric is not None:
-                    custom_metric = self.custom_metric(y_test, y_pred)
-                    CUSTOM_METRIC.append(custom_metric)
+                    custom_metric = {}
+                    for _cm in self.custom_metric:
+                        custom_metric[_cm.__name__] = _cm(y_test, y_pred)
+                        CUSTOM_METRIC[_cm.__name__].append(custom_metric[_cm.__name__])
+
                 if self.verbose > 0:
-                    if self.custom_metric is not None:
-                        print(
-                            {
-                                "Model": name,
-                                "Accuracy": accuracy,
-                                "Balanced Accuracy": b_accuracy,
-                                "ROC AUC": roc_auc,
-                                "F1 Score": f1,
-                                self.custom_metric.__name__: custom_metric,
-                                "Time taken": time.time() - start,
-                            }
-                        )
-                    else:
-                        print(
-                            {
-                                "Model": name,
-                                "Accuracy": accuracy,
-                                "Balanced Accuracy": b_accuracy,
-                                "ROC AUC": roc_auc,
-                                "F1 Score": f1,
-                                "Time taken": time.time() - start,
-                            }
-                        )
+                    scores_verbose = {
+                        "Model": name,
+                        "Accuracy": accuracy,
+                        "Balanced Accuracy": b_accuracy,
+                        "ROC AUC": roc_auc,
+                        "F1 Score": f1,
+                        "Time taken": time.time() - start,
+                    }
+                    
+                    if self.custom_metric:
+                        for _cm in self.custom_metric:
+                            scores_verbose[_cm.__name__] = custom_metric[_cm.__name__]
+                    print(scores_verbose)
+
                 if self.predictions:
                     predictions[name] = y_pred
+
             except Exception as exception:
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
-        if self.custom_metric is None:
-            scores = pd.DataFrame(
-                {
-                    "Model": names,
-                    "Accuracy": Accuracy,
-                    "Balanced Accuracy": B_Accuracy,
-                    "ROC AUC": ROC_AUC,
-                    "F1 Score": F1,
-                    "Time Taken": TIME,
-                }
-            )
-        else:
-            scores = pd.DataFrame(
-                {
-                    "Model": names,
-                    "Accuracy": Accuracy,
-                    "Balanced Accuracy": B_Accuracy,
-                    "ROC AUC": ROC_AUC,
-                    "F1 Score": F1,
-                    self.custom_metric.__name__: CUSTOM_METRIC,
-                    "Time Taken": TIME,
-                }
-            )
+
+        scores = {
+            "Model": names,
+            "Accuracy": Accuracy,
+            "Balanced Accuracy": B_Accuracy,
+            "ROC AUC": ROC_AUC,
+            "F1 Score": F1,
+            "Time Taken": TIME,
+        }
+
+        if self.custom_metric:
+            for _cm in self.custom_metric:
+                scores[_cm.__name__] = CUSTOM_METRIC[_cm.__name__]
+        
+        scores = pd.DataFrame(scores)
         scores = scores.sort_values(by="Balanced Accuracy", ascending=False).set_index(
             "Model"
         )
@@ -420,8 +415,8 @@ class LazyRegressor:
         number for verbosity.
     ignore_warnings : bool, optional (default=True)
         When set to True, the warning related to algorigms that are not able to run are ignored.
-    custom_metric : function, optional (default=None)
-        When function is provided, models are evaluated based on the custom evaluation metric provided.
+    custom_metric : function or list[functions], optional (default=None)
+        When function or list of functions are provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
     regressors : list, optional (default="all")
@@ -540,8 +535,11 @@ class LazyRegressor:
         TIME = []
         predictions = {}
 
+        if type(self.custom_metric) != list and self.custom_metric is not None:
+            self.custom_metric = [self.custom_metric]
+
         if self.custom_metric:
-            CUSTOM_METRIC = []
+            CUSTOM_METRIC = defaultdict(list)
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -607,8 +605,10 @@ class LazyRegressor:
                 TIME.append(time.time() - start)
 
                 if self.custom_metric:
-                    custom_metric = self.custom_metric(y_test, y_pred)
-                    CUSTOM_METRIC.append(custom_metric)
+                    custom_metric = {}
+                    for _cm in self.custom_metric:
+                        custom_metric[_cm.__name__] = _cm(y_test, y_pred)
+                        CUSTOM_METRIC[_cm.__name__].append(custom_metric[_cm.__name__])
 
                 if self.verbose > 0:
                     scores_verbose = {
@@ -620,7 +620,8 @@ class LazyRegressor:
                     }
 
                     if self.custom_metric:
-                        scores_verbose[self.custom_metric.__name__] = custom_metric
+                        for _cm in self.custom_metric:
+                            scores_verbose[_cm.__name__] = custom_metric[_cm.__name__]
 
                     print(scores_verbose)
                 if self.predictions:
@@ -639,7 +640,8 @@ class LazyRegressor:
         }
 
         if self.custom_metric:
-            scores[self.custom_metric.__name__] = CUSTOM_METRIC
+            for _cm in self.custom_metric:
+                scores[_cm.__name__] = CUSTOM_METRIC[_cm.__name__]
 
         scores = pd.DataFrame(scores)
         scores = scores.sort_values(by="Adjusted R-Squared", ascending=False).set_index(

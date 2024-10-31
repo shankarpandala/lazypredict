@@ -40,9 +40,9 @@ removed_classifiers = [
     "GaussianProcessClassifier",
     "HistGradientBoostingClassifier",
     "MLPClassifier",
-    "LogisticRegressionCV", 
-    "MultiOutputClassifier", 
-    "MultinomialNB", 
+    "LogisticRegressionCV",
+    "MultiOutputClassifier",
+    "MultinomialNB",
     "OneVsOneClassifier",
     "OneVsRestClassifier",
     "OutputCodeClassifier",
@@ -52,20 +52,20 @@ removed_classifiers = [
 
 removed_regressors = [
     "TheilSenRegressor",
-    "ARDRegression", 
-    "CCA", 
-    "IsotonicRegression", 
+    "ARDRegression",
+    "CCA",
+    "IsotonicRegression",
     "StackingRegressor",
-    "MultiOutputRegressor", 
-    "MultiTaskElasticNet", 
-    "MultiTaskElasticNetCV", 
-    "MultiTaskLasso", 
-    "MultiTaskLassoCV", 
-    "PLSCanonical", 
-    "PLSRegression", 
-    "RadiusNeighborsRegressor", 
-    "RegressorChain", 
-    "VotingRegressor", 
+    "MultiOutputRegressor",
+    "MultiTaskElasticNet",
+    "MultiTaskElasticNetCV",
+    "MultiTaskLasso",
+    "MultiTaskLassoCV",
+    "PLSCanonical",
+    "PLSRegression",
+    "RadiusNeighborsRegressor",
+    "RegressorChain",
+    "VotingRegressor",
 ]
 
 CLASSIFIERS = [
@@ -219,7 +219,7 @@ class LazyClassifier:
         self.random_state = random_state
         self.classifiers = classifiers
 
-    def fit(self, X_train, X_test, y_train, y_test):
+    def fit(self, X_train, X_test, y_train, y_test, should_preprocess: bool = True):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
         Parameters
         ----------
@@ -235,6 +235,9 @@ class LazyClassifier:
         y_test : array-like,
             Testing vectors, where rows is the number of samples
             and columns is the number of features.
+        should_preprocess : bool,
+            Indicates if preprocessing columns is needed.
+            Turn this off if your matrix is sparse.
         Returns
         -------
         scores : Pandas DataFrame
@@ -257,20 +260,22 @@ class LazyClassifier:
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
-        numeric_features = X_train.select_dtypes(include=[np.number]).columns
-        categorical_features = X_train.select_dtypes(include=["object"]).columns
+        preprocessor = None
+        if should_preprocess:
+            numeric_features = X_train.select_dtypes(include=[np.number]).columns
+            categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        categorical_low, categorical_high = get_card_split(
-            X_train, categorical_features
-        )
+            categorical_low, categorical_high = get_card_split(
+                X_train, categorical_features
+            )
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
-            ]
-        )
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ("numeric", numeric_transformer, numeric_features),
+                    ("categorical_low", categorical_transformer_low, categorical_low),
+                    ("categorical_high", categorical_transformer_high, categorical_high),
+                ]
+            )
 
         if self.classifiers == "all":
             self.classifiers = CLASSIFIERS
@@ -288,17 +293,14 @@ class LazyClassifier:
         for name, model in tqdm(self.classifiers):
             start = time.time()
             try:
+                steps = []
+                if should_preprocess:
+                    steps.append(("preprocessor", preprocessor))
                 if "random_state" in model().get_params().keys():
-                    pipe = Pipeline(
-                        steps=[
-                            ("preprocessor", preprocessor),
-                            ("classifier", model(random_state=self.random_state)),
-                        ]
-                    )
+                    steps.append(("classifier", model(random_state=self.random_state)))
                 else:
-                    pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), ("classifier", model())]
-                    )
+                    steps.append(("classifier", model()))
+                pipe = Pipeline(steps=steps)
 
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
@@ -349,6 +351,7 @@ class LazyClassifier:
                 if self.predictions:
                     predictions[name] = y_pred
             except Exception as exception:
+                print(f"{name} got error: {exception}")
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
@@ -404,7 +407,7 @@ class LazyClassifier:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
@@ -519,7 +522,7 @@ class LazyRegressor:
         self.random_state = random_state
         self.regressors = regressors
 
-    def fit(self, X_train, X_test, y_train, y_test):
+    def fit(self, X_train, X_test, y_train, y_test, should_preprocess: bool = True):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
         Parameters
         ----------
@@ -535,6 +538,9 @@ class LazyRegressor:
         y_test : array-like,
             Testing vectors, where rows is the number of samples
             and columns is the number of features.
+        should_preprocess : bool,
+            If preprocessing of columns should be done.
+            Turn this off if your matrix is sparse.
         Returns
         -------
         scores : Pandas DataFrame
@@ -557,20 +563,22 @@ class LazyRegressor:
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
-        numeric_features = X_train.select_dtypes(include=[np.number]).columns
-        categorical_features = X_train.select_dtypes(include=["object"]).columns
+        preprocessor = None
+        if should_preprocess:
+            numeric_features = X_train.select_dtypes(include=[np.number]).columns
+            categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        categorical_low, categorical_high = get_card_split(
-            X_train, categorical_features
-        )
+            categorical_low, categorical_high = get_card_split(
+                X_train, categorical_features
+            )
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
-            ]
-        )
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ("numeric", numeric_transformer, numeric_features),
+                    ("categorical_low", categorical_transformer_low, categorical_low),
+                    ("categorical_high", categorical_transformer_high, categorical_high),
+                ]
+            )
 
         if self.regressors == "all":
             self.regressors = REGRESSORS
@@ -588,18 +596,14 @@ class LazyRegressor:
         for name, model in tqdm(self.regressors):
             start = time.time()
             try:
+                steps = []
+                if should_preprocess:
+                    steps.append(("preprocessor", preprocessor))
                 if "random_state" in model().get_params().keys():
-                    pipe = Pipeline(
-                        steps=[
-                            ("preprocessor", preprocessor),
-                            ("regressor", model(random_state=self.random_state)),
-                        ]
-                    )
+                    steps.append(("regressor", model(random_state=self.random_state)))
                 else:
-                    pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), ("regressor", model())]
-                    )
-
+                    steps.append(("regressor", model()))
+                pipe = Pipeline(steps=steps)
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
@@ -681,7 +685,7 @@ class LazyRegressor:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:

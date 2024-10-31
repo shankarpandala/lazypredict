@@ -36,7 +36,8 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/tags/*' && matrix.python-version == '3.9'
+    needs: build
+    if: github.ref_name == startsWith('refs/tags/')
     steps:
     - name: Check out code
       uses: actions/checkout@v2

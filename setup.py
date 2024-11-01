@@ -5,10 +5,10 @@
 
 from setuptools import setup, find_packages
 
-with open("README.rst") as readme_file:
+with open("README.md") as readme_file:
     readme = readme_file.read()
 
-with open("HISTORY.rst") as history_file:
+with open("HISTORY.md") as history_file:
     history = history_file.read()
 
 requirements = [requirement for requirement in open('requirements.txt')]
@@ -30,9 +30,16 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
-        "Programming Language :: Python :: 3.6",
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
     description="Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning",
+    long_description_content_type="text/markdown",
     entry_points={"console_scripts": ["lazypredict=lazypredict.cli:main",],},
     install_requires=requirements,
     license="MIT license",
@@ -45,6 +52,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/shankarpandala/lazypredict",
-    version='0.2.10',
+    version='0.2.12',
     zip_safe=False,
 )

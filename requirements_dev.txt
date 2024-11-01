@@ -6,3 +6,4 @@ joblib
 lightgbm
 xgboost
 pytest
+myst-parser

@@ -41,7 +41,10 @@ jobs:
           repository-url: 'https://upload.pypi.org/legacy/'
       
       - name: Install Conda Build Tool
-        run: conda install conda-build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y conda
+          conda install conda-build
 
       - name: Build Conda Package
         run: conda-build conda-recipe
@@ -49,7 +52,7 @@ jobs:
       - name: Upload Conda Package
         env:
           ANACONDA_USERNAME: ${{ secrets.ANACONDA_USERNAME }}
-          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }} 
         run: |
           anaconda login --username $ANACONDA_USERNAME --password $ANACONDA_TOKEN
-          anaconda upload /home/runner/work/lazypredict/lazypredict/conda-bld/noarch/your-conda-package.tar.bz2  # Update with actual package name
+          anaconda upload /home/runner/work/lazypredict/lazypredict/conda-bld/noarch/*.tar.bz2

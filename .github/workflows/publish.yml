@@ -1,4 +1,4 @@
-name: publish
+name: Publish
 
 on:
   release:
@@ -11,42 +11,39 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
 
-    - name: Get release version
-      id: get_version
-      run: echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
+      - name: Install Build Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
 
-    - name: Update version in setup.py
-      run: |
-        sed -i "s/version='.*'/version='${{ steps.get_version.outputs.version }}'/g" setup.py
-        sed -i "s/__version__ = '.*'/__version__ = '${{ steps.get_version.outputs.version }}'/g" lazypredict/__init__.py
+      - name: Build Package
+        run: python -m build
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install setuptools wheel
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: 'https://upload.pypi.org/legacy/'
+  
+      - name: Install Conda Build Tool
+        run: conda install conda-build
 
-    - name: Build and publish to PyPI
-      uses: pypi/pypi-publish@v1.0.0
-      with:
-        python: '3.x'
-        repository_url: 'https://upload.pypi.org/legacy/'
-        package: 'dist/*'
+      - name: Build Conda Package
+        run: conda-build conda-recipe
 
-    - name: Build Conda Package
-      run: |
-        conda install conda-build
-        conda-build conda-recipe
-
-    - name: Upload Conda Package
-      run: |
-        anaconda login --username ${{ secrets.ANACONDA_USERNAME }} --password ${{ secrets.ANACONDA_TOKEN }}
-        anaconda upload /path/to/your/conda-package.tar.bz2  # Update with actual path
+      - name: Upload Conda Package
+        env:
+          ANACONDA_USERNAME: ${{ secrets.ANACONDA_USERNAME }}
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          anaconda login --username $ANACONDA_USERNAME --password $ANACONDA_TOKEN
+          anaconda upload /home/runner/work/lazypredict/lazypredict/conda-bld/noarch/your-conda-package.tar.bz2  # Update with actual package name

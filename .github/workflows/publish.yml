@@ -26,6 +26,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
 
+      - name: Update Version in setup.py and __init__.py
+        run: |
+          VERSION=$(echo $GITHUB_REF | sed 's/refs\/tags\///')
+          sed -i "s/version=.*/version='$VERSION',/" setup.py
+          sed -i "s/__version__ = .*/__version__ = '$VERSION'/" lazypredict/__init__.py
+
       - name: Build Package
         run: python -m build
 
@@ -33,7 +39,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: 'https://upload.pypi.org/legacy/'
-  
+      
       - name: Install Conda Build Tool
         run: conda install conda-build
 

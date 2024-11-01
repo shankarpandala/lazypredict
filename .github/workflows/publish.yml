@@ -47,8 +47,14 @@ jobs:
           auto-update-conda: true
           python-version: 3.12
 
+      - name: Initialize Conda
+        run: source $CONDA/bin/activate
+
       - name: Install Conda Build Tool
         run: conda install -y conda-build
+
+      - name: Verify Conda Build Installation
+        run: which conda-build
 
       - name: Build Conda Package
         run: conda-build conda-recipe
@@ -56,7 +62,7 @@ jobs:
       - name: Upload Conda Package
         env:
           ANACONDA_USERNAME: ${{ secrets.ANACONDA_USERNAME }}
-          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }} 
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
           anaconda login --username $ANACONDA_USERNAME --password $ANACONDA_TOKEN
           anaconda upload /home/runner/work/lazypredict/lazypredict/conda-bld/noarch/*.tar.bz2

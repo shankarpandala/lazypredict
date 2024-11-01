@@ -13,6 +13,17 @@ helps understand which models works better without any parameter tuning.
 -   Documentation: <https://lazypredict.readthedocs.io>.
 
 # Installation
+To Clone the repo using gitub. Follow the below steps:
+- git clone https://github.com/shankarpandala/lazypredict.git
+- cd lazypredict
+- create a virtual environment (python -m venv .venv)
+- source .venv/Scripts/activate or source .venv/bin/activate
+- pip install setuptools
+- pip install -r requirements.txt
+- python setup.py install
+- Now you can run your .ipynb files by selecting kernel as .venv environment and can use the lazypredict python package
+
+# Installation Using Pip
 
 To install Lazy Predict:
 

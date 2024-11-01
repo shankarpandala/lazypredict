@@ -11,7 +11,7 @@ jobs:
       with:
         docs-folder: "docs/"
      
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v3
       with:
         name: DocumentationHTML
         path: docs/_build/html/
@@ -32,4 +32,4 @@ jobs:
       with:
         branch: gh-pages
         directory: gh-pages
-        github_token: ${{ secrets.GITHUB_TOKEN }} 
+        github_token: ${{ secrets.GITHUB_TOKEN }}

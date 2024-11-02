@@ -21,8 +21,10 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Build Tools
+      - name: Install Build Tools and Git
         run: |
+          sudo apt-get update
+          sudo apt-get install -y git
           python -m pip install --upgrade pip
           pip install build
 
@@ -56,9 +58,9 @@ jobs:
       - name: Build Conda Package
         run: |
           source /usr/share/miniconda/bin/activate
-          conda-build .
+          conda build conda-recipe
 
-      - name: publish-to-conda
+      - name: Publish to Conda
         uses: fcakyon/conda-publish-action@v1.3
         with:
           anacondatoken: ${{ secrets.ANACONDA_TOKEN }}

@@ -53,11 +53,11 @@ jobs:
       - name: Install Conda Build Tool
         run: conda install -y conda-build
 
-      - name: Verify Conda Build Installation
-        run: which conda-build
+      # - name: Verify Conda Build Installation
+      #   run: which conda-build
 
-      - name: Build Conda Package
-        run: conda-build conda-recipe
+      # - name: Build Conda Package
+      #   run: conda-build conda-recipe
 
       - name: publish-to-conda
         uses: fcakyon/conda-publish-action@v1.3

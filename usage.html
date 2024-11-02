@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Usage &#8212; Lazy Predict 0.2.12 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
+    
+    <script src="_static/documentation_options.js?v=1e30946d"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="contributing.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="contributing.html" title="&lt;no title&gt;"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Lazy Predict 0.2.12 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Usage</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h1>
+<p>To use Lazy Predict in a project:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">lazypredict</span>
+</pre></div>
+</div>
+</section>
+<section id="classification">
+<h1>Classification<a class="headerlink" href="#classification" title="Link to this heading">¶</a></h1>
+<p>Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">lazypredict.Supervised</span> <span class="kn">import</span> <span class="n">LazyClassifier</span>
+<span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">load_breast_cancer</span>
+<span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">load_breast_cancer</span><span class="p">()</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">data</span>
+<span class="n">y</span><span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span>
+<span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span><span class="n">test_size</span><span class="o">=</span><span class="mf">.5</span><span class="p">,</span><span class="n">random_state</span> <span class="o">=</span><span class="mi">123</span><span class="p">)</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span><span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="n">models</span>
+
+
+<span class="o">|</span> <span class="n">Model</span>                          <span class="o">|</span>   <span class="n">Accuracy</span> <span class="o">|</span>   <span class="n">Balanced</span> <span class="n">Accuracy</span> <span class="o">|</span>   <span class="n">ROC</span> <span class="n">AUC</span> <span class="o">|</span>   <span class="n">F1</span> <span class="n">Score</span> <span class="o">|</span>   <span class="n">Time</span> <span class="n">Taken</span> <span class="o">|</span>
+<span class="o">|</span><span class="p">:</span><span class="o">-------------------------------|-----------</span><span class="p">:</span><span class="o">|--------------------</span><span class="p">:</span><span class="o">|----------</span><span class="p">:</span><span class="o">|-----------</span><span class="p">:</span><span class="o">|-------------</span><span class="p">:</span><span class="o">|</span>
+<span class="o">|</span> <span class="n">LinearSVC</span>                      <span class="o">|</span>   <span class="mf">0.989474</span> <span class="o">|</span>            <span class="mf">0.987544</span> <span class="o">|</span>  <span class="mf">0.987544</span> <span class="o">|</span>   <span class="mf">0.989462</span> <span class="o">|</span>    <span class="mf">0.0150008</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">SGDClassifier</span>                  <span class="o">|</span>   <span class="mf">0.989474</span> <span class="o">|</span>            <span class="mf">0.987544</span> <span class="o">|</span>  <span class="mf">0.987544</span> <span class="o">|</span>   <span class="mf">0.989462</span> <span class="o">|</span>    <span class="mf">0.0109992</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">MLPClassifier</span>                  <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.986904</span> <span class="o">|</span>  <span class="mf">0.986904</span> <span class="o">|</span>   <span class="mf">0.985994</span> <span class="o">|</span>    <span class="mf">0.426</span>     <span class="o">|</span>
+<span class="o">|</span> <span class="n">Perceptron</span>                     <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.984797</span> <span class="o">|</span>  <span class="mf">0.984797</span> <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>    <span class="mf">0.0120046</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LogisticRegression</span>             <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.98269</span>  <span class="o">|</span>  <span class="mf">0.98269</span>  <span class="o">|</span>   <span class="mf">0.985934</span> <span class="o">|</span>    <span class="mf">0.0200036</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LogisticRegressionCV</span>           <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.98269</span>  <span class="o">|</span>  <span class="mf">0.98269</span>  <span class="o">|</span>   <span class="mf">0.985934</span> <span class="o">|</span>    <span class="mf">0.262997</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">SVC</span>                            <span class="o">|</span>   <span class="mf">0.982456</span> <span class="o">|</span>            <span class="mf">0.979942</span> <span class="o">|</span>  <span class="mf">0.979942</span> <span class="o">|</span>   <span class="mf">0.982437</span> <span class="o">|</span>    <span class="mf">0.0140011</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">CalibratedClassifierCV</span>         <span class="o">|</span>   <span class="mf">0.982456</span> <span class="o">|</span>            <span class="mf">0.975728</span> <span class="o">|</span>  <span class="mf">0.975728</span> <span class="o">|</span>   <span class="mf">0.982357</span> <span class="o">|</span>    <span class="mf">0.0350015</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">PassiveAggressiveClassifier</span>    <span class="o">|</span>   <span class="mf">0.975439</span> <span class="o">|</span>            <span class="mf">0.974448</span> <span class="o">|</span>  <span class="mf">0.974448</span> <span class="o">|</span>   <span class="mf">0.975464</span> <span class="o">|</span>    <span class="mf">0.0130005</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LabelPropagation</span>               <span class="o">|</span>   <span class="mf">0.975439</span> <span class="o">|</span>            <span class="mf">0.974448</span> <span class="o">|</span>  <span class="mf">0.974448</span> <span class="o">|</span>   <span class="mf">0.975464</span> <span class="o">|</span>    <span class="mf">0.0429988</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LabelSpreading</span>                 <span class="o">|</span>   <span class="mf">0.975439</span> <span class="o">|</span>            <span class="mf">0.974448</span> <span class="o">|</span>  <span class="mf">0.974448</span> <span class="o">|</span>   <span class="mf">0.975464</span> <span class="o">|</span>    <span class="mf">0.0310006</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">RandomForestClassifier</span>         <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>            <span class="mf">0.969594</span> <span class="o">|</span>  <span class="mf">0.969594</span> <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>    <span class="mf">0.033</span>     <span class="o">|</span>
+<span class="o">|</span> <span class="n">GradientBoostingClassifier</span>     <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>            <span class="mf">0.967486</span> <span class="o">|</span>  <span class="mf">0.967486</span> <span class="o">|</span>   <span class="mf">0.971869</span> <span class="o">|</span>    <span class="mf">0.166998</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">QuadraticDiscriminantAnalysis</span>  <span class="o">|</span>   <span class="mf">0.964912</span> <span class="o">|</span>            <span class="mf">0.966206</span> <span class="o">|</span>  <span class="mf">0.966206</span> <span class="o">|</span>   <span class="mf">0.965052</span> <span class="o">|</span>    <span class="mf">0.0119994</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">HistGradientBoostingClassifier</span> <span class="o">|</span>   <span class="mf">0.968421</span> <span class="o">|</span>            <span class="mf">0.964739</span> <span class="o">|</span>  <span class="mf">0.964739</span> <span class="o">|</span>   <span class="mf">0.968387</span> <span class="o">|</span>    <span class="mf">0.682003</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">RidgeClassifierCV</span>              <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>            <span class="mf">0.963272</span> <span class="o">|</span>  <span class="mf">0.963272</span> <span class="o">|</span>   <span class="mf">0.971736</span> <span class="o">|</span>    <span class="mf">0.0130029</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">RidgeClassifier</span>                <span class="o">|</span>   <span class="mf">0.968421</span> <span class="o">|</span>            <span class="mf">0.960525</span> <span class="o">|</span>  <span class="mf">0.960525</span> <span class="o">|</span>   <span class="mf">0.968242</span> <span class="o">|</span>    <span class="mf">0.0119977</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">AdaBoostClassifier</span>             <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.959245</span> <span class="o">|</span>  <span class="mf">0.959245</span> <span class="o">|</span>   <span class="mf">0.961444</span> <span class="o">|</span>    <span class="mf">0.204998</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">ExtraTreesClassifier</span>           <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.957138</span> <span class="o">|</span>  <span class="mf">0.957138</span> <span class="o">|</span>   <span class="mf">0.961362</span> <span class="o">|</span>    <span class="mf">0.0270066</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">KNeighborsClassifier</span>           <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.95503</span>  <span class="o">|</span>  <span class="mf">0.95503</span>  <span class="o">|</span>   <span class="mf">0.961276</span> <span class="o">|</span>    <span class="mf">0.0560005</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">BaggingClassifier</span>              <span class="o">|</span>   <span class="mf">0.947368</span> <span class="o">|</span>            <span class="mf">0.954577</span> <span class="o">|</span>  <span class="mf">0.954577</span> <span class="o">|</span>   <span class="mf">0.947882</span> <span class="o">|</span>    <span class="mf">0.0559971</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">BernoulliNB</span>                    <span class="o">|</span>   <span class="mf">0.950877</span> <span class="o">|</span>            <span class="mf">0.951003</span> <span class="o">|</span>  <span class="mf">0.951003</span> <span class="o">|</span>   <span class="mf">0.951072</span> <span class="o">|</span>    <span class="mf">0.0169988</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LinearDiscriminantAnalysis</span>     <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.950816</span> <span class="o">|</span>  <span class="mf">0.950816</span> <span class="o">|</span>   <span class="mf">0.961089</span> <span class="o">|</span>    <span class="mf">0.0199995</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">GaussianNB</span>                     <span class="o">|</span>   <span class="mf">0.954386</span> <span class="o">|</span>            <span class="mf">0.949536</span> <span class="o">|</span>  <span class="mf">0.949536</span> <span class="o">|</span>   <span class="mf">0.954337</span> <span class="o">|</span>    <span class="mf">0.0139935</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">NuSVC</span>                          <span class="o">|</span>   <span class="mf">0.954386</span> <span class="o">|</span>            <span class="mf">0.943215</span> <span class="o">|</span>  <span class="mf">0.943215</span> <span class="o">|</span>   <span class="mf">0.954014</span> <span class="o">|</span>    <span class="mf">0.019989</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">DecisionTreeClassifier</span>         <span class="o">|</span>   <span class="mf">0.936842</span> <span class="o">|</span>            <span class="mf">0.933693</span> <span class="o">|</span>  <span class="mf">0.933693</span> <span class="o">|</span>   <span class="mf">0.936971</span> <span class="o">|</span>    <span class="mf">0.0170023</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">NearestCentroid</span>                <span class="o">|</span>   <span class="mf">0.947368</span> <span class="o">|</span>            <span class="mf">0.933506</span> <span class="o">|</span>  <span class="mf">0.933506</span> <span class="o">|</span>   <span class="mf">0.946801</span> <span class="o">|</span>    <span class="mf">0.0160074</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">ExtraTreeClassifier</span>            <span class="o">|</span>   <span class="mf">0.922807</span> <span class="o">|</span>            <span class="mf">0.912168</span> <span class="o">|</span>  <span class="mf">0.912168</span> <span class="o">|</span>   <span class="mf">0.922462</span> <span class="o">|</span>    <span class="mf">0.0109999</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">CheckingClassifier</span>             <span class="o">|</span>   <span class="mf">0.361404</span> <span class="o">|</span>            <span class="mf">0.5</span>      <span class="o">|</span>  <span class="mf">0.5</span>      <span class="o">|</span>   <span class="mf">0.191879</span> <span class="o">|</span>    <span class="mf">0.0170043</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">DummyClassifier</span>                <span class="o">|</span>   <span class="mf">0.512281</span> <span class="o">|</span>            <span class="mf">0.489598</span> <span class="o">|</span>  <span class="mf">0.489598</span> <span class="o">|</span>   <span class="mf">0.518924</span> <span class="o">|</span>    <span class="mf">0.0119965</span> <span class="o">|</span>
+</pre></div>
+</div>
+</section>
+<section id="regression">
+<h1>Regression<a class="headerlink" href="#regression" title="Link to this heading">¶</a></h1>
+<p>Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">lazypredict.Supervised</span> <span class="kn">import</span> <span class="n">LazyRegressor</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">datasets</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils</span> <span class="kn">import</span> <span class="n">shuffle</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="n">boston</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_boston</span><span class="p">()</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">shuffle</span><span class="p">(</span><span class="n">boston</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">boston</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">offset</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">)</span>
+<span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:</span><span class="n">offset</span><span class="p">],</span> <span class="n">y</span><span class="p">[:</span><span class="n">offset</span><span class="p">]</span>
+<span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">offset</span><span class="p">:],</span> <span class="n">y</span><span class="p">[</span><span class="n">offset</span><span class="p">:]</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span> <span class="p">)</span>
+<span class="n">models</span><span class="p">,</span><span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+
+<span class="o">|</span> <span class="n">Model</span>                         <span class="o">|</span>   <span class="n">R</span><span class="o">-</span><span class="n">Squared</span> <span class="o">|</span>     <span class="n">RMSE</span> <span class="o">|</span>   <span class="n">Time</span> <span class="n">Taken</span> <span class="o">|</span>
+<span class="o">|</span><span class="p">:</span><span class="o">------------------------------|------------</span><span class="p">:</span><span class="o">|---------</span><span class="p">:</span><span class="o">|-------------</span><span class="p">:</span><span class="o">|</span>
+<span class="o">|</span> <span class="n">SVR</span>                           <span class="o">|</span>   <span class="mf">0.877199</span>  <span class="o">|</span>  <span class="mf">2.62054</span> <span class="o">|</span>    <span class="mf">0.0330021</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">RandomForestRegressor</span>         <span class="o">|</span>   <span class="mf">0.874429</span>  <span class="o">|</span>  <span class="mf">2.64993</span> <span class="o">|</span>    <span class="mf">0.0659981</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">ExtraTreesRegressor</span>           <span class="o">|</span>   <span class="mf">0.867566</span>  <span class="o">|</span>  <span class="mf">2.72138</span> <span class="o">|</span>    <span class="mf">0.0570002</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">AdaBoostRegressor</span>             <span class="o">|</span>   <span class="mf">0.865851</span>  <span class="o">|</span>  <span class="mf">2.73895</span> <span class="o">|</span>    <span class="mf">0.144999</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">NuSVR</span>                         <span class="o">|</span>   <span class="mf">0.863712</span>  <span class="o">|</span>  <span class="mf">2.7607</span>  <span class="o">|</span>    <span class="mf">0.0340044</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">GradientBoostingRegressor</span>     <span class="o">|</span>   <span class="mf">0.858693</span>  <span class="o">|</span>  <span class="mf">2.81107</span> <span class="o">|</span>    <span class="mf">0.13</span>      <span class="o">|</span>
+<span class="o">|</span> <span class="n">KNeighborsRegressor</span>           <span class="o">|</span>   <span class="mf">0.826307</span>  <span class="o">|</span>  <span class="mf">3.1166</span>  <span class="o">|</span>    <span class="mf">0.0179954</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">HistGradientBoostingRegressor</span> <span class="o">|</span>   <span class="mf">0.810479</span>  <span class="o">|</span>  <span class="mf">3.25551</span> <span class="o">|</span>    <span class="mf">0.820995</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">BaggingRegressor</span>              <span class="o">|</span>   <span class="mf">0.800056</span>  <span class="o">|</span>  <span class="mf">3.34383</span> <span class="o">|</span>    <span class="mf">0.0579946</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">MLPRegressor</span>                  <span class="o">|</span>   <span class="mf">0.750536</span>  <span class="o">|</span>  <span class="mf">3.73503</span> <span class="o">|</span>    <span class="mf">0.725997</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">HuberRegressor</span>                <span class="o">|</span>   <span class="mf">0.736973</span>  <span class="o">|</span>  <span class="mf">3.83522</span> <span class="o">|</span>    <span class="mf">0.0370018</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LinearSVR</span>                     <span class="o">|</span>   <span class="mf">0.71914</span>   <span class="o">|</span>  <span class="mf">3.9631</span>  <span class="o">|</span>    <span class="mf">0.0179989</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">RidgeCV</span>                       <span class="o">|</span>   <span class="mf">0.718402</span>  <span class="o">|</span>  <span class="mf">3.9683</span>  <span class="o">|</span>    <span class="mf">0.018003</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">BayesianRidge</span>                 <span class="o">|</span>   <span class="mf">0.718102</span>  <span class="o">|</span>  <span class="mf">3.97041</span> <span class="o">|</span>    <span class="mf">0.0159984</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">Ridge</span>                         <span class="o">|</span>   <span class="mf">0.71765</span>   <span class="o">|</span>  <span class="mf">3.9736</span>  <span class="o">|</span>    <span class="mf">0.0149941</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LinearRegression</span>              <span class="o">|</span>   <span class="mf">0.71753</span>   <span class="o">|</span>  <span class="mf">3.97444</span> <span class="o">|</span>    <span class="mf">0.0190051</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">TransformedTargetRegressor</span>    <span class="o">|</span>   <span class="mf">0.71753</span>   <span class="o">|</span>  <span class="mf">3.97444</span> <span class="o">|</span>    <span class="mf">0.012001</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">LassoCV</span>                       <span class="o">|</span>   <span class="mf">0.717337</span>  <span class="o">|</span>  <span class="mf">3.9758</span>  <span class="o">|</span>    <span class="mf">0.0960066</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">ElasticNetCV</span>                  <span class="o">|</span>   <span class="mf">0.717104</span>  <span class="o">|</span>  <span class="mf">3.97744</span> <span class="o">|</span>    <span class="mf">0.0860076</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LassoLarsCV</span>                   <span class="o">|</span>   <span class="mf">0.717045</span>  <span class="o">|</span>  <span class="mf">3.97786</span> <span class="o">|</span>    <span class="mf">0.0490005</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LassoLarsIC</span>                   <span class="o">|</span>   <span class="mf">0.716636</span>  <span class="o">|</span>  <span class="mf">3.98073</span> <span class="o">|</span>    <span class="mf">0.0210001</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LarsCV</span>                        <span class="o">|</span>   <span class="mf">0.715031</span>  <span class="o">|</span>  <span class="mf">3.99199</span> <span class="o">|</span>    <span class="mf">0.0450008</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">Lars</span>                          <span class="o">|</span>   <span class="mf">0.715031</span>  <span class="o">|</span>  <span class="mf">3.99199</span> <span class="o">|</span>    <span class="mf">0.0269964</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">SGDRegressor</span>                  <span class="o">|</span>   <span class="mf">0.714362</span>  <span class="o">|</span>  <span class="mf">3.99667</span> <span class="o">|</span>    <span class="mf">0.0210009</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">RANSACRegressor</span>               <span class="o">|</span>   <span class="mf">0.707849</span>  <span class="o">|</span>  <span class="mf">4.04198</span> <span class="o">|</span>    <span class="mf">0.111998</span>  <span class="o">|</span>
+<span class="o">|</span> <span class="n">ElasticNet</span>                    <span class="o">|</span>   <span class="mf">0.690408</span>  <span class="o">|</span>  <span class="mf">4.16088</span> <span class="o">|</span>    <span class="mf">0.0190012</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">Lasso</span>                         <span class="o">|</span>   <span class="mf">0.662141</span>  <span class="o">|</span>  <span class="mf">4.34668</span> <span class="o">|</span>    <span class="mf">0.0180018</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">OrthogonalMatchingPursuitCV</span>   <span class="o">|</span>   <span class="mf">0.591632</span>  <span class="o">|</span>  <span class="mf">4.77877</span> <span class="o">|</span>    <span class="mf">0.0180008</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">ExtraTreeRegressor</span>            <span class="o">|</span>   <span class="mf">0.583314</span>  <span class="o">|</span>  <span class="mf">4.82719</span> <span class="o">|</span>    <span class="mf">0.0129974</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">PassiveAggressiveRegressor</span>    <span class="o">|</span>   <span class="mf">0.556668</span>  <span class="o">|</span>  <span class="mf">4.97914</span> <span class="o">|</span>    <span class="mf">0.0150032</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">GaussianProcessRegressor</span>      <span class="o">|</span>   <span class="mf">0.428298</span>  <span class="o">|</span>  <span class="mf">5.65425</span> <span class="o">|</span>    <span class="mf">0.0580051</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">OrthogonalMatchingPursuit</span>     <span class="o">|</span>   <span class="mf">0.379295</span>  <span class="o">|</span>  <span class="mf">5.89159</span> <span class="o">|</span>    <span class="mf">0.0180039</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">DecisionTreeRegressor</span>         <span class="o">|</span>   <span class="mf">0.318767</span>  <span class="o">|</span>  <span class="mf">6.17217</span> <span class="o">|</span>    <span class="mf">0.0230272</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">DummyRegressor</span>                <span class="o">|</span>  <span class="o">-</span><span class="mf">0.0215752</span> <span class="o">|</span>  <span class="mf">7.55832</span> <span class="o">|</span>    <span class="mf">0.0140116</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">LassoLars</span>                     <span class="o">|</span>  <span class="o">-</span><span class="mf">0.0215752</span> <span class="o">|</span>  <span class="mf">7.55832</span> <span class="o">|</span>    <span class="mf">0.0180008</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">KernelRidge</span>                   <span class="o">|</span>  <span class="o">-</span><span class="mf">8.24669</span>   <span class="o">|</span> <span class="mf">22.7396</span>  <span class="o">|</span>    <span class="mf">0.0309792</span> <span class="o">|</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Regression and Classification are replaced with LazyRegressor and LazyClassifier.
+Regression and Classification classes will be removed in next release</p>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Usage</a></li>
+<li><a class="reference internal" href="#classification">Classification</a></li>
+<li><a class="reference internal" href="#regression">Regression</a></li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="installation.html"
+                          title="previous chapter">Installation</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="contributing.html"
+                          title="next chapter">&lt;no title&gt;</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/usage.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="contributing.html" title="&lt;no title&gt;"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Lazy Predict 0.2.12 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Usage</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2022, Shankar Rao Pandala.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    </div>
+  </body>
+</html>

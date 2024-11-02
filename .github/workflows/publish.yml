@@ -42,26 +42,3 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: 'https://upload.pypi.org/legacy/'
-
-      - name: Set up Conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          auto-update-conda: true
-          python-version: 3.12
-
-      - name: Initialize Conda
-        run: source /usr/share/miniconda/bin/activate
-
-      - name: Install Conda Build Tool
-        run: conda install -y conda-build
-
-      - name: Build Conda Package
-        run: |
-          source /usr/share/miniconda/bin/activate
-          conda build conda-recipe
-
-      - name: Publish to Conda
-        uses: fcakyon/conda-publish-action@v1.3
-        with:
-          anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
-          platforms: 'win osx linux'

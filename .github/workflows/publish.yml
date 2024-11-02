@@ -1,49 +1,44 @@
-name: publish
+name: Publish
 
 on:
   release:
     types: [created]
 
+permissions:
+  contents: read
+  id-token: write  # Required for OIDC
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
 
-    - name: Get release version
-      id: get_version
-      run: echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
+      - name: Install Build Tools and Git
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+          python -m pip install --upgrade pip
+          pip install build
 
-    - name: Update version in setup.py
-      run: |
-        sed -i "s/version='.*'/version='${{ steps.get_version.outputs.version }}'/g" setup.py
-        sed -i "s/__version__ = '.*'/__version__ = '${{ steps.get_version.outputs.version }}'/g" lazypredict/__init__.py
+      - name: Update Version in setup.py and __init__.py
+        run: |
+          VERSION=$(echo $GITHUB_REF | sed 's/refs\/tags\///')
+          sed -i "s/version=.*/version='$VERSION',/" setup.py
+          sed -i "s/__version__ = .*/__version__ = '$VERSION'/" lazypredict/__init__.py
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install setuptools wheel twine
+      - name: Build Package
+        run: python -m build
 
-    - name: Build and publish to PyPI
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERS }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        python setup.py sdist bdist_wheel
-        twine upload dist/*
-
-    - name: Build Conda Package
-      run: |
-        conda install conda-build
-        conda-build conda-recipe
-
-    - name: Upload Conda Package
-      run: |
-        anaconda login --username ${{ secrets.ANACONDA_USERNAME }} --password ${{ secrets.ANACONDA_TOKEN }}
-        anaconda upload /path/to/your/conda-package.tar.bz2  # Update with actual path
+      - name: Publish to PyPI
+        if: github.event.release.prerelease == false
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: 'https://upload.pypi.org/legacy/'

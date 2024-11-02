@@ -5,3 +5,4 @@ tqdm
 joblib
 lightgbm
 xgboost
+pytest-runner

@@ -1,7 +1,9 @@
 name: "Pull Request Docs Check"
 on: 
   pull_request:
-
+  push:
+    branches:
+      - dev
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -17,7 +19,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install sphinx
-          pip install -r docs/requirements.txt  # Ensure you have a requirements file for Sphinx
+          pip install -r requirements.txt  # Ensure you have a requirements file for Sphinx
 
       - name: Build documentation
         run: |

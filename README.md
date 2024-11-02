@@ -91,8 +91,8 @@ from sklearn import datasets
 from sklearn.utils import shuffle
 import numpy as np
 
-boston = datasets.load_boston()
-X, y = shuffle(boston.data, boston.target, random_state=13)
+diabetes  = datasets.load_diabetes()
+X, y = shuffle(diabetes.data, diabetes.target, random_state=13)
 X = X.astype(np.float32)
 
 offset = int(X.shape[0] * 0.9)
@@ -106,47 +106,46 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 print(models)
 ```
 
-| Model                         | Adjusted R-Squared | R-Squared |  RMSE | Time Taken |
-|:------------------------------|-------------------:|----------:|------:|-----------:|
-| SVR                           |               0.83 |      0.88 |  2.62 |       0.01 |
-| BaggingRegressor              |               0.83 |      0.88 |  2.63 |       0.03 |
-| NuSVR                         |               0.82 |      0.86 |  2.76 |       0.03 |
-| RandomForestRegressor         |               0.81 |      0.86 |  2.78 |       0.21 |
-| XGBRegressor                  |               0.81 |      0.86 |  2.79 |       0.06 |
-| GradientBoostingRegressor     |               0.81 |      0.86 |  2.84 |       0.11 |
-| ExtraTreesRegressor           |               0.79 |      0.84 |  2.98 |       0.12 |
-| AdaBoostRegressor             |               0.78 |      0.83 |  3.04 |       0.07 |
-| HistGradientBoostingRegressor |               0.77 |      0.83 |  3.06 |       0.17 |
-| PoissonRegressor              |               0.77 |      0.83 |  3.11 |       0.01 |
-| LGBMRegressor                 |               0.77 |      0.83 |  3.11 |       0.07 |
-| KNeighborsRegressor           |               0.77 |      0.83 |  3.12 |       0.01 |
-| DecisionTreeRegressor         |               0.65 |      0.74 |  3.79 |       0.01 |
-| MLPRegressor                  |               0.65 |      0.74 |  3.80 |       1.63 |
-| HuberRegressor                |               0.64 |      0.74 |  3.84 |       0.01 |
-| GammaRegressor                |               0.64 |      0.73 |  3.88 |       0.01 |
-| LinearSVR                     |               0.62 |      0.72 |  3.96 |       0.01 |
-| RidgeCV                       |               0.62 |      0.72 |  3.97 |       0.01 |
-| BayesianRidge                 |               0.62 |      0.72 |  3.97 |       0.01 |
-| Ridge                         |               0.62 |      0.72 |  3.97 |       0.01 |
-| TransformedTargetRegressor    |               0.62 |      0.72 |  3.97 |       0.01 |
-| LinearRegression              |               0.62 |      0.72 |  3.97 |       0.01 |
-| ElasticNetCV                  |               0.62 |      0.72 |  3.98 |       0.04 |
-| LassoCV                       |               0.62 |      0.72 |  3.98 |       0.06 |
-| LassoLarsIC                   |               0.62 |      0.72 |  3.98 |       0.01 |
-| LassoLarsCV                   |               0.62 |      0.72 |  3.98 |       0.02 |
-| Lars                          |               0.61 |      0.72 |  3.99 |       0.01 |
-| LarsCV                        |               0.61 |      0.71 |  4.02 |       0.04 |
-| SGDRegressor                  |               0.60 |      0.70 |  4.07 |       0.01 |
-| TweedieRegressor              |               0.59 |      0.70 |  4.12 |       0.01 |
-| GeneralizedLinearRegressor    |               0.59 |      0.70 |  4.12 |       0.01 |
-| ElasticNet                    |               0.58 |      0.69 |  4.16 |       0.01 |
-| Lasso                         |               0.54 |      0.66 |  4.35 |       0.02 |
-| RANSACRegressor               |               0.53 |      0.65 |  4.41 |       0.04 |
-| OrthogonalMatchingPursuitCV   |               0.45 |      0.59 |  4.78 |       0.02 |
-| PassiveAggressiveRegressor    |               0.37 |      0.54 |  5.09 |       0.01 |
-| GaussianProcessRegressor      |               0.23 |      0.43 |  5.65 |       0.03 |
-| OrthogonalMatchingPursuit     |               0.16 |      0.38 |  5.89 |       0.01 |
-| ExtraTreeRegressor            |               0.08 |      0.32 |  6.17 |       0.01 |
-| DummyRegressor                |              -0.38 |     -0.02 |  7.56 |       0.01 |
-| LassoLars                     |              -0.38 |     -0.02 |  7.56 |       0.01 |
-| KernelRidge                   |             -11.50 |     -8.25 | 22.74 |       0.01 |
+| Model                         |   Adjusted R-Squared |   R-Squared |     RMSE |   Time Taken |
+|:------------------------------|---------------------:|------------:|---------:|-------------:|
+| ExtraTreesRegressor           |           0.378921   |  0.520076   |  54.2202 |   0.121466   |
+| OrthogonalMatchingPursuitCV   |           0.374947   |  0.517004   |  54.3934 |   0.0111742  |
+| Lasso                         |           0.373483   |  0.515873   |  54.457  |   0.00620174 |
+| LassoLars                     |           0.373474   |  0.515866   |  54.4575 |   0.0087235  |
+| LarsCV                        |           0.3715     |  0.514341   |  54.5432 |   0.0160234  |
+| LassoCV                       |           0.370413   |  0.513501   |  54.5903 |   0.0624897  |
+| PassiveAggressiveRegressor    |           0.366958   |  0.510831   |  54.7399 |   0.00689793 |
+| LassoLarsIC                   |           0.364984   |  0.509306   |  54.8252 |   0.0108321  |
+| SGDRegressor                  |           0.364307   |  0.508783   |  54.8544 |   0.0055306  |
+| RidgeCV                       |           0.363002   |  0.507774   |  54.9107 |   0.00728202 |
+| Ridge                         |           0.363002   |  0.507774   |  54.9107 |   0.00556874 |
+| BayesianRidge                 |           0.362296   |  0.507229   |  54.9411 |   0.0122972  |
+| LassoLarsCV                   |           0.361749   |  0.506806   |  54.9646 |   0.0175984  |
+| TransformedTargetRegressor    |           0.361749   |  0.506806   |  54.9646 |   0.00604773 |
+| LinearRegression              |           0.361749   |  0.506806   |  54.9646 |   0.00677514 |
+| Lars                          |           0.358828   |  0.504549   |  55.0903 |   0.00935149 |
+| ElasticNetCV                  |           0.356159   |  0.502486   |  55.2048 |   0.0478678  |
+| HuberRegressor                |           0.355251   |  0.501785   |  55.2437 |   0.0129263  |
+| RandomForestRegressor         |           0.349621   |  0.497434   |  55.4844 |   0.2331     |
+| AdaBoostRegressor             |           0.340416   |  0.490322   |  55.8757 |   0.0512381  |
+| LGBMRegressor                 |           0.339239   |  0.489412   |  55.9255 |   0.0396187  |
+| HistGradientBoostingRegressor |           0.335632   |  0.486625   |  56.0779 |   0.0897055  |
+| PoissonRegressor              |           0.323033   |  0.476889   |  56.6072 |   0.00953603 |
+| ElasticNet                    |           0.301755   |  0.460447   |  57.4899 |   0.00604224 |
+| KNeighborsRegressor           |           0.299855   |  0.458979   |  57.5681 |   0.00757337 |
+| OrthogonalMatchingPursuit     |           0.292421   |  0.453235   |  57.8729 |   0.00709486 |
+| BaggingRegressor              |           0.291213   |  0.452301   |  57.9223 |   0.0302746  |
+| GradientBoostingRegressor     |           0.247009   |  0.418143   |  59.7011 |   0.136803   |
+| TweedieRegressor              |           0.244215   |  0.415984   |  59.8118 |   0.00633955 |
+| XGBRegressor                  |           0.224263   |  0.400567   |  60.5961 |   0.339694   |
+| GammaRegressor                |           0.223895   |  0.400283   |  60.6105 |   0.0235181  |
+| RANSACRegressor               |           0.203535   |  0.38455    |  61.4004 |   0.0653253  |
+| LinearSVR                     |           0.116707   |  0.317455   |  64.6607 |   0.0077076  |
+| ExtraTreeRegressor            |           0.00201902 |  0.228833   |  68.7304 |   0.00626636 |
+| NuSVR                         |          -0.0667043  |  0.175728   |  71.0575 |   0.0143399  |
+| SVR                           |          -0.0964128  |  0.152772   |  72.0402 |   0.0114729  |
+| DummyRegressor                |          -0.297553   | -0.00265478 |  78.3701 |   0.00592971 |
+| DecisionTreeRegressor         |          -0.470263   | -0.136112   |  83.4229 |   0.00749898 |
+| GaussianProcessRegressor      |          -0.769174   | -0.367089   |  91.5109 |   0.0770502  |
+| MLPRegressor                  |          -1.86772    | -1.21597    | 116.508  |   0.235267   |
+| KernelRidge                   |          -5.03822    | -3.6659     | 169.061  |   0.0243919  |

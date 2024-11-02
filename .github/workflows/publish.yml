@@ -48,13 +48,15 @@ jobs:
           python-version: 3.12
 
       - name: Initialize Conda
-        run: source $CONDA/bin/activate
+        run: source /usr/share/miniconda/bin/activate
 
       - name: Install Conda Build Tool
         run: conda install -y conda-build
 
       - name: Build Conda Package
-        run: conda-build .
+        run: |
+          source /usr/share/miniconda/bin/activate
+          conda-build .
 
       - name: publish-to-conda
         uses: fcakyon/conda-publish-action@v1.3

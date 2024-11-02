@@ -59,10 +59,9 @@ jobs:
       - name: Build Conda Package
         run: conda-build conda-recipe
 
-      - name: Upload Conda Package
-        env:
-          ANACONDA_USERNAME: ${{ secrets.ANACONDA_USERNAME }}
-          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
-        run: |
-          anaconda login --username $ANACONDA_USERNAME --password $ANACONDA_TOKEN
-          anaconda upload /home/runner/work/lazypredict/lazypredict/conda-bld/noarch/*.tar.bz2
+      - name: publish-to-conda
+        uses: fcakyon/conda-publish-action@v1.3
+        with:
+          subdir: 'conda'
+          anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
+          platforms: 'win osx linux'

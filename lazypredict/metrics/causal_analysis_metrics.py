@@ -1,53 +1,36 @@
-# lazypredict/metrics/causal_analysis_metrics.py
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from .base import MetricsBase
 
-import pandas as pd  # Added import for pandas
-from typing import Any, Dict, List
-import logging
-from .base import Metrics
-
-logger = logging.getLogger(__name__)
-
-class CausalAnalysisMetrics(Metrics):
+class CausalAnalysisMetrics(MetricsBase):
     """
-    A class for calculating various metrics for causal analysis.
+    CausalAnalysisMetrics for evaluating causal analysis models.
+
+    This class computes metrics such as MSE, MAE, and R2 score.
+
+    Methods
+    -------
+    compute(y_true, y_pred):
+        Compute causal analysis metrics.
     """
 
-    def calculate(self, treatment_effect: Any, estimated_effect: Any) -> Dict[str, float]:
+    def compute(self, y_true, y_pred):
         """
-        Calculate causal analysis metrics for the given true and estimated effects.
+        Compute causal analysis metrics.
 
-        Args:
-            treatment_effect (Any): True treatment effect.
-            estimated_effect (Any): Estimated treatment effect.
+        Parameters
+        ----------
+        y_true : array-like
+            True values.
+        y_pred : array-like
+            Predicted values.
 
-        Returns:
-            Dict[str, float]: A dictionary of calculated metrics.
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics.
         """
-        try:
-            # Assuming simple differences for effect comparison
-            metrics = {
-                'mean_difference': (estimated_effect - treatment_effect).mean(),
-                'variance_difference': (estimated_effect - treatment_effect).var()
-            }
-            return metrics
-
-        except Exception as e:
-            logger.error(f"Failed to calculate causal analysis metrics: {e}")
-            return {}
-
-    def create_results_df(self, results: List[Dict[str, Any]]) -> pd.DataFrame:
-        """
-        Create a DataFrame of causal analysis results from a list of dictionaries.
-
-        Args:
-            results (List[Dict[str, Any]]): A list of dictionaries containing results.
-
-        Returns:
-            pd.DataFrame: A DataFrame containing the causal analysis results.
-        """
-        try:
-            results_df = pd.DataFrame(results)
-            return results_df
-        except Exception as e:
-            logger.error(f"Failed to create results DataFrame: {e}")
-            return pd.DataFrame()
+        return {
+            "mean_squared_error": mean_squared_error(y_true, y_pred),
+            "mean_absolute_error": mean_absolute_error(y_true, y_pred),
+            "r2_score": r2_score(y_true, y_pred)
+        }

@@ -1,54 +1,36 @@
-# lazypredict/metrics/clustering_metrics.py
-
-import pandas as pd  # Added import for pandas
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-from typing import Any, Dict, List
-import logging
-from .base import Metrics
+from .base import MetricsBase
 
-logger = logging.getLogger(__name__)
-
-class ClusteringMetrics(Metrics):
+class ClusteringMetrics(MetricsBase):
     """
-    A class for calculating various clustering metrics.
+    ClusteringMetrics for evaluating clustering models.
+
+    This class computes metrics such as silhouette score, calinski_harabasz score, and davies_bouldin score.
+
+    Methods
+    -------
+    compute(X, labels):
+        Compute clustering metrics.
     """
 
-    def calculate(self, X: Any, labels: Any) -> Dict[str, float]:
+    def compute(self, X, labels):
         """
-        Calculate clustering metrics for the given data and cluster labels.
+        Compute clustering metrics.
 
-        Args:
-            X (Any): Input features.
-            labels (Any): Cluster labels.
+        Parameters
+        ----------
+        X : DataFrame
+            Input data.
+        labels : array-like
+            Cluster labels.
 
-        Returns:
-            Dict[str, float]: A dictionary of calculated metrics.
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics.
         """
-        try:
-            metrics = {
-                'silhouette_score': silhouette_score(X, labels),
-                'calinski_harabasz_score': calinski_harabasz_score(X, labels),
-                'davies_bouldin_score': davies_bouldin_score(X, labels)
-            }
-            return metrics
-
-        except Exception as e:
-            logger.error(f"Failed to calculate clustering metrics: {e}")
-            return {}
-
-    def create_results_df(self, results: List[Dict[str, Any]]) -> pd.DataFrame:
-        """
-        Create a DataFrame of clustering results from a list of dictionaries.
-
-        Args:
-            results (List[Dict[str, Any]]): A list of dictionaries containing results.
-
-        Returns:
-            pd.DataFrame: A DataFrame containing the clustering results.
-        """
-        try:
-            results_df = pd.DataFrame(results)
-            return results_df
-        except Exception as e:
-            logger.error(f"Failed to create results DataFrame: {e}")
-            return pd.DataFrame()
+        return {
+            "silhouette_score": silhouette_score(X, labels),
+            "calinski_harabasz_score": calinski_harabasz_score(X, labels),
+            "davies_bouldin_score": davies_bouldin_score(X, labels)
+        }

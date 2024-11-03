@@ -1,54 +1,36 @@
-# lazypredict/metrics/regression_metrics.py
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from .base import MetricsBase
 
-import pandas as pd  # Added import for pandas
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-from typing import Any, Dict, List
-import logging
-from .base import Metrics
-
-logger = logging.getLogger(__name__)
-
-class RegressionMetrics(Metrics):
+class RegressionMetrics(MetricsBase):
     """
-    A class for calculating various regression metrics.
+    RegressionMetrics for evaluating regression models.
+
+    This class computes metrics such as MSE, MAE, and R2 score.
+
+    Methods
+    -------
+    compute(y_true, y_pred):
+        Compute MSE, MAE, and R2 score.
     """
 
-    def calculate(self, y_true: Any, y_pred: Any) -> Dict[str, float]:
+    def compute(self, y_true, y_pred):
         """
-        Calculate regression metrics for the given true and predicted values.
+        Compute regression metrics.
 
-        Args:
-            y_true (Any): True target values.
-            y_pred (Any): Predicted target values.
+        Parameters
+        ----------
+        y_true : array-like
+            True values.
+        y_pred : array-like
+            Predicted values.
 
-        Returns:
-            Dict[str, float]: A dictionary of calculated metrics.
+        Returns
+        -------
+        dict
+            Dictionary of computed metrics.
         """
-        try:
-            metrics = {
-                'mean_squared_error': mean_squared_error(y_true, y_pred),
-                'r2_score': r2_score(y_true, y_pred),
-                'mean_absolute_error': mean_absolute_error(y_true, y_pred)
-            }
-            return metrics
-
-        except Exception as e:
-            logger.error(f"Failed to calculate regression metrics: {e}")
-            return {}
-
-    def create_results_df(self, results: List[Dict[str, Any]]) -> pd.DataFrame:
-        """
-        Create a DataFrame of regression results from a list of dictionaries.
-
-        Args:
-            results (List[Dict[str, Any]]): A list of dictionaries containing results.
-
-        Returns:
-            pd.DataFrame: A DataFrame containing the regression results.
-        """
-        try:
-            results_df = pd.DataFrame(results)
-            return results_df
-        except Exception as e:
-            logger.error(f"Failed to create results DataFrame: {e}")
-            return pd.DataFrame()
+        return {
+            "mean_squared_error": mean_squared_error(y_true, y_pred),
+            "mean_absolute_error": mean_absolute_error(y_true, y_pred),
+            "r2_score": r2_score(y_true, y_pred)
+        }

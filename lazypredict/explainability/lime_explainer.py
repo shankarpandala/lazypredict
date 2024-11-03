@@ -1,4 +1,5 @@
 from lime.lime_tabular import LimeTabularExplainer
+import pandas as pd
 
 class LIMEExplainer:
     """
@@ -30,9 +31,10 @@ class LIMEExplainer:
             Training data used for creating the explainer.
         """
         self.model = model
+        self.feature_names = training_data.columns if isinstance(training_data, pd.DataFrame) else None
         self.explainer = LimeTabularExplainer(
             training_data.values,
-            feature_names=training_data.columns,
+            feature_names=self.feature_names,
             mode="classification" if hasattr(model, "predict_proba") else "regression"
         )
 
@@ -49,10 +51,14 @@ class LIMEExplainer:
 
         Returns
         -------
-        dict
+        list of tuples
             Explanation results with feature importance for the instance.
         """
+        if not isinstance(X, pd.DataFrame):
+            raise ValueError("X must be a DataFrame to preserve feature names for LIME.")
+
         explanation = self.explainer.explain_instance(
-            X.iloc[instance].values, self.model.predict_proba if hasattr(self.model, "predict_proba") else self.model.predict
+            X.iloc[instance].values, 
+            self.model.predict_proba if hasattr(self.model, "predict_proba") else self.model.predict
         )
         return explanation.as_list()

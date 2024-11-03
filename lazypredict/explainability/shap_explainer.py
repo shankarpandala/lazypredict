@@ -1,4 +1,5 @@
 import shap
+import pandas as pd
 
 class SHAPExplainer:
     """
@@ -63,4 +64,11 @@ class SHAPExplainer:
         X : DataFrame
             Input data used for plotting feature importance.
         """
+        # Ensure X is a DataFrame and compatible with shap_values
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=[f"feature_{i}" for i in range(X.shape[1])])
+        
+        if hasattr(shap_values, "values") and shap_values.values.shape[1] != X.shape[1]:
+            raise ValueError("Mismatch between shap_values and X dimensions.")
+        
         shap.summary_plot(shap_values, X)

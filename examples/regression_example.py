@@ -48,7 +48,7 @@ mlflow_logger.end_run()
 # SHAP Explainability (for Jupyter Notebook)
 # Uncomment the lines below to use in a notebook
 # from lazypredict.explainability.shap_explainer import SHAPExplainer
-# shap_explainer = SHAPExplainer(model.model)
+# shap_explainer = SHAPExplainer(model.model, data=X_selected)  # Provide sample data for the masker
 # shap_values = shap_explainer.explain(X_selected)
 # shap_explainer.plot_summary(shap_values, X_selected)
 

@@ -1,4 +1,4 @@
-from sklearn.inspection import plot_partial_dependence
+from sklearn.inspection import PartialDependenceDisplay
 import matplotlib.pyplot as plt
 
 class PartialDependencePlot:
@@ -43,5 +43,6 @@ class PartialDependencePlot:
         -------
         None
         """
-        plot_partial_dependence(self.model, self.X, features, grid_resolution=50)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        PartialDependenceDisplay.from_estimator(self.model, self.X, features, ax=ax, grid_resolution=50)
         plt.show()

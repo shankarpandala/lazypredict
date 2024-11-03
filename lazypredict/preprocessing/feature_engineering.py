@@ -42,7 +42,26 @@ class FeatureEngineering(PreprocessingBase):
             self.poly.fit(X)
 
     def transform(self, X):
-        """Transform the data by adding engineered features."""
+        """
+        Transform the data by adding engineered features.
+        
+        If `fit()` has not been called, it will automatically call `fit()` on the data.
+
+        Parameters
+        ----------
+        X : DataFrame or array-like
+            Input data to transform.
+
+        Returns
+        -------
+        DataFrame
+            Transformed data with additional features.
+        """
+        if self.poly is None:
+            # Automatically call fit if it hasn't been called
+            self.fit(X)
+            
         if self.method == 'polynomial':
             return pd.DataFrame(self.poly.transform(X), columns=self.poly.get_feature_names_out())
+        
         return X

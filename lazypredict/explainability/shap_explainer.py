@@ -20,15 +20,21 @@ class SHAPExplainer:
         Plot a SHAP summary plot.
     """
 
-    def __init__(self, model):
+    def __init__(self, model, data=None):
         """
         Parameters
         ----------
         model : object
             A trained model compatible with SHAP explainers.
+        data : DataFrame, optional
+            Sample data used to create the masker for SHAP. Required for models
+            that are not directly compatible with SHAP (like LinearRegression).
         """
         self.model = model
-        self.explainer = shap.Explainer(self.model)
+        if data is not None:
+            self.explainer = shap.Explainer(self.model, shap.maskers.Independent(data))
+        else:
+            self.explainer = shap.Explainer(self.model)
 
     def explain(self, X):
         """

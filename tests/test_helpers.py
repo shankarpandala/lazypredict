@@ -1,5 +1,8 @@
 import pytest
-import pandas as pd
+from lazypredict.utils.backend import Backend
+
+DataFrame = Backend.DataFrame
+Series = Backend.Series
 from lazypredict.Supervised import get_card_split
 
 def test_get_card_split():

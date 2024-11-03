@@ -1,8 +1,29 @@
 click
-scikit-learn
-pandas
-tqdm
 joblib
 lightgbm
 xgboost
 pytest-runner
+# Core Dependencies
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+tqdm>=4.62.0
+
+# Preprocessing and Backend Support
+polars>=0.10.0     # Optional: For polars DataFrame backend
+
+
+# Explainability Libraries
+shap>=0.39.0       # For SHAP explainability
+lime>=0.2.0.1      # For LIME explainability
+matplotlib>=3.4.0  # For plotting explainability visuals
+
+# MLflow Integration
+mlflow>=1.19.0     # For model tracking and logging
+
+# Causal Analysis Libraries
+dowhy>=0.7         # For causal inference analysis
+econml>=0.12.0     # For advanced causal inference methods
+
+# Additional Utilities
+seaborn>=0.11.0    # Optional: For enhanced plotting

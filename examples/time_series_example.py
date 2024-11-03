@@ -1,60 +1,29 @@
-# examples/time_series_example.py
+# time_series_example.py
+import numpy as np
+import pandas as pd
+from lazypredict.estimators.time_series import LazyTimeSeriesForecaster
+from lazypredict.metrics.time_series_metrics import TimeSeriesMetrics
+from lazypredict.utils.logger import Logger
 
-"""
-Time Series Forecasting Example using LazyTimeSeriesForecaster from lazypredict.
+# Generate synthetic time series data
+np.random.seed(42)
+n_points = 100
+time = np.arange(n_points)
+y = 0.5 * time + np.sin(time) + np.random.normal(scale=5, size=n_points)
 
-This script demonstrates how to use LazyTimeSeriesForecaster to automatically fit and evaluate
-multiple time series forecasting models on the AirPassengers dataset.
-"""
+# Train-test split
+train_size = int(n_points * 0.8)
+y_train, y_test = y[:train_size], y[train_size:]
 
-from lazypredict.utils.backend import Backend
+# Logger setup
+logger = Logger.configure_logger("time_series_example")
 
-DataFrame = Backend.DataFrame
-Series = Backend.Series
-from sklearn.model_selection import train_test_split
+# Model Training and Evaluation
+model = LazyTimeSeriesForecaster()
+model.fit(time[:train_size], y_train)
+predictions = model.predict(steps=len(y_test))
 
-from lazypredict.estimators import LazyTimeSeriesForecaster
-from lazypredict.metrics import TimeSeriesMetrics
-from lazypredict.utils.backend import Backend
-
-# Initialize the backend (pandas is default)
-Backend.initialize_backend(use_gpu=False)
-
-def main():
-    # Load the AirPassengers dataset
-    url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/airline-passengers.csv'
-    df = pd.read_csv(url, parse_dates=['Month'], index_col='Month')
-
-    # Prepare the data
-    df.rename(columns={'Passengers': 'y'}, inplace=True)
-    df['ds'] = df.index
-
-    # Split the dataset into training and test sets
-    train_size = int(len(df) * 0.8)
-    df_train = df.iloc[:train_size]
-    df_test = df.iloc[train_size:]
-
-    # Initialize LazyTimeSeriesForecaster
-    forecaster = LazyTimeSeriesForecaster(
-        verbose=1,
-        ignore_warnings=False,
-        random_state=42,
-        use_gpu=False,
-        mlflow_logging=False,
-        forecast_horizon=len(df_test),
-        time_col='ds',
-        target_col='y',
-    )
-
-    # Fit models and get results
-    results, predictions = forecaster.fit(df_train, df_test)
-
-    # Display results
-    print("Time Series Forecasting Model Evaluation Results:")
-    print(results)
-
-    # Access trained models
-    models = forecaster.models
-
-if __name__ == "__main__":
-    main()
+# Compute Metrics
+metrics_calculator = TimeSeriesMetrics()
+metrics = metrics_calculator.compute(y_test, predictions)
+print("Metrics:", metrics)

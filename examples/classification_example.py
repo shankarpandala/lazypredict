@@ -1,61 +1,60 @@
-# examples/classification_example.py
+# classification_example.py
+from sklearn.datasets import load_breast_cancer
+from lazypredict.estimators.classification import LazyClassifier
+from lazypredict.preprocessing.feature_engineering import FeatureEngineering
+from lazypredict.preprocessing.feature_selection import FeatureSelection
+from lazypredict.mlflow_integration import MLflowLogger
+from lazypredict.metrics.classification_metrics import ClassificationMetrics
+from lazypredict.utils.logger import Logger
 
-"""
-Classification Example using LazyClassifier from lazypredict.
+# Load dataset
+data = load_breast_cancer(as_frame=True)
+X, y = data.data, data.target
 
-This script demonstrates how to use LazyClassifier to automatically fit and evaluate
-multiple classification models on the Iris dataset.
-"""
+# Logger setup
+logger = Logger.configure_logger("classification_example")
 
-from lazypredict.utils.backend import Backend
+# Initialize MLflow logger
+mlflow_logger = MLflowLogger(experiment_name="Classification Experiment")
+mlflow_logger.start_run(run_name="Breast Cancer Classification")
 
-DataFrame = Backend.DataFrame
-Series = Backend.Series
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+# Feature Engineering (Polynomial Features)
+feature_engineer = FeatureEngineering(method="polynomial", degree=2)
+X_poly = feature_engineer.transform(X)
 
-from lazypredict.estimators import LazyClassifier
-from lazypredict.preprocessing import Preprocessor
-from lazypredict.metrics import ClassificationMetrics
-from lazypredict.utils.backend import Backend
+# Feature Selection
+feature_selector = FeatureSelection(k=10)
+feature_selector.fit(X_poly, y)
+X_selected = feature_selector.transform(X_poly)
 
-# Initialize the backend (pandas is default)
-Backend.initialize_backend(use_gpu=False)
+# Model Training and Evaluation
+model = LazyClassifier()
+model.fit(X_selected, y)
+predictions = model.predict(X_selected)
 
-def main():
-    # Load the Iris dataset
-    iris = load_iris()
-    X = pd.DataFrame(iris.data, columns=iris.feature_names)
-    y = pd.Series(iris.target, name='target')
+# Compute Metrics
+metrics_calculator = ClassificationMetrics()
+metrics = metrics_calculator.compute(y, predictions)
+print("Metrics:", metrics)
 
-    # Split the dataset into training and test sets
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+# Log parameters and metrics to MLflow
+mlflow_logger.log_params({"feature_engineering": "polynomial", "feature_selection_k": 10})
+mlflow_logger.log_metrics(metrics)
+mlflow_logger.log_model(model.model, model_name="LazyClassifier")
 
-    # Initialize LazyClassifier
-    clf = LazyClassifier(
-        verbose=1,
-        ignore_warnings=False,
-        predictions=True,
-        random_state=42,
-        use_gpu=False,
-        mlflow_logging=False,
-        explainability=True,
-    )
+# End MLflow run
+mlflow_logger.end_run()
 
-    # Fit models and get results
-    results, predictions = clf.fit(X_train, X_test, y_train, y_test)
+# SHAP Explainability (for Jupyter Notebook)
+# Uncomment the lines below to use in a notebook
+# from lazypredict.explainability.shap_explainer import SHAPExplainer
+# shap_explainer = SHAPExplainer(model.model)
+# shap_values = shap_explainer.explain(X_selected)
+# shap_explainer.plot_summary(shap_values, X_selected)
 
-    # Display results
-    print("Model Evaluation Results:")
-    print(results)
-
-    # Access trained models
-    models = clf.models
-
-    # Generate explainability reports (SHAP plots are saved as images)
-    # Note: Explainability is enabled in the LazyClassifier initialization
-
-if __name__ == "__main__":
-    main()
+# LIME Explainability (for Jupyter Notebook)
+# Uncomment the lines below to use in a notebook
+# from lazypredict.explainability.lime_explainer import LIMEExplainer
+# lime_explainer = LIMEExplainer(model.model, X_selected)
+# explanation = lime_explainer.explain_instance(X_selected, instance=0)
+# print("LIME Explanation:", explanation)

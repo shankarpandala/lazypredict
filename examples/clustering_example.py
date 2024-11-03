@@ -1,48 +1,22 @@
-# examples/clustering_example.py
-
-"""
-Clustering Example using LazyClusterer from lazypredict.
-
-This script demonstrates how to use LazyClusterer to automatically fit and evaluate
-multiple clustering models on the Iris dataset.
-"""
-
-from lazypredict.utils.backend import Backend
-
-DataFrame = Backend.DataFrame
-Series = Backend.Series
+# clustering_example.py
 from sklearn.datasets import load_iris
+from lazypredict.estimators.clustering import LazyClusterer
+from lazypredict.metrics.clustering_metrics import ClusteringMetrics
+from lazypredict.utils.logger import Logger
 
-from lazypredict.estimators import LazyClusterer
-from lazypredict.metrics import ClusteringMetrics
-from lazypredict.utils.backend import Backend
+# Load dataset
+data = load_iris(as_frame=True)
+X = data.data
 
-# Initialize the backend (pandas is default)
-Backend.initialize_backend(use_gpu=False)
+# Logger setup
+logger = Logger.configure_logger("clustering_example")
 
-def main():
-    # Load the Iris dataset
-    iris = load_iris()
-    X = pd.DataFrame(iris.data, columns=iris.feature_names)
+# Model Training and Evaluation
+model = LazyClusterer()
+model.fit(X)
+labels = model.predict(X)
 
-    # Initialize LazyClusterer
-    clusterer = LazyClusterer(
-        verbose=1,
-        ignore_warnings=False,
-        random_state=42,
-        use_gpu=False,
-        mlflow_logging=False,
-    )
-
-    # Fit models and get results
-    results = clusterer.fit(X)
-
-    # Display results
-    print("Clustering Model Evaluation Results:")
-    print(results)
-
-    # Access trained models
-    models = clusterer.models
-
-if __name__ == "__main__":
-    main()
+# Compute Metrics
+metrics_calculator = ClusteringMetrics()
+metrics = metrics_calculator.compute(X, labels)
+print("Metrics:", metrics)

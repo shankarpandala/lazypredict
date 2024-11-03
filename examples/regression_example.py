@@ -1,61 +1,60 @@
-# examples/regression_example.py
-
-"""
-Regression Example using LazyRegressor from lazypredict.
-
-This script demonstrates how to use LazyRegressor to automatically fit and evaluate
-multiple regression models on the California Housing dataset.
-"""
-
-from lazypredict.utils.backend import Backend
-
-DataFrame = Backend.DataFrame
-Series = Backend.Series
+# regression_example.py
 from sklearn.datasets import fetch_california_housing
-from sklearn.model_selection import train_test_split
+from lazypredict.estimators.regression import LazyRegressor
+from lazypredict.preprocessing.feature_engineering import FeatureEngineering
+from lazypredict.preprocessing.feature_selection import FeatureSelection
+from lazypredict.mlflow_integration import MLflowLogger
+from lazypredict.metrics.regression_metrics import RegressionMetrics
+from lazypredict.utils.logger import Logger
 
-from lazypredict.estimators import LazyRegressor
-from lazypredict.utils.backend import Backend
+# Load dataset
+data = fetch_california_housing(as_frame=True)
+X, y = data.data, data.target
 
-# Initialize the backend (pandas is default)
-Backend.initialize_backend(use_gpu=False)
+# Logger setup
+logger = Logger.configure_logger("regression_example")
 
+# Initialize MLflow logger
+mlflow_logger = MLflowLogger(experiment_name="Regression Experiment")
+mlflow_logger.start_run(run_name="California Housing Regression")
 
-def main():
-    # Load the California Housing dataset
-    housing = fetch_california_housing(as_frame=True)
-    X = housing.data
-    y = housing.target
+# Feature Engineering (Polynomial Features)
+feature_engineer = FeatureEngineering(method="polynomial", degree=2)
+X_poly = feature_engineer.transform(X)
 
-    # Split the dataset into training and test sets
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+# Feature Selection
+feature_selector = FeatureSelection(k=5)
+feature_selector.fit(X_poly, y)
+X_selected = feature_selector.transform(X_poly)
 
-    # Initialize LazyRegressor
-    reg = LazyRegressor(
-        verbose=1,
-        ignore_warnings=False,
-        predictions=True,
-        random_state=42,
-        use_gpu=False,
-        mlflow_logging=False,
-        explainability=True,
-    )
+# Model Training and Evaluation
+model = LazyRegressor()
+model.fit(X_selected, y)
+predictions = model.predict(X_selected)
 
-    # Fit models and get results
-    results, predictions = reg.fit(X_train, X_test, y_train, y_test)
+# Compute Metrics
+metrics_calculator = RegressionMetrics()
+metrics = metrics_calculator.compute(y, predictions)
+print("Metrics:", metrics)
 
-    # Display results
-    print("Model Evaluation Results:")
-    print(results)
+# Log parameters and metrics to MLflow
+mlflow_logger.log_params({"feature_engineering": "polynomial", "feature_selection_k": 5})
+mlflow_logger.log_metrics(metrics)
+mlflow_logger.log_model(model.model, model_name="LazyRegressor")
 
-    # Access trained models
-    models = reg.models
+# End MLflow run
+mlflow_logger.end_run()
 
-    # Generate explainability reports (SHAP plots are saved as images)
-    # Note: Explainability is enabled in the LazyRegressor initialization
+# SHAP Explainability (for Jupyter Notebook)
+# Uncomment the lines below to use in a notebook
+# from lazypredict.explainability.shap_explainer import SHAPExplainer
+# shap_explainer = SHAPExplainer(model.model)
+# shap_values = shap_explainer.explain(X_selected)
+# shap_explainer.plot_summary(shap_values, X_selected)
 
-
-if __name__ == "__main__":
-    main()
+# LIME Explainability (for Jupyter Notebook)
+# Uncomment the lines below to use in a notebook
+# from lazypredict.explainability.lime_explainer import LIMEExplainer
+# lime_explainer = LIMEExplainer(model.model, X_selected)
+# explanation = lime_explainer.explain_instance(X_selected, instance=0)
+# print("LIME Explanation:", explanation)

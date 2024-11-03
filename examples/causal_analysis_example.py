@@ -1,60 +1,22 @@
-# examples/causal_analysis_example.py
+# causal_analysis_example.py
+from sklearn.datasets import load_diabetes
+from lazypredict.estimators.causal_analysis import LazyCausalAnalyzer
+from lazypredict.metrics.causal_analysis_metrics import CausalAnalysisMetrics
+from lazypredict.utils.logger import Logger
 
-"""
-Causal Analysis Example using LazyCausalAnalyzer from lazypredict.
+# Load dataset
+data = load_diabetes(as_frame=True)
+X, y = data.data, data.target
 
-This script demonstrates how to use LazyCausalAnalyzer to perform causal analysis
-on a synthetic dataset.
-"""
+# Logger setup
+logger = Logger.configure_logger("causal_analysis_example")
 
-from lazypredict.utils.backend import Backend
+# Model Training and Evaluation
+model = LazyCausalAnalyzer()
+model.fit(X, y)
+predictions = model.predict(X)
 
-DataFrame = Backend.DataFrame
-Series = Backend.Series
-import numpy as np
-
-from lazypredict.estimators import LazyCausalAnalyzer
-from lazypredict.metrics import CausalAnalysisMetrics
-from lazypredict.utils.backend import Backend
-
-# Initialize the backend (pandas is default)
-Backend.initialize_backend(use_gpu=False)
-
-def main():
-    # Create a synthetic dataset
-    np.random.seed(42)
-    size = 1000
-    treatment = np.random.binomial(1, 0.5, size)
-    confounder = np.random.normal(0, 1, size)
-    outcome = 2 * treatment + 3 * confounder + np.random.normal(0, 1, size)
-
-    data = pd.DataFrame({
-        'treatment': treatment,
-        'outcome': outcome,
-        'confounder': confounder,
-    })
-
-    # Initialize LazyCausalAnalyzer
-    analyzer = LazyCausalAnalyzer(
-        verbose=1,
-        ignore_warnings=False,
-        random_state=42,
-        use_gpu=False,
-        mlflow_logging=False,
-        treatment='treatment',
-        outcome='outcome',
-        common_causes=['confounder'],
-    )
-
-    # Fit models and get results
-    results = analyzer.fit(data)
-
-    # Display results
-    print("Causal Analysis Model Evaluation Results:")
-    print(results)
-
-    # Access trained models
-    models = analyzer.models
-
-if __name__ == "__main__":
-    main()
+# Compute Metrics
+metrics_calculator = CausalAnalysisMetrics()
+metrics = metrics_calculator.compute(y, predictions)
+print("Metrics:", metrics)

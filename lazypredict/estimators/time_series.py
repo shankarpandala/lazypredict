@@ -1,63 +1,50 @@
-# lazypredict/metrics/time_series_metrics.py
-
-from typing import Any, Dict, List, Optional, Tuple, Union
-
-from lazypredict.utils.backend import Backend
-
-DataFrame = Backend.DataFrame
-Series = Backend.Series
-import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from .base import BaseEstimator
 
-from .base import Metrics
-
-
-class TimeSeriesMetrics(Metrics):
+class LazyTimeSeriesForecaster(BaseEstimator):
     """
-    Calculates evaluation metrics for time series forecasting models.
+    LazyTimeSeriesForecaster for automated training, prediction, and evaluation of time series forecasting models.
+
+    This class uses statsmodels time series models by default. It provides evaluation metrics specific
+    to regression-like tasks for time series data.
+
+    Attributes
+    ----------
+    model : object
+        The time series forecasting model used for training and prediction.
+
+    Methods
+    -------
+    fit(X, y):
+        Trains the time series forecasting model on the provided data.
+    predict(X):
+        Generates time series predictions for the given input data.
+    evaluate(X, y):
+        Evaluates the model's performance using time series regression metrics.
     """
 
-    def evaluate(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, Any]:
+    def __init__(self, model=None):
         """
-        Evaluates forecasting performance.
-
-        Args:
-            y_true (np.ndarray): True target values.
-            y_pred (np.ndarray): Predicted target values.
-
-        Returns:
-            Dict[str, Any]: Dictionary of evaluation metrics.
+        Parameters
+        ----------
+        model : object, optional
+            A statsmodels compatible time series model. Defaults to ExponentialSmoothing.
         """
-        mse = mean_squared_error(y_true, y_pred)
-        rmse = np.sqrt(mse)
-        mae = mean_absolute_error(y_true, y_pred)
-        r2 = r2_score(y_true, y_pred)
-        mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+        self.model = model
 
-        scores = {
-            'MSE': mse,
-            'RMSE': rmse,
-            'MAE': mae,
-            'R2 Score': r2,
-            'MAPE': mape,
+    def fit(self, X, y):
+        """Train the time series forecaster on the provided data."""
+        self.model = ExponentialSmoothing(y, trend="add", seasonal="add", seasonal_periods=12).fit()
+
+    def predict(self, steps=1):
+        """Generate time series predictions for a specified number of steps ahead."""
+        return self.model.forecast(steps)
+
+    def evaluate(self, y_true, y_pred):
+        """Evaluate the time series forecaster's performance using MSE, MAE, and R2 score."""
+        return {
+            "mean_squared_error": mean_squared_error(y_true, y_pred),
+            "mean_absolute_error": mean_absolute_error(y_true, y_pred),
+            "r2_score": r2_score(y_true, y_pred)
         }
-
-        if self.custom_metric:
-            scores[self.custom_metric.__name__] = self.custom_metric(y_true, y_pred)
-
-        return scores
-
-    def create_results_df(self, results: List[Dict[str, Any]]) -> pd.DataFrame:
-        """
-        Creates a DataFrame from the list of result dictionaries.
-
-        Args:
-            results (List[Dict[str, Any]]): List of evaluation results.
-
-        Returns:
-            pd.DataFrame: DataFrame of evaluation metrics.
-        """
-        df = pd.DataFrame(results)
-        df.set_index('Model', inplace=True)
-        df.sort_values(by='RMSE', ascending=True, inplace=True)
-        return df

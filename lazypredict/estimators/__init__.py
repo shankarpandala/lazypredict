@@ -1,5 +1,3 @@
-# lazypredict/estimators/__init__.py
-
 from .classification import LazyClassifier
 from .regression import LazyRegressor
 from .clustering import LazyClusterer

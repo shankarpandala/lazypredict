@@ -1,73 +1,52 @@
-# lazypredict/metrics/anomaly_detection_metrics.py
+from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
+from sklearn.ensemble import IsolationForest
+from .base import BaseEstimator
 
-from typing import Any, Dict, List, Optional, Tuple, Union
-
-from lazypredict.utils.backend import Backend
-
-DataFrame = Backend.DataFrame
-Series = Backend.Series
-from sklearn import metrics
-
-from .base import Metrics
-
-
-class AnomalyDetectionMetrics(Metrics):
+class LazyAnomalyDetector(BaseEstimator):
     """
-    Calculates evaluation metrics for anomaly detection models.
+    LazyAnomalyDetector for automated training, prediction, and evaluation of anomaly detection models.
 
-    If true labels are provided, supervised metrics can be calculated.
+    This class uses scikit-learn anomaly detection models by default. It provides evaluation using metrics
+    specific to binary classification on anomalous data.
+
+    Attributes
+    ----------
+    model : object
+        The anomaly detection model used for training and prediction.
+
+    Methods
+    -------
+    fit(X):
+        Trains the anomaly detection model on the provided data.
+    predict(X):
+        Generates anomaly predictions for the given input data.
+    evaluate(X, y):
+        Evaluates the model's performance using classification metrics for anomaly detection.
     """
 
-    def evaluate(self, y_true, y_pred) -> Dict[str, Any]:
+    def __init__(self, model=None):
         """
-        Evaluates anomaly detection performance.
-
-        Args:
-            y_true: True labels (1 for normal, -1 for anomaly). Can be None for unsupervised metrics.
-            y_pred: Predicted labels (1 for normal, -1 for anomaly).
-
-        Returns:
-            Dict[str, Any]: Dictionary of evaluation metrics.
+        Parameters
+        ----------
+        model : object, optional
+            A scikit-learn compatible anomaly detection model. Defaults to IsolationForest.
         """
-        scores = {}
+        self.model = model if model is not None else IsolationForest()
 
-        # If y_true is provided, calculate supervised metrics
-        if y_true is not None:
-            accuracy = metrics.accuracy_score(y_true, y_pred)
-            precision = metrics.precision_score(y_true, y_pred, pos_label=-1)
-            recall = metrics.recall_score(y_true, y_pred, pos_label=-1)
-            f1 = metrics.f1_score(y_true, y_pred, pos_label=-1)
-            roc_auc = metrics.roc_auc_score(y_true, y_pred)
+    def fit(self, X, y=None):
+        """Train the anomaly detector on the provided data."""
+        self.model.fit(X)
 
-            scores['Accuracy'] = accuracy
-            scores['Precision'] = precision
-            scores['Recall'] = recall
-            scores['F1 Score'] = f1
-            scores['ROC AUC'] = roc_auc
-        else:
-            # Without y_true, unsupervised metrics are limited
-            scores['Anomalies Detected'] = (y_pred == -1).sum()
+    def predict(self, X):
+        """Generate anomaly predictions for the given input data (1: normal, -1: anomaly)."""
+        return self.model.predict(X)
 
-        if self.custom_metric:
-            scores[self.custom_metric.__name__] = self.custom_metric(y_true, y_pred)
-
-        return scores
-
-    def create_results_df(self, results: List[Dict[str, Any]]) -> pd.DataFrame:
-        """
-        Creates a DataFrame from the list of result dictionaries.
-
-        Args:
-            results (List[Dict[str, Any]]): List of evaluation results.
-
-        Returns:
-            pd.DataFrame: DataFrame of evaluation metrics.
-        """
-        df = pd.DataFrame(results)
-        df.set_index('Model', inplace=True)
-        # Sort based on an appropriate metric, e.g., F1 Score
-        if 'F1 Score' in df.columns:
-            df.sort_values(by='F1 Score', ascending=False, inplace=True)
-        elif 'Anomalies Detected' in df.columns:
-            df.sort_values(by='Anomalies Detected', ascending=False, inplace=True)
-        return df
+    def evaluate(self, X, y):
+        """Evaluate the anomaly detector's performance using F1, accuracy, precision, and recall."""
+        predictions = self.predict(X)
+        return {
+            "accuracy": accuracy_score(y, predictions),
+            "precision": precision_score(y, predictions, pos_label=-1),
+            "recall": recall_score(y, predictions, pos_label=-1),
+            "f1_score": f1_score(y, predictions, pos_label=-1)
+        }

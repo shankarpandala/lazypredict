@@ -1,13 +1,5 @@
-# lazypredict/preprocessing/__init__.py
-
-from .base import Preprocessor
-from .feature_engineering import FeatureEngineer
-from .feature_selection import FeatureSelector
+from .feature_engineering import FeatureEngineering
+from .feature_selection import FeatureSelection
 from .transformers import CustomTransformer
 
-__all__ = [
-    "Preprocessor",
-    "FeatureEngineer",
-    "FeatureSelector",
-    "CustomTransformer",
-]
+__all__ = ["FeatureEngineering", "FeatureSelection", "CustomTransformer"]

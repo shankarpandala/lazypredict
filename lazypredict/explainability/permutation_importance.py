@@ -1,66 +1,56 @@
-# lazypredict/explainability/permutation_importance.py
-
-import pandas as pd  # Added import for pandas
-import numpy as np
 from sklearn.inspection import permutation_importance
-from sklearn.base import BaseEstimator
-from typing import Any
-import logging
-
-logger = logging.getLogger(__name__)
 
 class PermutationImportance:
     """
-    A class to compute permutation importance for machine learning models.
+    PermutationImportance for estimating feature importance by shuffling feature values.
+
+    Attributes
+    ----------
+    model : object
+        The trained model for which permutation importance is computed.
+    X : DataFrame
+        Data on which to compute permutation importance.
+    y : array-like
+        True labels for the data.
+
+    Methods
+    -------
+    compute_importance():
+        Computes and returns permutation importances.
     """
 
-    def __init__(self, model: BaseEstimator):
+    def __init__(self, model, X, y):
+        """
+        Parameters
+        ----------
+        model : object
+            Trained model compatible with permutation importance.
+        X : DataFrame
+            Input data.
+        y : array-like
+            True labels for the data.
+        """
         self.model = model
+        self.X = X
+        self.y = y
 
-    def compute_importance(self, X: pd.DataFrame, y: pd.Series, n_repeats: int = 10, random_state: int = 42) -> pd.DataFrame:
+    def compute_importance(self, n_repeats=10):
         """
-        Computes permutation importance for the given model and dataset.
+        Compute permutation importances for the model.
 
-        Args:
-            X (pd.DataFrame): The input features.
-            y (pd.Series): The target variable.
-            n_repeats (int): The number of times to permute a feature.
-            random_state (int): The seed for random permutation.
+        Parameters
+        ----------
+        n_repeats : int, optional
+            Number of repetitions for shuffling each feature. Default is 10.
 
-        Returns:
-            pd.DataFrame: A DataFrame containing the permutation importances sorted in descending order.
+        Returns
+        -------
+        DataFrame
+            Permutation importance scores for each feature.
         """
-        try:
-            result = permutation_importance(self.model, X, y, n_repeats=n_repeats, random_state=random_state)
-            importance_df = pd.DataFrame({
-                'Feature': X.columns,
-                'Importance Mean': result.importances_mean,
-                'Importance Std': result.importances_std
-            }).sort_values(by='Importance Mean', ascending=False)
-
-            return importance_df
-
-        except Exception as e:
-            logger.error(f"Failed to compute permutation importance: {e}")
-            return pd.DataFrame()
-
-    def plot_importance(self, importance_df: pd.DataFrame, top_n: int = 10):
-        """
-        Plots the permutation importance.
-
-        Args:
-            importance_df (pd.DataFrame): DataFrame containing permutation importances.
-            top_n (int): Number of top features to plot.
-        """
-        try:
-            import matplotlib.pyplot as plt
-            importance_df = importance_df.head(top_n)
-            plt.figure(figsize=(10, 6))
-            plt.barh(importance_df['Feature'], importance_df['Importance Mean'])
-            plt.xlabel('Importance Mean')
-            plt.title('Top Permutation Importances')
-            plt.gca().invert_yaxis()
-            plt.show()
-
-        except Exception as e:
-            logger.error(f"Failed to plot permutation importance: {e}")
+        results = permutation_importance(self.model, self.X, self.y, n_repeats=n_repeats)
+        return pd.DataFrame({
+            "feature": self.X.columns,
+            "importance_mean": results.importances_mean,
+            "importance_std": results.importances_std
+        })

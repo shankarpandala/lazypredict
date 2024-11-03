@@ -1,38 +1,47 @@
-# lazypredict/explainability/partial_dependence.py
-
-import pandas as pd  # Added import for pandas
+from sklearn.inspection import plot_partial_dependence
 import matplotlib.pyplot as plt
-from sklearn.inspection import PartialDependenceDisplay
-from sklearn.base import BaseEstimator
-from typing import Any, List
-import logging
 
-logger = logging.getLogger(__name__)
-
-class PartialDependence:
+class PartialDependencePlot:
     """
-    A class to generate partial dependence plots for machine learning models.
+    PartialDependencePlot for visualizing the marginal effect of features on predictions.
+
+    Attributes
+    ----------
+    model : object
+        The trained model for which partial dependence is computed.
+    X : DataFrame
+        Data on which to compute partial dependence.
+
+    Methods
+    -------
+    plot(features):
+        Plot partial dependence for specified features.
     """
 
-    def __init__(self, model: BaseEstimator):
+    def __init__(self, model, X):
+        """
+        Parameters
+        ----------
+        model : object
+            Trained model compatible with partial dependence plot.
+        X : DataFrame
+            Input data.
+        """
         self.model = model
+        self.X = X
 
-    def plot_partial_dependence(self, X: pd.DataFrame, features: List[int], target: Any = None):
+    def plot(self, features):
         """
-        Plots partial dependence for the given model and dataset.
+        Plot partial dependence for specified features.
 
-        Args:
-            X (pd.DataFrame): Input feature data.
-            features (List[int]): List of feature indices or names for which to plot partial dependence.
-            target (Any, optional): Target class to plot for classification models.
+        Parameters
+        ----------
+        features : list of str
+            List of feature names to plot.
+
+        Returns
+        -------
+        None
         """
-        try:
-            if target:
-                PartialDependenceDisplay.from_estimator(self.model, X, features, target=target)
-            else:
-                PartialDependenceDisplay.from_estimator(self.model, X, features)
-
-            plt.show()
-
-        except Exception as e:
-            logger.error(f"Failed to generate partial dependence plot: {e}")
+        plot_partial_dependence(self.model, self.X, features, grid_resolution=50)
+        plt.show()

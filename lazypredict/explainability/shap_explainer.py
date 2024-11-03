@@ -1,63 +1,60 @@
-# lazypredict/explainability/shap_explainer.py
-
 import shap
-import pandas as pd  # Added import for pandas
-from sklearn.base import BaseEstimator
-from typing import Any, Optional
-import logging
 
-logger = logging.getLogger(__name__)
-
-class ShapExplainer:
+class SHAPExplainer:
     """
-    A class to provide SHAP explainability for machine learning models.
+    SHAPExplainer for interpreting model predictions using SHAP values.
+
+    This class provides methods for explaining individual predictions and
+    obtaining global feature importance using SHAP.
+
+    Attributes
+    ----------
+    model : object
+        The model to be explained.
+
+    Methods
+    -------
+    explain(X):
+        Compute SHAP values for the provided data.
+    plot_summary(shap_values, X):
+        Plot a SHAP summary plot.
     """
 
-    def __init__(self, model: BaseEstimator):
+    def __init__(self, model):
+        """
+        Parameters
+        ----------
+        model : object
+            A trained model compatible with SHAP explainers.
+        """
         self.model = model
-        self.explainer = None
+        self.explainer = shap.Explainer(self.model)
 
-    def fit(self, X: pd.DataFrame):
+    def explain(self, X):
         """
-        Fits the SHAP explainer to the model.
-        
-        Args:
-            X (pd.DataFrame): Input data to fit the SHAP explainer.
-        """
-        try:
-            self.explainer = shap.Explainer(self.model, X)
-            logger.info("SHAP Explainer has been fitted to the model.")
-        except Exception as e:
-            logger.error(f"Failed to fit SHAP Explainer: {e}")
+        Compute SHAP values for the provided data.
 
-    def explain(self, data: pd.DataFrame) -> Optional[Any]:
-        """
-        Generates SHAP values for the input data.
+        Parameters
+        ----------
+        X : DataFrame
+            Input data for which SHAP values are computed.
 
-        Args:
-            data (pd.DataFrame): Input data to explain.
-
-        Returns:
-            shap_values (Optional[Any]): The SHAP values if explanation is successful, else None.
+        Returns
+        -------
+        array-like
+            SHAP values for each feature in the input data.
         """
-        try:
-            if self.explainer is None:
-                raise ValueError("The explainer is not fitted. Call `fit` first.")
-            shap_values = self.explainer(data)
-            return shap_values
-        except Exception as e:
-            logger.error(f"Failed to generate SHAP values: {e}")
-            return None
+        return self.explainer(X)
 
-    def plot_summary(self, shap_values: Any, feature_names: Optional[list] = None):
+    def plot_summary(self, shap_values, X):
         """
-        Plots the SHAP summary plot.
+        Plot a SHAP summary plot.
 
-        Args:
-            shap_values (Any): SHAP values to plot.
-            feature_names (Optional[list]): List of feature names.
+        Parameters
+        ----------
+        shap_values : array-like
+            SHAP values for the input data.
+        X : DataFrame
+            Input data used for plotting feature importance.
         """
-        try:
-            shap.summary_plot(shap_values, feature_names=feature_names)
-        except Exception as e:
-            logger.error(f"Failed to plot SHAP summary: {e}")
+        shap.summary_plot(shap_values, X)

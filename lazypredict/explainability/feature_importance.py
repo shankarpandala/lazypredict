@@ -1,72 +1,58 @@
-# lazypredict/explainability/feature_importance.py
-
-import pandas as pd  # Added import for pandas
-import numpy as np
-from sklearn.base import BaseEstimator
-from typing import Any, Optional
-import logging
-
-logger = logging.getLogger(__name__)
+import pandas as pd
 
 class FeatureImportance:
     """
-    A class to compute feature importance for machine learning models.
+    FeatureImportance for extracting feature importances from a trained model.
+
+    This class provides methods to obtain and display feature importance values
+    for models with a built-in feature_importances_ attribute.
+
+    Attributes
+    ----------
+    model : object
+        The model with a feature_importances_ attribute.
+
+    Methods
+    -------
+    get_importance():
+        Returns a DataFrame of feature importances.
+    plot_importance():
+        Plots the feature importances.
     """
 
-    def __init__(self, model: BaseEstimator):
+    def __init__(self, model):
+        """
+        Parameters
+        ----------
+        model : object
+            A trained model with a feature_importances_ attribute.
+        """
         self.model = model
 
-    def compute_importance(self, X: pd.DataFrame, feature_names: Optional[list] = None) -> pd.DataFrame:
+    def get_importance(self):
         """
-        Computes the feature importance of a given model.
+        Returns a DataFrame of feature importances.
 
-        Args:
-            X (pd.DataFrame): Input features used for training the model.
-            feature_names (Optional[list]): List of feature names, defaults to the columns of X.
-
-        Returns:
-            pd.DataFrame: A DataFrame containing feature importances sorted in descending order.
+        Returns
+        -------
+        DataFrame
+            Feature importances for each feature.
         """
-        try:
-            # If model has feature_importances_ attribute (e.g., tree-based models)
-            if hasattr(self.model, 'feature_importances_'):
-                importances = self.model.feature_importances_
-                feature_names = feature_names if feature_names else X.columns.tolist()
-            # If model has coef_ attribute (e.g., linear models)
-            elif hasattr(self.model, 'coef_'):
-                importances = np.abs(self.model.coef_)
-                feature_names = feature_names if feature_names else X.columns.tolist()
-            else:
-                raise ValueError("The model does not have feature_importances_ or coef_ attribute.")
+        return pd.DataFrame({
+            "feature": range(len(self.model.feature_importances_)),
+            "importance": self.model.feature_importances_
+        })
 
-            importance_df = pd.DataFrame({
-                'Feature': feature_names,
-                'Importance': importances
-            }).sort_values(by='Importance', ascending=False)
-
-            return importance_df
-
-        except Exception as e:
-            logger.error(f"Failed to compute feature importance: {e}")
-            return pd.DataFrame()
-
-    def plot_importance(self, importance_df: pd.DataFrame, top_n: int = 10):
+    def plot_importance(self):
         """
-        Plots the feature importance.
-
-        Args:
-            importance_df (pd.DataFrame): DataFrame containing feature importances.
-            top_n (int): Number of top features to plot.
+        Plot the feature importances.
         """
-        try:
-            import matplotlib.pyplot as plt
-            importance_df = importance_df.head(top_n)
-            plt.figure(figsize=(10, 6))
-            plt.barh(importance_df['Feature'], importance_df['Importance'])
-            plt.xlabel('Importance')
-            plt.title('Top Feature Importances')
-            plt.gca().invert_yaxis()
-            plt.show()
+        import matplotlib.pyplot as plt
 
-        except Exception as e:
-            logger.error(f"Failed to plot feature importance: {e}")
+        importance_df = self.get_importance().sort_values(by="importance", ascending=False)
+        plt.figure(figsize=(10, 6))
+        plt.bar(importance_df["feature"].astype(str), importance_df["importance"])
+        plt.xlabel("Feature")
+        plt.ylabel("Importance")
+        plt.title("Feature Importance")
+        plt.show()

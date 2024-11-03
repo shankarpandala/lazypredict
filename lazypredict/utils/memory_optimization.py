@@ -1,21 +1,33 @@
-# lazypredict/utils/memory_optimization.py
-
 import pandas as pd
 
-def optimize_memory_usage(df: pd.DataFrame) -> pd.DataFrame:
+class MemoryOptimizer:
     """
-    Optimizes the memory usage of a DataFrame by downcasting numeric types.
+    MemoryOptimizer for optimizing dataframe memory usage.
 
-    Args:
-        df (pd.DataFrame): Input DataFrame.
-
-    Returns:
-        pd.DataFrame: DataFrame with optimized memory usage.
+    Methods
+    -------
+    optimize_memory(df):
+        Optimize memory usage by downcasting numeric columns.
     """
-    for col in df.select_dtypes(include=['int', 'float']).columns:
-        col_type = df[col].dtypes
-        if col_type == 'float64':
-            df[col] = pd.to_numeric(df[col], downcast='float')
-        elif col_type == 'int64':
-            df[col] = pd.to_numeric(df[col], downcast='integer')
-    return df
+
+    @staticmethod
+    def optimize_memory(df):
+        """
+        Optimize memory usage of a dataframe by downcasting numeric columns.
+
+        Parameters
+        ----------
+        df : DataFrame
+            Dataframe to optimize.
+
+        Returns
+        -------
+        DataFrame
+            Optimized dataframe with reduced memory usage.
+        """
+        for col in df.select_dtypes(include=['float', 'int']).columns:
+            if pd.api.types.is_float_dtype(df[col]):
+                df[col] = pd.to_numeric(df[col], downcast="float")
+            elif pd.api.types.is_integer_dtype(df[col]):
+                df[col] = pd.to_numeric(df[col], downcast="integer")
+        return df

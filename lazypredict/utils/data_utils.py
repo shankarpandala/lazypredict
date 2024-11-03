@@ -1,53 +1,62 @@
-# lazypredict/utils/data_utils.py
+from sklearn.model_selection import train_test_split
 
-from typing import Any, Dict, List, Optional, Tuple, Union, Callable
-import logging
-
-# Import Backend only when needed to avoid circular import issues
-from .backend import Backend
-
-logger = logging.getLogger(__name__)
-
-def prepare_data(X: Any) -> Any:
+class DataUtils:
     """
-    Prepares input data by converting it to the appropriate DataFrame type based on the backend.
+    DataUtils provides common data manipulation and utility functions.
 
-    Args:
-        X (Any): Input data.
-
-    Returns:
-        Any: Prepared DataFrame.
+    Methods
+    -------
+    handle_missing_values(df, method="mean"):
+        Handle missing values in a dataframe.
+    split_data(X, y, test_size=0.2, random_state=42):
+        Split data into training and test sets.
     """
-    DataFrame = Backend.DataFrame
 
-    if not isinstance(X, DataFrame):
-        try:
-            X = DataFrame(X)
-        except Exception as e:
-            logger.error(f"Failed to convert data to DataFrame: {e}")
-            raise ValueError("Input data cannot be converted to a DataFrame.")
-    return X
+    @staticmethod
+    def handle_missing_values(df, method="mean"):
+        """
+        Handle missing values in a dataframe.
 
+        Parameters
+        ----------
+        df : DataFrame
+            Dataframe with missing values.
+        method : str, optional
+            Method to handle missing values ('mean', 'median', 'mode'). Default is 'mean'.
 
-def get_card_split(df: Any, categorical_features: List[str], threshold: int = 10) -> Tuple[List[str], List[str]]:
-    """
-    Splits categorical features into low and high cardinality based on a threshold.
-
-    Args:
-        df (Any): Input DataFrame.
-        categorical_features (List[str]): List of categorical feature names.
-        threshold (int, optional): Cardinality threshold. Defaults to 10.
-
-    Returns:
-        Tuple[List[str], List[str]]: Lists of low and high cardinality features.
-    """
-    low_cardinality = []
-    high_cardinality = []
-
-    for col in categorical_features:
-        num_unique = df[col].nunique()
-        if num_unique <= threshold:
-            low_cardinality.append(col)
+        Returns
+        -------
+        DataFrame
+            Dataframe with missing values handled.
+        """
+        if method == "mean":
+            return df.fillna(df.mean())
+        elif method == "median":
+            return df.fillna(df.median())
+        elif method == "mode":
+            return df.fillna(df.mode().iloc[0])
         else:
-            high_cardinality.append(col)
-    return low_cardinality, high_cardinality
+            raise ValueError("Method must be 'mean', 'median', or 'mode'.")
+
+    @staticmethod
+    def split_data(X, y, test_size=0.2, random_state=42):
+        """
+        Split data into training and test sets.
+
+        Parameters
+        ----------
+        X : array-like
+            Features data.
+        y : array-like
+            Target data.
+        test_size : float, optional
+            Proportion of the dataset to include in the test split. Default is 0.2.
+        random_state : int, optional
+            Controls the shuffling applied to the data before splitting. Default is 42.
+
+        Returns
+        -------
+        tuple
+            Training and test splits of X and y.
+        """
+        return train_test_split(X, y, test_size=test_size, random_state=random_state)

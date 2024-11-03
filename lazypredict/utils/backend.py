@@ -1,78 +1,65 @@
-# lazypredict/utils/backend.py
+import pandas as pd
+try:
+    import cudf
+except ImportError:
+    cudf = None
+try:
+    import polars as pl
+except ImportError:
+    pl = None
 
-import os
-import logging
+class BackendManager:
+    """
+    BackendManager for switching between different dataframe libraries.
 
-# No direct imports of pandas, cudf, or polars at the top
-logger = logging.getLogger(__name__)
+    This class allows users to choose between Pandas, CuDF, and Polars, depending on hardware
+    availability and performance preferences.
 
-# Backend choice: 'pandas', 'cudf', 'polars'
-BACKEND_ENV_VARIABLE = 'LAZYPREDICT_BACKEND'
+    Attributes
+    ----------
+    backend : str
+        The backend to use ('pandas', 'cudf', or 'polars').
 
-class Backend:
-    _backend = None
+    Methods
+    -------
+    set_backend(backend):
+        Sets the dataframe backend.
+    get_dataframe(data):
+        Returns a dataframe in the specified backend format.
+    """
 
-    @staticmethod
-    def initialize_backend(use_gpu: bool = False):
+    def __init__(self, backend="pandas"):
         """
-        Initializes the backend based on user preference.
-        If use_gpu is True, it attempts to use cuDF if available.
+        Parameters
+        ----------
+        backend : str, optional
+            The backend to use ('pandas', 'cudf', or 'polars'). Default is 'pandas'.
         """
-        backend_choice = os.getenv(BACKEND_ENV_VARIABLE, 'pandas').lower()
+        self.backend = backend.lower()
 
-        if use_gpu:
-            try:
-                import cudf
-                Backend._backend = cudf
-                logger.info("Using cuDF as the backend.")
-                return
-            except ImportError:
-                logger.warning("cuDF not available, falling back to the selected backend.")
+    def set_backend(self, backend):
+        """Set the dataframe backend."""
+        self.backend = backend.lower()
 
-        if backend_choice == 'cudf':
-            try:
-                import cudf
-                Backend._backend = cudf
-                logger.info("Using cuDF as the backend.")
-            except ImportError:
-                logger.error("cuDF not available. Install RAPIDS or set the backend to another option.")
-                raise ImportError("cuDF is not available. Install RAPIDS or choose another backend.")
+    def get_dataframe(self, data):
+        """
+        Convert data to the specified backend's dataframe format.
 
-        elif backend_choice == 'polars':
-            try:
-                import polars as pl
-                Backend._backend = pl
-                logger.info("Using polars as the backend.")
-            except ImportError:
-                logger.error("Polars is not available. Install polars or set the backend to another option.")
-                raise ImportError("Polars is not available. Install polars or choose another backend.")
+        Parameters
+        ----------
+        data : array-like
+            Data to convert to the specified backend format.
 
+        Returns
+        -------
+        DataFrame
+            Data in the selected backend's dataframe format.
+        """
+        if self.backend == "pandas":
+            return pd.DataFrame(data)
+        elif self.backend == "cudf" and cudf is not None:
+            return cudf.DataFrame.from_pandas(pd.DataFrame(data))
+        elif self.backend == "polars" and pl is not None:
+            return pl.DataFrame(data)
         else:
-            import pandas as pd
-            Backend._backend = pd
-            logger.info("Using pandas as the backend.")
-
-    @staticmethod
-    def get_backend():
-        """
-        Returns the backend object.
-        """
-        if Backend._backend is None:
-            Backend.initialize_backend()
-        return Backend._backend
-
-    @staticmethod
-    def DataFrame(*args, **kwargs):
-        """
-        Returns a DataFrame object from the selected backend.
-        """
-        backend = Backend.get_backend()
-        return backend.DataFrame(*args, **kwargs)
-
-    @staticmethod
-    def Series(*args, **kwargs):
-        """
-        Returns a Series object from the selected backend.
-        """
-        backend = Backend.get_backend()
-        return backend.Series(*args, **kwargs)
+            raise ValueError(f"Backend '{self.backend}' not supported or unavailable.")

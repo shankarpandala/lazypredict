@@ -1,27 +1,39 @@
-# lazypredict/utils/logging.py
-
 import logging
 
-
-def get_logger(name: str) -> logging.Logger:
+class Logger:
     """
-    Configures and returns a logger with the specified name.
+    Logger configuration for LazyPredict.
 
-    Args:
-        name (str): Name of the logger.
-
-    Returns:
-        logging.Logger: Configured logger instance.
+    Methods
+    -------
+    configure_logger(name, level=logging.INFO):
+        Configures and returns a logger.
     """
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        # Prevent adding multiple handlers if the logger already has them
-        logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    return logger
+
+    @staticmethod
+    def configure_logger(name, level=logging.INFO):
+        """
+        Configure and return a logger.
+
+        Parameters
+        ----------
+        name : str
+            Name of the logger.
+        level : int, optional
+            Logging level (e.g., logging.INFO, logging.DEBUG). Default is logging.INFO.
+
+        Returns
+        -------
+        Logger
+            Configured logger instance.
+        """
+        logger = logging.getLogger(name)
+        logger.setLevel(level)
+        
+        if not logger.hasHandlers():
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        
+        return logger

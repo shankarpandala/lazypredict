@@ -1,57 +1,125 @@
-# lazypredict/mlflow_integration/mlflow_logger.py
-
 import mlflow
-import pandas as pd  # Added import for pandas
-from typing import Any, Optional
-import logging
-
-logger = logging.getLogger(__name__)
+import mlflow.sklearn
 
 class MLflowLogger:
     """
-    A class for managing MLflow logging operations.
+    MLflowLogger for tracking model experiments, parameters, metrics, and artifacts using MLflow.
+
+    This class provides methods to log models and their relevant information to MLflow.
+
+    Attributes
+    ----------
+    experiment_name : str
+        Name of the MLflow experiment.
+    run : mlflow.ActiveRun
+        The active MLflow run, if any.
+
+    Methods
+    -------
+    start_run(run_name=None):
+        Start an MLflow run with the given name.
+    log_params(params):
+        Log model parameters to MLflow.
+    log_metrics(metrics):
+        Log model metrics to MLflow.
+    log_model(model, model_name):
+        Log the model itself to MLflow.
+    end_run():
+        End the current MLflow run.
     """
 
-    def __init__(self, experiment_name: str = "Default Experiment"):
+    def __init__(self, experiment_name="Default"):
+        """
+        Parameters
+        ----------
+        experiment_name : str, optional
+            Name of the MLflow experiment. Default is "Default".
+        """
         self.experiment_name = experiment_name
         mlflow.set_experiment(self.experiment_name)
+        self.run = None
 
-    def log_params(self, params: dict):
+    def start_run(self, run_name=None):
         """
-        Logs parameters to the active MLflow run.
+        Start an MLflow run.
+
+        Parameters
+        ----------
+        run_name : str, optional
+            Name of the run. If None, MLflow will assign a default name.
+
+        Returns
+        -------
+        None
         """
-        try:
+        self.run = mlflow.start_run(run_name=run_name)
+
+    def log_params(self, params):
+        """
+        Log parameters to MLflow.
+
+        Parameters
+        ----------
+        params : dict
+            Dictionary of parameters to log.
+
+        Returns
+        -------
+        None
+        """
+        if self.run:
             mlflow.log_params(params)
-            logger.info("Logged parameters to MLflow.")
-        except Exception as e:
-            logger.error(f"Failed to log parameters: {e}")
+        else:
+            raise ValueError("No active MLflow run. Please start a run before logging parameters.")
 
-    def log_metrics(self, metrics: dict):
+    def log_metrics(self, metrics):
         """
-        Logs metrics to the active MLflow run.
+        Log metrics to MLflow.
+
+        Parameters
+        ----------
+        metrics : dict
+            Dictionary of metrics to log.
+
+        Returns
+        -------
+        None
         """
-        try:
+        if self.run:
             mlflow.log_metrics(metrics)
-            logger.info("Logged metrics to MLflow.")
-        except Exception as e:
-            logger.error(f"Failed to log metrics: {e}")
+        else:
+            raise ValueError("No active MLflow run. Please start a run before logging metrics.")
 
-    def log_model(self, model: Any, artifact_path: str, X: Optional[pd.DataFrame] = None):
+    def log_model(self, model, model_name="model"):
         """
-        Logs a machine learning model to MLflow.
+        Log a model to MLflow.
 
-        Args:
-            model (Any): The model to log.
-            artifact_path (str): The artifact path where the model will be saved.
-            X (Optional[pd.DataFrame]): Optional input data to infer model schema.
+        Parameters
+        ----------
+        model : object
+            Trained model to log.
+        model_name : str, optional
+            Name to save the model under in MLflow. Default is "model".
+
+        Returns
+        -------
+        None
         """
-        try:
-            if X is not None:
-                signature = mlflow.models.infer_signature(X, model.predict(X))
-                mlflow.sklearn.log_model(model, artifact_path=artifact_path, signature=signature)
-            else:
-                mlflow.sklearn.log_model(model, artifact_path=artifact_path)
+        if self.run:
+            mlflow.sklearn.log_model(model, model_name)
+        else:
+            raise ValueError("No active MLflow run. Please start a run before logging the model.")
 
-            logger.info(f"Logged model to MLflow at {artifact_path}.")
-        except Exception as e:
-            logger.error(f"Failed to log model: {e}")
+    def end_run(self):
+        """
+        End the current MLflow run.
+
+        Returns
+        -------
+        None
+        """
+        if self.run:
+            mlflow.end_run()
+            self.run = None
+        else:
+            raise ValueError("No active MLflow run to end.")

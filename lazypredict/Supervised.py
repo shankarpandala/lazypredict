@@ -40,9 +40,9 @@ removed_classifiers = [
     "GaussianProcessClassifier",
     "HistGradientBoostingClassifier",
     "MLPClassifier",
-    "LogisticRegressionCV", 
-    "MultiOutputClassifier", 
-    "MultinomialNB", 
+    "LogisticRegressionCV",
+    "MultiOutputClassifier",
+    "MultinomialNB",
     "OneVsOneClassifier",
     "OneVsRestClassifier",
     "OutputCodeClassifier",
@@ -52,20 +52,20 @@ removed_classifiers = [
 
 removed_regressors = [
     "TheilSenRegressor",
-    "ARDRegression", 
-    "CCA", 
-    "IsotonicRegression", 
+    "ARDRegression",
+    "CCA",
+    "IsotonicRegression",
     "StackingRegressor",
-    "MultiOutputRegressor", 
-    "MultiTaskElasticNet", 
-    "MultiTaskElasticNetCV", 
-    "MultiTaskLasso", 
-    "MultiTaskLassoCV", 
-    "PLSCanonical", 
-    "PLSRegression", 
-    "RadiusNeighborsRegressor", 
-    "RegressorChain", 
-    "VotingRegressor", 
+    "MultiOutputRegressor",
+    "MultiTaskElasticNet",
+    "MultiTaskElasticNetCV",
+    "MultiTaskLasso",
+    "MultiTaskLassoCV",
+    "PLSCanonical",
+    "PLSRegression",
+    "RadiusNeighborsRegressor",
+    "RegressorChain",
+    "VotingRegressor",
 ]
 
 CLASSIFIERS = [
@@ -89,7 +89,8 @@ CLASSIFIERS.append(("LGBMClassifier", lightgbm.LGBMClassifier))
 # CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
 
 numeric_transformer = Pipeline(
-    steps=[("imputer", SimpleImputer(strategy="mean")), ("scaler", StandardScaler())]
+    steps=[("imputer", SimpleImputer(strategy="mean")),
+           ("scaler", StandardScaler())]
 )
 
 categorical_transformer_low = Pipeline(
@@ -258,7 +259,8 @@ class LazyClassifier:
             X_test = pd.DataFrame(X_test)
 
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
-        categorical_features = X_train.select_dtypes(include=["object"]).columns
+        categorical_features = X_train.select_dtypes(
+            include=["object"]).columns
 
         categorical_low, categorical_high = get_card_split(
             X_train, categorical_features
@@ -289,25 +291,42 @@ class LazyClassifier:
             start = time.time()
             try:
                 if "random_state" in model().get_params().keys():
-                    pipe = Pipeline(
-                        steps=[
-                            ("preprocessor", preprocessor),
-                            ("classifier", model(random_state=self.random_state)),
-                        ]
-                    )
+                    if name != 'SVC':
+                        pipe = Pipeline(
+                            steps=[
+                                ("preprocessor", preprocessor),
+                                ("classifier", model(random_state=self.random_state)),
+                            ]
+                        )
+                    else:
+                        pipe = Pipeline(
+                            steps=[
+                                ("preprocessor", preprocessor),
+                                ("classifier", model(
+                                    random_state=self.random_state, probability=True)),
+                            ]
+                        )
                 else:
-                    pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), ("classifier", model())]
-                    )
+                    if name != 'SVC':
+                        pipe = Pipeline(
+                            steps=[("preprocessor", preprocessor),
+                                   ("classifier", model())]
+                        )
+                    else:
+                        pipe = Pipeline(
+                            steps=[("preprocessor", preprocessor),
+                                   ("classifier", model(probability=True))]
+                        )
 
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
+                y_score = pipe.predict_proba(X_test)[:, 1]
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
                 f1 = f1_score(y_test, y_pred, average="weighted")
                 try:
-                    roc_auc = roc_auc_score(y_test, y_pred)
+                    roc_auc = roc_auc_score(y_test, y_score)
                 except Exception as exception:
                     roc_auc = None
                     if self.ignore_warnings is False:
@@ -557,7 +576,8 @@ class LazyRegressor:
             X_test = pd.DataFrame(X_test)
 
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
-        categorical_features = X_train.select_dtypes(include=["object"]).columns
+        categorical_features = X_train.select_dtypes(
+            include=["object"]).columns
 
         categorical_low, categorical_high = get_card_split(
             X_train, categorical_features
@@ -596,7 +616,8 @@ class LazyRegressor:
                     )
                 else:
                     pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), ("regressor", model())]
+                        steps=[("preprocessor", preprocessor),
+                               ("regressor", model())]
                     )
 
                 pipe.fit(X_train, y_train)

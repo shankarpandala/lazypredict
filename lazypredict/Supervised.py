@@ -5,7 +5,7 @@ Supervised Models
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import datetime
 import time
 from sklearn.pipeline import Pipeline
@@ -18,6 +18,7 @@ from sklearn.base import ClassifierMixin
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
+    euclidean_distances,
     roc_auc_score,
     f1_score,
     r2_score,
@@ -289,30 +290,64 @@ class LazyClassifier:
             start = time.time()
             try:
                 if "random_state" in model().get_params().keys():
-                    pipe = Pipeline(
-                        steps=[
-                            ("preprocessor", preprocessor),
-                            ("classifier", model(random_state=self.random_state)),
-                        ]
-                    )
+                    if "probability" not in model().get_params().keys():
+                        pipe = Pipeline(
+                            steps=[
+                                ("preprocessor", preprocessor),
+                                ("classifier", model(
+                                    random_state=self.random_state)),
+                            ]
+                        )
+                    else:
+                        pipe = Pipeline(
+                            steps=[
+                                ("preprocessor", preprocessor),
+                                ("classifier", model(
+                                    random_state=self.random_state, probability=True)),
+                            ]
+                        )
                 else:
-                    pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), ("classifier", model())]
-                    )
+                    if "probability" not in model().get_params().keys():
+                        pipe = Pipeline(
+                            steps=[("preprocessor", preprocessor),
+                                   ("classifier", model())]
+                        )
+                    else:
+                        pipe = Pipeline(
+                            steps=[("preprocessor", preprocessor),
+                                   ("classifier", model(probability=True))]
+                        )
 
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
+                
+                try:
+                    y_score = pipe.predict_proba(X_test)[:, 1]
+                except:
+                    try:
+                        y_score = pipe.decision_function(X_test)
+                    except:
+                        # Predict centroids and distances
+                        centroids = pipe.named_steps['classifier'].centroids_
+                        distances = euclidean_distances(X_test, centroids)
+
+                        # Use negative distances to the positive class centroid as the score
+                        # (Smaller distance => Higher score for positive class)
+                        # Assuming binary classification with class labels 0 and 1
+                        y_score = -distances[:, 1]
+
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
                 f1 = f1_score(y_test, y_pred, average="weighted")
                 try:
-                    roc_auc = roc_auc_score(y_test, y_pred)
+                    roc_auc = roc_auc_score(y_test, y_score)
                 except Exception as exception:
                     roc_auc = None
                     if self.ignore_warnings is False:
                         print("ROC AUC couldn't be calculated for " + name)
                         print(exception)
+                
                 names.append(name)
                 Accuracy.append(accuracy)
                 B_Accuracy.append(b_accuracy)

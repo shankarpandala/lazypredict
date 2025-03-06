@@ -1,6 +1,7 @@
 """
 Supervised Models
 """
+
 # Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
 import numpy as np
@@ -8,6 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 import time
+from func_timeout import func_timeout
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
@@ -40,9 +42,9 @@ removed_classifiers = [
     "GaussianProcessClassifier",
     "HistGradientBoostingClassifier",
     "MLPClassifier",
-    "LogisticRegressionCV", 
-    "MultiOutputClassifier", 
-    "MultinomialNB", 
+    "LogisticRegressionCV",
+    "MultiOutputClassifier",
+    "MultinomialNB",
     "OneVsOneClassifier",
     "OneVsRestClassifier",
     "OutputCodeClassifier",
@@ -52,20 +54,20 @@ removed_classifiers = [
 
 removed_regressors = [
     "TheilSenRegressor",
-    "ARDRegression", 
-    "CCA", 
-    "IsotonicRegression", 
+    "ARDRegression",
+    "CCA",
+    "IsotonicRegression",
     "StackingRegressor",
-    "MultiOutputRegressor", 
-    "MultiTaskElasticNet", 
-    "MultiTaskElasticNetCV", 
-    "MultiTaskLasso", 
-    "MultiTaskLassoCV", 
-    "PLSCanonical", 
-    "PLSRegression", 
-    "RadiusNeighborsRegressor", 
-    "RegressorChain", 
-    "VotingRegressor", 
+    "MultiOutputRegressor",
+    "MultiTaskElasticNet",
+    "MultiTaskElasticNetCV",
+    "MultiTaskLasso",
+    "MultiTaskLassoCV",
+    "PLSCanonical",
+    "PLSRegression",
+    "RadiusNeighborsRegressor",
+    "RegressorChain",
+    "VotingRegressor",
 ]
 
 CLASSIFIERS = [
@@ -219,7 +221,7 @@ class LazyClassifier:
         self.random_state = random_state
         self.classifiers = classifiers
 
-    def fit(self, X_train, X_test, y_train, y_test):
+    def fit(self, X_train, X_test, y_train, y_test, time_limit_per_model=None):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
         Parameters
         ----------
@@ -235,6 +237,9 @@ class LazyClassifier:
         y_test : array-like,
             Testing vectors, where rows is the number of samples
             and columns is the number of features.
+        time_limit_per_model: Int,
+            Seconds to run the fit function for a single model. Raises
+            FunctionTimedOut if time limit is exceeded.
         Returns
         -------
         scores : Pandas DataFrame
@@ -300,7 +305,13 @@ class LazyClassifier:
                         steps=[("preprocessor", preprocessor), ("classifier", model())]
                     )
 
-                pipe.fit(X_train, y_train)
+                if time_limit_per_model:
+                    func_timeout(
+                        time_limit_per_model, pipe.fit, args=(X_train, y_train)
+                    )
+                else:
+                    pipe.fit(X_train, y_train)
+
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
@@ -404,7 +415,7 @@ class LazyClassifier:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
@@ -518,7 +529,7 @@ class LazyRegressor:
         self.random_state = random_state
         self.regressors = regressors
 
-    def fit(self, X_train, X_test, y_train, y_test):
+    def fit(self, X_train, X_test, y_train, y_test, time_limit_per_model=None):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
         Parameters
         ----------
@@ -534,6 +545,9 @@ class LazyRegressor:
         y_test : array-like,
             Testing vectors, where rows is the number of samples
             and columns is the number of features.
+        time_limit_per_model: Int,
+            Seconds to run the fit function for a single model. Raises
+            FunctionTimedOut if time limit is exceeded.
         Returns
         -------
         scores : Pandas DataFrame
@@ -599,7 +613,13 @@ class LazyRegressor:
                         steps=[("preprocessor", preprocessor), ("regressor", model())]
                     )
 
-                pipe.fit(X_train, y_train)
+                if time_limit_per_model:
+                    func_timeout(
+                        time_limit_per_model, pipe.fit, args=(X_train, y_train)
+                    )
+                else:
+                    pipe.fit(X_train, y_train)
+
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
 
@@ -680,7 +700,7 @@ class LazyRegressor:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:

@@ -6,3 +6,4 @@ joblib
 lightgbm
 xgboost
 pytest-runner
+func-timeout

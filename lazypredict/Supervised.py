@@ -426,7 +426,7 @@ class LazyClassifier:
                     "Time Taken": TIME,
                 }
             )
-        scores = scores.sort_values(by="Balanced Accuracy", ascending=False).set_index(
+        scores = scores.sort_values(by="ROC AUC", ascending=False).set_index(
             "Model"
         )
 

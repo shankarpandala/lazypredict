@@ -1,50 +1,38 @@
-name: "Pull Request Docs Check"
-on: 
-  pull_request:
+name: "Documentation Generation"
+on:
   push:
     branches:
       - dev
+  pull_request:
+
 jobs:
-  docs:
+  build-docs:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2  # Updated to v2
+    - name: Checkout Repository
+      uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'  # Specify the Python version you need
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install sphinx
-          pip install -r requirements.txt  # Ensure you have a requirements file for Sphinx
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install sphinx
+        pip install -r requirements.txt
 
-      - name: Build documentation
-        run: |
-          sphinx-build docs docs/_build/html
+    - name: Build Documentation
+      run: |
+        sphinx-build -b html docs docs/_build/html
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: DocumentationHTML
-          path: docs/_build/html/
-
-      - name: Commit documentation changes
-        run: |
-          git clone https://github.com/shankarpandala/lazypredict.git --branch gh-pages --single-branch gh-pages
-          cp -r docs/_build/html/* gh-pages/
-          cd gh-pages
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add .
-          git commit -m "Update documentation" -a || true
-          # The above command will fail if no changes were present, so we ignore
-          # the return code.
-
-      - name: Push changes
-        uses: ad-m/github-push-action@v0.6.0  # Updated to a specific version
-        with:
-          branch: gh-pages
-          directory: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html
+        publish_branch: gh-pages
+        user_name: "GitHub Action"
+        user_email: "action@github.com"

@@ -53,4 +53,10 @@ setup(
     url="https://github.com/shankarpandala/lazypredict",
     version='0.2.12',
     zip_safe=False,
+    extras_require={
+        'gpu': [
+            'cuml',  # Add other GPU libraries if needed
+            'torch',  # For checking GPU availability
+        ],
+    },
 )

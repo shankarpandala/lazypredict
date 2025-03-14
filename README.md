@@ -149,3 +149,98 @@ print(models)
 | GaussianProcessRegressor      |          -0.769174   | -0.367089   |  91.5109 |   0.0770502  |
 | MLPRegressor                  |          -1.86772    | -1.21597    | 116.508  |   0.235267   |
 | KernelRidge                   |          -5.03822    | -3.6659     | 169.061  |   0.0243919  |
+
+## MLflow Integration
+
+Lazy Predict now supports MLflow for experiment tracking. You can specify a global MLflow tracking URI or pass it directly to the `fit` method.
+
+Example:
+
+```python
+# Set a global MLflow tracking URI
+GLOBAL_MLFLOW_TRACKING_URI = "http://localhost:5000"
+
+# Or specify it directly in the fit method
+clf.fit(X_train, X_test, y_train, y_test, mlflow_tracking_uri="http://localhost:5000")
+```
+
+## Hyperparameter Optimization
+
+Lazy Predict provides a `fit_optimize` method for hyperparameter optimization using Optuna.
+
+Example:
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+
+best_params = clf.fit_optimize(X_train, y_train, RandomForestClassifier)
+print("Best Parameters:", best_params)
+```
+
+## Dependencies
+
+Ensure you have the following dependencies installed:
+
+- `mlflow`
+- `shap`
+- `optuna`
+
+These can be installed via `pip install -r requirements.txt`. Ensure your `requirements.txt` is up to date with these packages.
+
+## New Features
+
+### Ordinal Regression
+The `LazyOrdinalRegressor` class allows for fitting ordinal regression models using Logistic Regression. It provides an easy interface to handle ordinal data and evaluate models based on custom metrics.
+
+**Example Usage:**
+```python
+from lazypredict.Supervised import LazyOrdinalRegressor
+from sklearn.datasets import fetch_openml
+
+data = fetch_openml(name='credit-g', version=1)
+X = data.data
+Y = data.target
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
+
+ord_reg = LazyOrdinalRegressor(verbose=1)
+model = ord_reg.fit(X_train, X_test, y_train, y_test)
+```
+
+### Survival Analysis
+The `LazySurvivalAnalysis` class provides tools for performing survival analysis using the Cox Proportional Hazards model. It is designed to handle time-to-event data efficiently.
+
+**Example Usage:**
+```python
+from lazypredict.Supervised import LazySurvivalAnalysis
+from sksurv.datasets import load_whas500
+
+X, y = load_whas500()
+surv_analysis = LazySurvivalAnalysis(verbose=1)
+model = surv_analysis.fit(X, y)
+```
+
+### Sequence Prediction
+The `LazySequencePredictor` class is a placeholder for sequence prediction tasks using RNN or LSTM models. It provides a framework to extend and implement sequence prediction models.
+
+**Example Usage:**
+```python
+from lazypredict.Supervised import LazySequencePredictor
+
+# Example usage with a sequence dataset
+seq_predictor = LazySequencePredictor(verbose=1)
+model = seq_predictor.fit(X_train, y_train)
+```
+
+## Installation
+
+To install the package, use the following command:
+
+```bash
+pip install lazypredict
+```
+
+For GPU support, use:
+
+```bash
+pip install lazypredict[gpu]
+```

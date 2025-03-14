@@ -63,3 +63,12 @@ title: History
 # 0.1.0 (2019-11-16)
 
 -   First release on PyPI.
+
+## [Unreleased]
+### Added
+- Added `LazyOrdinalRegressor` for ordinal regression tasks using Logistic Regression.
+- Added `LazySurvivalAnalysis` for survival analysis using the Cox Proportional Hazards model.
+- Added `LazySequencePredictor` as a placeholder for sequence prediction tasks using RNN or LSTM models.
+
+### Changed
+- Enhanced the `Supervised` module to include new supervised learning tasks beyond regression and classification.

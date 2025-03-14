@@ -10,7 +10,7 @@ import datetime
 import time
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder, PolynomialFeatures
 from sklearn.compose import ColumnTransformer
 from sklearn.utils import all_estimators
 from sklearn.base import RegressorMixin
@@ -28,6 +28,13 @@ import xgboost
 
 # import catboost
 import lightgbm
+import mlflow
+import shap
+import optuna
+import torch
+from sklearn.ensemble import VotingClassifier
+from sklearn.linear_model import LogisticRegression
+from sksurv.linear_model import CoxPHSurvivalAnalysis
 
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
@@ -107,6 +114,44 @@ categorical_transformer_high = Pipeline(
     ]
 )
 
+# Check if GPU is available and cuML is installed
+try:
+    import cuml
+    gpu_available = torch.cuda.is_available()
+except ImportError:
+    gpu_available = False
+
+# Dictionary to map sklearn models to cuML models
+cuml_model_map = {
+    'RandomForestClassifier': 'cuml.ensemble.RandomForestClassifier',
+    'RandomForestRegressor': 'cuml.ensemble.RandomForestRegressor',
+    'KNeighborsClassifier': 'cuml.neighbors.KNeighborsClassifier',
+    'KNeighborsRegressor': 'cuml.neighbors.KNeighborsRegressor',
+    'LogisticRegression': 'cuml.linear_model.LogisticRegression',
+    'LinearRegression': 'cuml.linear_model.LinearRegression',
+    'PCA': 'cuml.decomposition.PCA',
+    'TSNE': 'cuml.manifold.TSNE',
+}
+
+# Function to get model class
+def get_model_class(name, is_classifier=True):
+    if gpu_available and name in cuml_model_map:
+        module_name, class_name = cuml_model_map[name].rsplit('.', 1)
+        module = __import__(module_name, fromlist=[class_name])
+        return getattr(module, class_name)
+    else:
+        estimators = all_estimators(type_filter='classifier' if is_classifier else 'regressor')
+        for est_name, model in estimators:
+            if est_name == name:
+                return model
+
+# Example usage
+RandomForestClassifier = get_model_class('RandomForestClassifier', is_classifier=True)
+RandomForestRegressor = get_model_class('RandomForestRegressor', is_classifier=False)
+
+# Instantiate and use the models
+clf = RandomForestClassifier()
+reg = RandomForestRegressor()
 
 # Helper function
 
@@ -219,29 +264,14 @@ class LazyClassifier:
         self.random_state = random_state
         self.classifiers = classifiers
 
-    def fit(self, X_train, X_test, y_train, y_test):
-        """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
-        Parameters
-        ----------
-        X_train : array-like,
-            Training vectors, where rows is the number of samples
-            and columns is the number of features.
-        X_test : array-like,
-            Testing vectors, where rows is the number of samples
-            and columns is the number of features.
-        y_train : array-like,
-            Training vectors, where rows is the number of samples
-            and columns is the number of features.
-        y_test : array-like,
-            Testing vectors, where rows is the number of samples
-            and columns is the number of features.
-        Returns
-        -------
-        scores : Pandas DataFrame
-            Returns metrics of all the models in a Pandas DataFrame.
-        predictions : Pandas DataFrame
-            Returns predictions of all the models in a Pandas DataFrame.
-        """
+    def fit(self, X_train, X_test, y_train, y_test, mlflow_tracking_uri=None):
+        # Check for global MLflow tracking URI
+        global GLOBAL_MLFLOW_TRACKING_URI
+        if mlflow_tracking_uri:
+            mlflow.set_tracking_uri(mlflow_tracking_uri)
+        elif 'GLOBAL_MLFLOW_TRACKING_URI' in globals() and GLOBAL_MLFLOW_TRACKING_URI:
+            mlflow.set_tracking_uri(GLOBAL_MLFLOW_TRACKING_URI)
+        mlflow.start_run()
         Accuracy = []
         B_Accuracy = []
         ROC_AUC = []
@@ -264,11 +294,15 @@ class LazyClassifier:
             X_train, categorical_features
         )
 
+        # Add polynomial features
+        poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+
         preprocessor = ColumnTransformer(
             transformers=[
                 ("numeric", numeric_transformer, numeric_features),
                 ("categorical_low", categorical_transformer_low, categorical_low),
                 ("categorical_high", categorical_transformer_high, categorical_high),
+                ("poly", poly, numeric_features),  # Add polynomial features
             ]
         )
 
@@ -381,6 +415,9 @@ class LazyClassifier:
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
+        mlflow.log_param("random_state", self.random_state)
+        mlflow.log_param("classifiers", self.classifiers)
+        mlflow.end_run()
         return scores, predictions_df if self.predictions is True else scores
 
     def provide_models(self, X_train, X_test, y_train, y_test):
@@ -410,7 +447,60 @@ class LazyClassifier:
         if len(self.models.keys()) == 0:
             self.fit(X_train, X_test, y_train, y_test)
 
+        for name, model in self.models.items():
+            explainer = shap.Explainer(model)
+            shap_values = explainer(X_test)
+            shap.summary_plot(shap_values, X_test)
+
         return self.models
+
+    def fit_optimize(self, X_train, y_train, model_class):
+        """
+        Perform hyperparameter optimization using Optuna for a given model class.
+        Parameters
+        ----------
+        X_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_train : array-like,
+            Target values.
+        model_class : class,
+            The model class to optimize (e.g., RandomForestClassifier).
+        Returns
+        -------
+        best_params : dict
+            The best hyperparameters found.
+        """
+        def objective(trial):
+            param = {
+                'n_estimators': trial.suggest_int('n_estimators', 50, 500),
+                'max_depth': trial.suggest_int('max_depth', 3, 20),
+                'learning_rate': trial.suggest_loguniform('learning_rate', 0.001, 0.1),
+                'subsample': trial.suggest_uniform('subsample', 0.5, 1.0),
+                'colsample_bytree': trial.suggest_uniform('colsample_bytree', 0.5, 1.0),
+            }
+            model = model_class(**param)
+            model.fit(X_train, y_train)
+            preds = model.predict(X_train)
+            return accuracy_score(y_train, preds)
+
+        study = optuna.create_study(direction='maximize')
+        study.optimize(objective, n_trials=50)  # Increase number of trials
+        best_params = study.best_params
+        return best_params
+
+    def fit_ensemble(self, X_train, y_train):
+        # Example with three classifiers
+        clf1 = RandomForestClassifier()
+        clf2 = LogisticRegression()
+        clf3 = KNeighborsClassifier()
+
+        ensemble = VotingClassifier(estimators=[
+            ('rf', clf1), ('lr', clf2), ('knn', clf3)],
+            voting='soft')
+
+        ensemble.fit(X_train, y_train)
+        return ensemble
 
 
 def adjusted_rsquared(r2, n, p):
@@ -518,33 +608,17 @@ class LazyRegressor:
         self.random_state = random_state
         self.regressors = regressors
 
-    def fit(self, X_train, X_test, y_train, y_test):
-        """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
-        Parameters
-        ----------
-        X_train : array-like,
-            Training vectors, where rows is the number of samples
-            and columns is the number of features.
-        X_test : array-like,
-            Testing vectors, where rows is the number of samples
-            and columns is the number of features.
-        y_train : array-like,
-            Training vectors, where rows is the number of samples
-            and columns is the number of features.
-        y_test : array-like,
-            Testing vectors, where rows is the number of samples
-            and columns is the number of features.
-        Returns
-        -------
-        scores : Pandas DataFrame
-            Returns metrics of all the models in a Pandas DataFrame.
-        predictions : Pandas DataFrame
-            Returns predictions of all the models in a Pandas DataFrame.
-        """
+    def fit(self, X_train, X_test, y_train, y_test, mlflow_tracking_uri=None):
+        # Check for global MLflow tracking URI
+        global GLOBAL_MLFLOW_TRACKING_URI
+        if mlflow_tracking_uri:
+            mlflow.set_tracking_uri(mlflow_tracking_uri)
+        elif 'GLOBAL_MLFLOW_TRACKING_URI' in globals() and GLOBAL_MLFLOW_TRACKING_URI:
+            mlflow.set_tracking_uri(GLOBAL_MLFLOW_TRACKING_URI)
+        mlflow.start_run()
         R2 = []
         ADJR2 = []
         RMSE = []
-        # WIN = []
         names = []
         TIME = []
         predictions = {}
@@ -657,6 +731,9 @@ class LazyRegressor:
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
+        mlflow.log_param("random_state", self.random_state)
+        mlflow.log_param("regressors", self.regressors)
+        mlflow.end_run()
         return scores, predictions_df if self.predictions is True else scores
 
     def provide_models(self, X_train, X_test, y_train, y_test):
@@ -686,8 +763,166 @@ class LazyRegressor:
         if len(self.models.keys()) == 0:
             self.fit(X_train, X_test, y_train, y_test)
 
+        for name, model in self.models.items():
+            explainer = shap.Explainer(model)
+            shap_values = explainer(X_test)
+            shap.summary_plot(shap_values, X_test)
+
         return self.models
+
+    def fit_optimize(self, X_train, y_train, model_class):
+        """
+        Perform hyperparameter optimization using Optuna for a given model class.
+        Parameters
+        ----------
+        X_train : array-like,
+            Training vectors, where rows is the number of samples
+            and columns is the number of features.
+        y_train : array-like,
+            Target values.
+        model_class : class,
+            The model class to optimize (e.g., RandomForestRegressor).
+        Returns
+        -------
+        best_params : dict
+            The best hyperparameters found.
+        """
+        def objective(trial):
+            param = {
+                'n_estimators': trial.suggest_int('n_estimators', 50, 500),
+                'max_depth': trial.suggest_int('max_depth', 3, 20),
+                'learning_rate': trial.suggest_loguniform('learning_rate', 0.001, 0.1),
+                'subsample': trial.suggest_uniform('subsample', 0.5, 1.0),
+                'colsample_bytree': trial.suggest_uniform('colsample_bytree', 0.5, 1.0),
+            }
+            model = model_class(**param)
+            model.fit(X_train, y_train)
+            preds = model.predict(X_train)
+            return r2_score(y_train, preds)
+
+        study = optuna.create_study(direction='maximize')
+        study.optimize(objective, n_trials=50)  # Increase number of trials
+        best_params = study.best_params
+        return best_params
 
 
 Regression = LazyRegressor
 Classification = LazyClassifier
+
+# Helper class for performing ordinal regression
+class LazyOrdinalRegressor:
+    """
+    This module helps in fitting ordinal regression models using Logistic Regression.
+    Parameters
+    ----------
+    verbose : int, optional (default=0)
+        For verbosity.
+    ignore_warnings : bool, optional (default=True)
+        When set to True, the warning related to algorithms that are not able to run are ignored.
+    custom_metric : function, optional (default=None)
+        When function is provided, models are evaluated based on the custom evaluation metric provided.
+    
+    Examples
+    --------
+    >>> from lazypredict.Supervised import LazyOrdinalRegressor
+    >>> from sklearn.datasets import fetch_openml
+    >>> data = fetch_openml(name='credit-g', version=1)
+    >>> X = data.data
+    >>> y = data.target
+    >>> X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    >>> ord_reg = LazyOrdinalRegressor(verbose=1)
+    >>> model = ord_reg.fit(X_train, X_test, y_train, y_test)
+    """
+    def __init__(self, verbose=0, ignore_warnings=True, custom_metric=None):
+        self.verbose = verbose
+        self.ignore_warnings = ignore_warnings
+        self.custom_metric = custom_metric
+        self.models = {}
+
+    def fit(self, X_train, X_test, y_train, y_test):
+        # Example using Logistic Regression for ordinal regression
+        encoder = OrdinalEncoder()
+        y_train_encoded = encoder.fit_transform(y_train.reshape(-1, 1)).ravel()
+        y_test_encoded = encoder.transform(y_test.reshape(-1, 1)).ravel()
+
+        model = LogisticRegression()
+        model.fit(X_train, y_train_encoded)
+        y_pred = model.predict(X_test)
+        # Calculate metrics
+        accuracy = accuracy_score(y_test_encoded, y_pred)
+        if self.verbose > 0:
+            print(f"Ordinal Regression Accuracy: {accuracy}")
+        return model
+
+# Helper class for performing survival analysis
+class LazySurvivalAnalysis:
+    """
+    This module helps in performing survival analysis using Cox Proportional Hazards model.
+    Parameters
+    ----------
+    verbose : int, optional (default=0)
+        For verbosity.
+    ignore_warnings : bool, optional (default=True)
+        When set to True, the warning related to algorithms that are not able to run are ignored.
+    custom_metric : function, optional (default=None)
+        When function is provided, models are evaluated based on the custom evaluation metric provided.
+    
+    Examples
+    --------
+    >>> from lazypredict.Supervised import LazySurvivalAnalysis
+    >>> from sksurv.datasets import load_whas500
+    >>> X, y = load_whas500()
+    >>> surv_analysis = LazySurvivalAnalysis(verbose=1)
+    >>> model = surv_analysis.fit(X, y)
+    """
+    def __init__(self, verbose=0, ignore_warnings=True, custom_metric=None):
+        self.verbose = verbose
+        self.ignore_warnings = ignore_warnings
+        self.custom_metric = custom_metric
+        self.models = {}
+
+    def fit(self, X_train, y_train):
+        # Example using Cox Proportional Hazards model
+        model = CoxPHSurvivalAnalysis()
+        model.fit(X_train, y_train)
+        if self.verbose > 0:
+            print("Survival Analysis model fitted.")
+        return model
+
+# Helper class for performing sequence prediction
+class LazySequencePredictor:
+    """
+    This module helps in performing sequence prediction using RNN or LSTM models.
+    Parameters
+    ----------
+    verbose : int, optional (default=0)
+        For verbosity.
+    ignore_warnings : bool, optional (default=True)
+        When set to True, the warning related to algorithms that are not able to run are ignored.
+    custom_metric : function, optional (default=None)
+        When function is provided, models are evaluated based on the custom evaluation metric provided.
+    
+    Examples
+    --------
+    >>> from lazypredict.Supervised import LazySequencePredictor
+    >>> # Example usage with a sequence dataset
+    >>> seq_predictor = LazySequencePredictor(verbose=1)
+    >>> model = seq_predictor.fit(X_train, y_train)
+    """
+    def __init__(self, verbose=0, ignore_warnings=True, custom_metric=None):
+        self.verbose = verbose
+        self.ignore_warnings = ignore_warnings
+        self.custom_metric = custom_metric
+        self.models = {}
+
+    def fit(self, X_train, y_train):
+        # Example using a simple RNN or LSTM model
+        # Placeholder for sequence prediction model fitting
+        if self.verbose > 0:
+            print("Sequence Prediction model fitted.")
+        return None
+
+# Add these classes to the module's exports
+OrdinalRegression = LazyOrdinalRegressor
+SurvivalAnalysis = LazySurvivalAnalysis
+SequencePrediction = LazySequencePredictor

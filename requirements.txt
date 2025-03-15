@@ -1,14 +1,20 @@
-numpy
-pandas
-tqdm
-scikit-learn
-xgboost
-lightgbm
-mlflow
-shap
-optuna
-torch
-scikit-survival
-cuml
-pytest
-click
+# Core requirements
+numpy>=1.17.0
+pandas>=1.0.0
+tqdm>=4.45.0
+scikit-learn>=1.0.0
+xgboost>=1.0.0
+lightgbm>=3.0.0
+
+# Optional dependencies (uncomment as needed)
+# mlflow>=1.0.0
+# optuna>=2.0.0
+# torch>=1.0.0
+# cuml>=21.0.0
+# scikit-survival>=0.15.0
+
+# Development requirements
+pytest>=7.0.0
+pytest-cov>=4.0.0
+click>=7.0.0
+mlflow>=2.0.0

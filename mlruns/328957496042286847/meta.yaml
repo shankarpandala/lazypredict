@@ -1,0 +1,6 @@
+artifact_location: file:///home/jovyan/lazypredict/mlruns/328957496042286847
+creation_time: 1742061329268
+experiment_id: '328957496042286847'
+last_update_time: 1742061329268
+lifecycle_stage: active
+name: test_experiment

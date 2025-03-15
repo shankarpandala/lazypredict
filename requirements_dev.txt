@@ -7,3 +7,17 @@ lightgbm
 xgboost
 pytest
 myst-parser
+
+# Development dependencies
+pytest>=5.0.0
+pytest-runner>=5.0.0
+black>=20.8b1
+isort>=5.0.0
+mypy>=0.800
+flake8>=3.8.0
+sphinx>=3.0.0
+sphinx-rtd-theme>=0.5.0
+twine>=3.0.0
+pre-commit>=2.9.0
+bump2version>=1.0.0
+coverage>=5.0.0

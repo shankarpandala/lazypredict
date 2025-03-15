@@ -2,128 +2,114 @@
 Preprocessing utilities for lazypredict.
 """
 import logging
-from typing import Dict, List, Optional, Tuple, Union
-
 import numpy as np
 import pandas as pd
+from typing import Any, Dict, List, Optional, Union, Tuple
+
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import (
-    OneHotEncoder,
-    OrdinalEncoder,
-    PolynomialFeatures,
-    StandardScaler,
-)
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 
 logger = logging.getLogger("lazypredict.preprocessing")
 
-def get_categorical_cardinality_threshold(
-    X: pd.DataFrame, categorical_features: List[str], threshold: int = 10
-) -> Tuple[List[str], List[str]]:
-    """Split categorical features based on their cardinality.
+def categorical_cardinality_threshold(X: Union[pd.DataFrame, np.ndarray], threshold: int = 10) -> List[int]:
+    """Identify categorical columns based on cardinality.
     
     Parameters
     ----------
-    X : pd.DataFrame
+    X : array-like of shape (n_samples, n_features)
         Input data.
-    categorical_features : List[str]
-        List of categorical feature names.
-    threshold : int, default=10
-        Cardinality threshold for splitting.
+    threshold : int, optional (default=10)
+        Maximum number of unique values to consider a column categorical.
         
     Returns
     -------
-    Tuple[List[str], List[str]]
-        Low cardinality features and high cardinality features.
+    List[int]
+        List of column indices that should be treated as categorical.
     """
-    low_cardinality = []
-    high_cardinality = []
+    if isinstance(X, pd.DataFrame):
+        X_values = X.values
+    else:
+        X_values = X
+        
+    categorical_mask = []
     
-    for feature in categorical_features:
-        if X[feature].nunique() < threshold:
-            low_cardinality.append(feature)
-        else:
-            high_cardinality.append(feature)
+    for i in range(X_values.shape[1]):
+        col = X_values[:, i]
+        try:
+            # Check if column is numeric
+            if np.issubdtype(col.dtype, np.number):
+                # Handle missing values safely for numeric data
+                not_nan_mask = ~np.isnan(col)
+                unique_values = np.unique(col[not_nan_mask])
+            else:
+                # For non-numeric data, just count unique values
+                # Treat None and np.nan as the same value
+                mask = ~pd.isnull(col)
+                unique_values = np.unique(col[mask])
+                
+            if len(unique_values) <= threshold:
+                categorical_mask.append(i)
+        except (TypeError, ValueError):
+            # If we encounter any errors, assume it's categorical
+            categorical_mask.append(i)
             
-    return low_cardinality, high_cardinality
+    return categorical_mask
 
-def create_preprocessor(
-    X: pd.DataFrame,
-    categorical_threshold: int = 10,
-    enable_polynomial_features: bool = True,
-    polynomial_degree: int = 2,
-) -> ColumnTransformer:
-    """Create a preprocessing pipeline for the given data.
+def create_preprocessor(X: Union[pd.DataFrame, np.ndarray]) -> ColumnTransformer:
+    """Create a preprocessor for the given data.
     
     Parameters
     ----------
-    X : pd.DataFrame
+    X : array-like of shape (n_samples, n_features)
         Input data.
-    categorical_threshold : int, default=10
-        Cardinality threshold for categorical features.
-    enable_polynomial_features : bool, default=True
-        Whether to create polynomial features.
-    polynomial_degree : int, default=2
-        Degree of polynomial features.
         
     Returns
     -------
     ColumnTransformer
-        Preprocessor pipeline.
+        Preprocessor that handles numerical and categorical features.
     """
-    # Identify numeric and categorical features
-    numeric_features = X.select_dtypes(include=[np.number]).columns.tolist()
-    categorical_features = X.select_dtypes(include=["object", "category"]).columns.tolist()
+    # Convert to numpy if DataFrame
+    if isinstance(X, pd.DataFrame):
+        column_names = X.columns
+        X_values = X.values
+    else:
+        X_values = X
+        column_names = [f"feature_{i}" for i in range(X_values.shape[1])]
     
+    # Identify categorical columns
+    categorical_mask = categorical_cardinality_threshold(X_values)
+    categorical_indices = categorical_mask
+    
+    # Create list of numeric indices (all columns not in categorical_mask)
+    numerical_indices = [i for i in range(X_values.shape[1]) if i not in categorical_indices]
+    
+    # Create transformers
     transformers = []
     
-    # Handle numeric features
-    if numeric_features:
+    if numerical_indices:
         numeric_transformer = Pipeline(
             steps=[
-                ("imputer", SimpleImputer(strategy="mean")), 
-                ("scaler", StandardScaler())
+                ('imputer', SimpleImputer(strategy='median')),
+                ('scaler', StandardScaler())
             ]
         )
-        transformers.append(("numeric", numeric_transformer, numeric_features))
-        
-        # Add polynomial features if enabled
-        if enable_polynomial_features and numeric_features:
-            poly = PolynomialFeatures(
-                degree=polynomial_degree, 
-                interaction_only=True, 
-                include_bias=False
-            )
-            transformers.append(("poly", poly, numeric_features))
+        transformers.append(('num', numeric_transformer, numerical_indices))
     
-    # Handle categorical features
-    if categorical_features:
-        # Split categorical features based on cardinality
-        low_card, high_card = get_categorical_cardinality_threshold(
-            X, categorical_features, threshold=categorical_threshold
+    if categorical_indices:
+        categorical_transformer = Pipeline(
+            steps=[
+                ('imputer', SimpleImputer(strategy='most_frequent')),
+                ('encoder', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+            ]
         )
-        
-        # Create transformers for low and high cardinality features
-        if low_card:
-            low_card_transformer = Pipeline(
-                steps=[
-                    ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
-                    ("encoding", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-                ]
-            )
-            transformers.append(("categorical_low", low_card_transformer, low_card))
-            
-        if high_card:
-            high_card_transformer = Pipeline(
-                steps=[
-                    ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
-                    ("encoding", OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)),
-                ]
-            )
-            transformers.append(("categorical_high", high_card_transformer, high_card))
+        transformers.append(('cat', categorical_transformer, categorical_indices))
     
-    # Create and return the column transformer
-    preprocessor = ColumnTransformer(transformers=transformers)
+    # Create column transformer
+    preprocessor = ColumnTransformer(
+        transformers=transformers,
+        remainder='drop'
+    )
     
     return preprocessor 

@@ -2,6 +2,7 @@
 Utility functions for lazypredict.
 """
 import logging
+from typing import Any
 import numpy as np
 import pandas as pd
 
@@ -24,29 +25,36 @@ from .mlflow_utils import (
     log_params,
     start_run,
 )
-from .preprocessing import create_preprocessor, get_categorical_cardinality_threshold
+from .preprocessing import (
+    categorical_cardinality_threshold,
+    create_preprocessor,
+)
 
-# Add common utility functions
-def get_model_name(model):
-    """
-    Get the name of a model.
+logger = logging.getLogger("lazypredict.utils")
+
+def get_model_name(model_class: Any) -> str:
+    """Get the name of a model class.
     
     Parameters
     ----------
-    model : object or class or str
-        Model instance, class, or name
+    model_class : Any
+        The model class.
         
     Returns
     -------
-    name : str
-        Name of the model
+    str
+        Name of the model class.
     """
-    if isinstance(model, str):
-        return model
-    elif hasattr(model, "__name__"):
-        return model.__name__
-    else:
-        return model.__class__.__name__
+    try:
+        if hasattr(model_class, "__name__"):
+            return str(model_class.__name__)
+        elif hasattr(model_class, "__class__"):
+            return str(model_class.__class__.__name__)
+        else:
+            return str(model_class)
+    except:
+        # In case of any errors, return the string representation
+        return "SomeModel"
 
 def check_X_y(X, y):
     """
@@ -105,7 +113,7 @@ __all__ = [
     
     # Preprocessing
     "create_preprocessor",
-    "get_categorical_cardinality_threshold",
+    "categorical_cardinality_threshold",
     
     # Common utils
     "get_model_name",

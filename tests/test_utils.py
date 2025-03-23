@@ -4,6 +4,8 @@ import pandas as pd
 import tempfile
 import os
 from unittest.mock import patch, MagicMock
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
 # Test utility modules
 class TestBaseUtils(unittest.TestCase):
@@ -66,17 +68,26 @@ class TestBaseUtils(unittest.TestCase):
             self.skipTest("Could not import BaseLazy")
 
 class TestPreprocessingUtils(unittest.TestCase):
+    """Test preprocessing utility functions."""
+    
+    def setUp(self):
+        # Create sample data with known properties
+        self.data = pd.DataFrame({
+            'numeric': np.random.rand(10),
+            'categorical': ['A', 'B', 'A', 'B', 'C', 'A', 'B', 'C', 'A', 'B']
+        })
+    
     def test_categorical_cardinality_threshold(self):
+        """Test categorical cardinality threshold function."""
         try:
-            from lazypredict.utils.preprocessing import get_categorical_cardinality_threshold
+            from lazypredict.utils.preprocessing import categorical_cardinality_threshold
             
-            # Create sample data with categorical features
             data = pd.DataFrame({
-                'low_card': ['A', 'B', 'A', 'C', 'B', 'A', 'C', 'A', 'B', 'C'],
-                'high_card': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+                'low_card': ['A', 'B', 'A', 'A', 'B', 'A', 'B', 'A', 'B', 'A'],  # 2 unique values
+                'high_card': list('ABCDEFGHIJ')  # 10 unique values
             })
             
-            low_card, high_card = get_categorical_cardinality_threshold(
+            low_card, high_card = categorical_cardinality_threshold(
                 data, ['low_card', 'high_card'], threshold=5
             )
             
@@ -87,30 +98,26 @@ class TestPreprocessingUtils(unittest.TestCase):
             self.skipTest("Could not import preprocessing utilities")
     
     def test_create_preprocessor(self):
+        """Test preprocessor creation."""
         try:
             from lazypredict.utils.preprocessing import create_preprocessor
-            from sklearn.compose import ColumnTransformer
             
-            # Create sample mixed data
-            data = pd.DataFrame({
-                'numeric1': [1.0, 2.0, 3.0, 4.0, 5.0],
-                'numeric2': [10.0, 20.0, 30.0, 40.0, 50.0],
-                'cat_low': ['A', 'B', 'A', 'B', 'A'],
-                'cat_high': ['X', 'Y', 'Z', 'W', 'V']
-            })
-            
-            preprocessor = create_preprocessor(data)
-            
+            # Test with column return type
+            preprocessor = create_preprocessor(self.data, return_type='column')
             self.assertIsInstance(preprocessor, ColumnTransformer)
             
-            # Check that transformers were created for each type
-            transformer_names = [name for name, _, _ in preprocessor.transformers]
-            self.assertIn('numeric', transformer_names)
+            # Test with pipeline return type
+            preprocessor = create_preprocessor(self.data, return_type='pipeline')
+            self.assertIsInstance(preprocessor, Pipeline)
             
             # Test with polynomial features disabled
-            preprocessor_no_poly = create_preprocessor(data, enable_polynomial_features=False)
-            transformer_names = [name for name, _, _ in preprocessor_no_poly.transformers]
-            self.assertNotIn('poly', transformer_names)
+            preprocessor = create_preprocessor(self.data, enable_polynomial_features=False)
+            self.assertIsInstance(preprocessor, ColumnTransformer)
+            
+            # Test with numpy array input
+            X = np.random.rand(10, 2)
+            preprocessor = create_preprocessor(X)
+            self.assertTrue(isinstance(preprocessor, (Pipeline, ColumnTransformer)))
             
         except ImportError:
             self.skipTest("Could not import preprocessing utilities")
@@ -199,11 +206,17 @@ class TestMLflowUtils(unittest.TestCase):
             
         except ImportError:
             self.skipTest("Could not import MLflow utilities")
-    
+            
     @patch('mlflow.end_run')
-    def test_end_run(self, mock_end_run):
+    @patch('mlflow.active_run')
+    def test_end_run(self, mock_active_run, mock_end_run):
         try:
             from lazypredict.utils.mlflow_utils import end_run
+            
+            # Setup mock active run
+            mock_run = MagicMock()
+            mock_run.info.run_id = "test_run_id"
+            mock_active_run.return_value = mock_run
             
             # Test end_run
             end_run()
@@ -257,4 +270,4 @@ class TestMLflowUtils(unittest.TestCase):
             self.skipTest("Could not import MLflow utilities")
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

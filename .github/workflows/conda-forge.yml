@@ -1,0 +1,22 @@
+name: Update conda-forge
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-conda-forge:
+    runs-on: ubuntu-latest
+    if: github.repository == 'shankarpandala/lazypredict'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Update conda-forge-bot
+      uses: conda-forge/admin-requests@main
+      with:
+        feedstock: lazypredict-feedstock
+        action: rerender
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

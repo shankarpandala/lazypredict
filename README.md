@@ -189,22 +189,8 @@ These can be installed via `pip install -r requirements.txt`. Ensure your `requi
 
 ## New Features
 
-### Ordinal Regression
-The `LazyOrdinalRegressor` class allows for fitting ordinal regression models using Logistic Regression. It provides an easy interface to handle ordinal data and evaluate models based on custom metrics.
-
-**Example Usage:**
-```python
-from lazypredict.Supervised import LazyOrdinalRegressor
-from sklearn.datasets import fetch_openml
-
-data = fetch_openml(name='credit-g', version=1)
-X = data.data
-Y = data.target
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
-
-ord_reg = LazyOrdinalRegressor(verbose=1)
-model = ord_reg.fit(X_train, X_test, y_train, y_test)
-```
+### Additional Model Support
+New models are continuously being added to support a wider range of machine learning tasks.
 
 ### Survival Analysis
 The `LazySurvivalAnalysis` class provides tools for performing survival analysis using the Cox Proportional Hazards model. It is designed to handle time-to-event data efficiently.

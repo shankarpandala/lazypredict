@@ -1,0 +1,56 @@
+{% set name = "lazypredict" %}
+{% set version = "0.3.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: $PLACEHOLDER  # This will be updated by the conda-forge bot
+
+build:
+  number: 0
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
+  entry_points:
+    - lazypredict = lazypredict.cli:main
+
+requirements:
+  host:
+    - python >=3.8
+    - pip
+    - setuptools >=61.0
+    - wheel
+  run:
+    - python >=3.8
+    - numpy >=1.17.0
+    - pandas >=1.0.0
+    - tqdm >=4.45.0
+    - scikit-learn >=1.0.0
+    - xgboost >=1.0.0
+    - lightgbm >=3.0.0
+
+test:
+  imports:
+    - lazypredict
+  commands:
+    - pip check
+  requires:
+    - pip
+
+about:
+  home: https://github.com/shankarpandala/lazypredict
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: Build many machine learning models with minimal code
+  description: |
+    Lazy Predict helps build a lot of basic models without much code and helps 
+    understand which models work better without any parameter tuning.
+  doc_url: https://lazypredict.readthedocs.io/
+  dev_url: https://github.com/shankarpandala/lazypredict
+
+extra:
+  recipe-maintainers:
+    - shankarpandala

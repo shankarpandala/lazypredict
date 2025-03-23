@@ -157,4 +157,35 @@ class BaseLazy:
             ]
         except Exception as e:
             logger.error(f"Error getting estimators: {e}")
-            return [] 
+            return []
+
+def check_X_y(X, y):
+    """Check and prepare X and y for model training."""
+    # Convert pandas DataFrames to numpy arrays
+    if isinstance(X, pd.DataFrame):
+        X = X.to_numpy()
+        
+    # Convert pandas Series to numpy arrays
+    if isinstance(y, (pd.Series, pd.DataFrame)):
+        y = y.to_numpy()
+        
+    # Reshape y if needed
+    if len(y.shape) > 1 and y.shape[1] == 1:
+        y = y.ravel()
+        
+    return X, y
+
+def get_model_name(model_class: Any) -> str:
+    """Get the name of a model class."""
+    try:
+        if isinstance(model_class, str):
+            return model_class
+        elif hasattr(model_class, "__name__"):
+            return str(model_class.__name__)
+        elif hasattr(model_class, "__class__"):
+            return str(model_class.__class__.__name__)
+        else:
+            return str(model_class)
+    except Exception as e:
+        logger.warning(f"Error getting model name: {e}")
+        return str(model_class)

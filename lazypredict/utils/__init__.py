@@ -1,19 +1,28 @@
-"""
-Utility functions for lazypredict.
-"""
+"""Utilities for lazy model selection."""
+
 import logging
 from typing import Any
 import numpy as np
 import pandas as pd
 
-from .base import BaseLazy
-from .gpu import (
-    get_best_model,
-    get_cpu_model,
-    get_gpu_model,
-    is_cuml_available,
-    is_gpu_available,
+from .base import (
+    BaseLazy,
+    check_X_y,
+    get_model_name,
 )
+
+from .gpu import (
+    is_gpu_available,
+    is_cuml_available,
+    get_cpu_model,
+    get_best_model,
+)
+
+from .metrics import (
+    get_regression_metrics,
+    get_classification_metrics,
+)
+
 from .mlflow_utils import (
     configure_mlflow,
     end_run,
@@ -25,9 +34,11 @@ from .mlflow_utils import (
     log_params,
     start_run,
 )
+
 from .preprocessing import (
-    categorical_cardinality_threshold,
     create_preprocessor,
+    categorical_cardinality_threshold,
+    get_card_split,
 )
 
 logger = logging.getLogger("lazypredict.utils")
@@ -38,7 +49,7 @@ def get_model_name(model_class: Any) -> str:
     Parameters
     ----------
     model_class : Any
-        The model class.
+        The model class or string name.
         
     Returns
     -------
@@ -46,15 +57,18 @@ def get_model_name(model_class: Any) -> str:
         Name of the model class.
     """
     try:
-        if hasattr(model_class, "__name__"):
+        if isinstance(model_class, str):
+            # Return string directly if it's already a string
+            return model_class
+        elif hasattr(model_class, "__name__"):
             return str(model_class.__name__)
         elif hasattr(model_class, "__class__"):
             return str(model_class.__class__.__name__)
         else:
             return str(model_class)
-    except:
-        # In case of any errors, return the string representation
-        return "SomeModel"
+    except Exception as e:
+        logger.warning(f"Error getting model name: {e}")
+        return str(model_class)
 
 def check_X_y(X, y):
     """
@@ -90,38 +104,40 @@ def check_X_y(X, y):
     return X, y
 
 __all__ = [
-    # Base
+    # Base utils
     "BaseLazy",
-    
-    # GPU
-    "get_best_model",
-    "get_cpu_model",
-    "get_gpu_model", 
-    "is_cuml_available",
+    "check_X_y",
+    "get_model_name",
+
+    # GPU utils 
     "is_gpu_available",
-    
-    # MLflow
+    "is_cuml_available",
+    "get_cpu_model",
+    "get_best_model",
+
+    # Metrics
+    "get_regression_metrics",
+    "get_classification_metrics",
+
+    # MLflow utils
     "configure_mlflow",
     "end_run",
     "log_artifacts",
     "log_dataframe",
     "log_metric",
     "log_model",
-    "log_model_performance",
+    "log_model_performance", 
     "log_params",
     "start_run",
-    
+
     # Preprocessing
     "create_preprocessor",
     "categorical_cardinality_threshold",
-    
-    # Common utils
-    "get_model_name",
-    "check_X_y",
+    "get_card_split",
 ]
 
 # Configure root logger
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-) 
+)

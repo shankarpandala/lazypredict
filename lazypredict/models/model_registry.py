@@ -1,133 +1,223 @@
-"""
-Model registry for lazypredict.
-"""
+"""Model registry for lazypredict."""
+
 import logging
-from typing import List, Type, Optional
+from typing import List, Optional, Type, Dict, Any, Union
+
+from sklearn.base import BaseEstimator
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    RandomForestRegressor,
+    ExtraTreesClassifier,
+    ExtraTreesRegressor,
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    AdaBoostClassifier,
+    AdaBoostRegressor,
+)
+from sklearn.linear_model import (
+    LogisticRegression,
+    LinearRegression,
+    Ridge,
+    Lasso,
+    ElasticNet,
+    SGDClassifier,
+    SGDRegressor,
+)
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.svm import SVC, SVR
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 logger = logging.getLogger("lazypredict.model_registry")
 
-# Import scikit-learn models
-from sklearn.linear_model import (
-    LinearRegression,
-    Ridge,
-    Lasso,
-    ElasticNet,
-    SGDRegressor,
-    BayesianRidge,
-)
-from sklearn.ensemble import (
-    RandomForestRegressor,
-    GradientBoostingRegressor,
-    AdaBoostRegressor,
-    ExtraTreesRegressor,
-)
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.svm import SVR
-from sklearn.neural_network import MLPRegressor
+# Default classifiers
+_CLASSIFIERS = {
+    "RandomForestClassifier": RandomForestClassifier,
+    "DecisionTreeClassifier": DecisionTreeClassifier,
+    "ExtraTreesClassifier": ExtraTreesClassifier,
+    "GradientBoostingClassifier": GradientBoostingClassifier,
+    "LogisticRegression": LogisticRegression,
+    "KNeighborsClassifier": KNeighborsClassifier,
+    "GaussianNB": GaussianNB,
+    "AdaBoostClassifier": AdaBoostClassifier,
+    "SVC": SVC,
+    "SGDClassifier": SGDClassifier,
+}
 
-from sklearn.linear_model import (
-    LogisticRegression,
-    RidgeClassifier,
-    SGDClassifier,
-)
-from sklearn.ensemble import (
-    RandomForestClassifier,
-    GradientBoostingClassifier,
-    AdaBoostClassifier,
-    ExtraTreesClassifier,
-)
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.naive_bayes import GaussianNB
-from sklearn.neural_network import MLPClassifier
+# Default regressors
+_REGRESSORS = {
+    "RandomForestRegressor": RandomForestRegressor,
+    "DecisionTreeRegressor": DecisionTreeRegressor,
+    "ExtraTreesRegressor": ExtraTreesRegressor,
+    "GradientBoostingRegressor": GradientBoostingRegressor,
+    "LinearRegression": LinearRegression,
+    "Ridge": Ridge,
+    "Lasso": Lasso,
+    "ElasticNet": ElasticNet,
+    "KNeighborsRegressor": KNeighborsRegressor,
+    "SVR": SVR,
+    "SGDRegressor": SGDRegressor,
+    "AdaBoostRegressor": AdaBoostRegressor,
+}
 
-# Define available models
-REGRESSORS = [
-    LinearRegression,
-    Ridge,
-    Lasso,
-    ElasticNet,
-    RandomForestRegressor,
-    GradientBoostingRegressor,
-    AdaBoostRegressor,
-    DecisionTreeRegressor,
-    KNeighborsRegressor,
-    SVR,
-    SGDRegressor,
-    BayesianRidge,
-    MLPRegressor,
-    ExtraTreesRegressor,
-]
+# Runtime registries
+CLASSIFIERS = dict(_CLASSIFIERS)
+REGRESSORS = dict(_REGRESSORS)
 
-CLASSIFIERS = [
-    LogisticRegression,
-    RidgeClassifier,
-    RandomForestClassifier,
-    GradientBoostingClassifier,
-    AdaBoostClassifier,
-    DecisionTreeClassifier,
-    KNeighborsClassifier,
-    SVC,
-    SGDClassifier,
-    GaussianNB,
-    MLPClassifier,
-    ExtraTreesClassifier,
-]
+def _get_class_name(model_class: Union[Type[BaseEstimator], str]) -> str:
+    """Get the name of a model class."""
+    if isinstance(model_class, str):
+        return model_class
+    return model_class.__name__
 
-def get_regression_models(models: Optional[List[str]] = None) -> List[Type]:
-    """Get regression models.
-    
-    Parameters
-    ----------
-    models : List[str], optional (default=None)
-        List of model names to include. If None, all models are included.
-        
-    Returns
-    -------
-    List[Type]
-        List of regression model classes.
-    """
-    if models is None:
-        return REGRESSORS
-    
-    filtered_models = []
-    for model_name in models:
-        model_name_str = str(model_name).lower()
-        for model in REGRESSORS:
-            if model.__name__.lower() == model_name_str:
-                filtered_models.append(model)
-                break
-        else:
-            logger.warning(f"Model {model_name} not found in regressor registry")
-    
-    return filtered_models if filtered_models else REGRESSORS
-
-def get_classification_models(models: Optional[List[str]] = None) -> List[Type]:
+def get_classification_models(names: Optional[List[Union[str, Type[BaseEstimator]]]] = None) -> List[Type[BaseEstimator]]:
     """Get classification models.
     
     Parameters
     ----------
-    models : List[str], optional (default=None)
-        List of model names to include. If None, all models are included.
+    names : list of str or model classes, optional (default=None)
+        List of model names or classes to include. If None, all models are included.
         
     Returns
     -------
-    List[Type]
-        List of classification model classes.
+    list
+        List of model classes
     """
-    if models is None:
-        return CLASSIFIERS
+    if not names:
+        return list(CLASSIFIERS.values())
     
-    filtered_models = []
-    for model_name in models:
-        model_name_str = str(model_name).lower()
-        for model in CLASSIFIERS:
-            if model.__name__.lower() == model_name_str:
-                filtered_models.append(model)
-                break
+    models = []
+    for name in names:
+        if isinstance(name, type):
+            # It's already a class, add it directly
+            models.append(name)
+            # Register it if not already in the registry
+            class_name = _get_class_name(name)
+            if class_name not in CLASSIFIERS:
+                register_classifier(class_name, name)
+        elif isinstance(name, str):
+            # It's a string name, look up in registry
+            if name in CLASSIFIERS:
+                models.append(CLASSIFIERS[name])
+            else:
+                # Try to find in sklearn
+                try:
+                    from sklearn.utils import all_estimators
+                    classifiers = dict(all_estimators(type_filter='classifier'))
+                    if name in classifiers:
+                        model_class = classifiers[name]
+                        register_classifier(name, model_class)
+                        models.append(model_class)
+                    else:
+                        logger.warning(f"Model {name} not found in classifier registry")
+                except Exception as e:
+                    logger.warning(f"Error finding model {name}: {str(e)}")
         else:
-            logger.warning(f"Model {model_name} not found in classifier registry")
+            logger.warning(f"Unexpected model type: {type(name)}")
     
-    return filtered_models if filtered_models else CLASSIFIERS 
+    # Return what we have, even if some models weren't found
+    return models
+
+def get_regression_models(names: Optional[List[Union[str, Type[BaseEstimator]]]] = None) -> List[Type[BaseEstimator]]:
+    """Get regression models.
+    
+    Parameters
+    ----------
+    names : list of str or model classes, optional (default=None)
+        List of model names or classes to include. If None, all models are included.
+        
+    Returns
+    -------
+    list
+        List of model classes
+    """
+    if not names:
+        return list(REGRESSORS.values())
+    
+    models = []
+    for name in names:
+        if isinstance(name, type):
+            # It's already a class, add it directly
+            models.append(name)
+            # Register it if not already in the registry
+            class_name = _get_class_name(name)
+            if class_name not in REGRESSORS:
+                register_regressor(class_name, name)
+        elif isinstance(name, str):
+            # It's a string name, look up in registry
+            if name in REGRESSORS:
+                models.append(REGRESSORS[name])
+            else:
+                # Try to find in sklearn
+                try:
+                    from sklearn.utils import all_estimators
+                    regressors = dict(all_estimators(type_filter='regressor'))
+                    if name in regressors:
+                        model_class = regressors[name]
+                        register_regressor(name, model_class)
+                        models.append(model_class)
+                    else:
+                        logger.warning(f"Model {name} not found in regressor registry")
+                except Exception as e:
+                    logger.warning(f"Error finding model {name}: {str(e)}")
+        else:
+            logger.warning(f"Unexpected model type: {type(name)}")
+    
+    # Return what we have, even if some models weren't found
+    return models
+
+def register_classifier(name: str, model_class: Type[BaseEstimator]) -> None:
+    """Register a new classifier.
+    
+    Parameters
+    ----------
+    name : str
+        Name of the classifier
+    model_class : type
+        Classifier class to register
+    """
+    if isinstance(model_class, type):
+        CLASSIFIERS[name] = model_class
+    else:
+        logger.warning(f"Cannot register non-class type: {type(model_class)}")
+
+def register_regressor(name: str, model_class: Type[BaseEstimator]) -> None:
+    """Register a new regressor.
+    
+    Parameters
+    ----------
+    name : str
+        Name of the regressor
+    model_class : type
+        Regressor class to register
+    """
+    if isinstance(model_class, type):
+        REGRESSORS[name] = model_class
+    else:
+        logger.warning(f"Cannot register non-class type: {type(model_class)}")
+
+def filter_models(models: Dict[str, Type[BaseEstimator]], exclude: Optional[List[str]] = None) -> Dict[str, Type[BaseEstimator]]:
+    """Filter models based on exclusion list.
+    
+    Parameters
+    ----------
+    models : dict
+        Dictionary of model name to model class
+    exclude : list of str, optional (default=None)
+        List of model names to exclude
+        
+    Returns
+    -------
+    dict
+        Filtered dictionary of models
+    """
+    if exclude is None:
+        return models
+        
+    return {name: model for name, model in models.items() if name not in exclude}
+
+def reset_registry():
+    """Reset registries to default state."""
+    global CLASSIFIERS, REGRESSORS
+    CLASSIFIERS = dict(_CLASSIFIERS)
+    REGRESSORS = dict(_REGRESSORS)

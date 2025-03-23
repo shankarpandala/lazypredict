@@ -5,111 +5,133 @@ import logging
 import numpy as np
 import pandas as pd
 from typing import Any, Dict, List, Optional, Union, Tuple
-
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder, PolynomialFeatures
 
 logger = logging.getLogger("lazypredict.preprocessing")
 
-def categorical_cardinality_threshold(X: Union[pd.DataFrame, np.ndarray], threshold: int = 10) -> List[int]:
-    """Identify categorical columns based on cardinality.
+def categorical_cardinality_threshold(data, columns, threshold=10):
+    """Split categorical columns based on cardinality threshold."""
+    if isinstance(data, np.ndarray):
+        data = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(data.shape[1])])
     
-    Parameters
-    ----------
-    X : array-like of shape (n_samples, n_features)
-        Input data.
-    threshold : int, optional (default=10)
-        Maximum number of unique values to consider a column categorical.
+    if not isinstance(columns, (list, tuple)):
+        columns = list(columns)
+    if not columns:
+        return [], []
         
-    Returns
-    -------
-    List[int]
-        List of column indices that should be treated as categorical.
-    """
-    if isinstance(X, pd.DataFrame):
-        X_values = X.values
-    else:
-        X_values = X
-        
-    categorical_mask = []
-    
-    for i in range(X_values.shape[1]):
-        col = X_values[:, i]
-        try:
-            # Check if column is numeric
-            if np.issubdtype(col.dtype, np.number):
-                # Handle missing values safely for numeric data
-                not_nan_mask = ~np.isnan(col)
-                unique_values = np.unique(col[not_nan_mask])
-            else:
-                # For non-numeric data, just count unique values
-                # Treat None and np.nan as the same value
-                mask = ~pd.isnull(col)
-                unique_values = np.unique(col[mask])
-                
-            if len(unique_values) <= threshold:
-                categorical_mask.append(i)
-        except (TypeError, ValueError):
-            # If we encounter any errors, assume it's categorical
-            categorical_mask.append(i)
+    # Calculate cardinality for each column
+    cardinality = {}
+    for col in columns:
+        if col in data.columns:
+            unique_vals = np.unique(data[col])
+            cardinality[col] = len(unique_vals[~pd.isnull(unique_vals)])
+        else:
+            cardinality[col] = 0
             
-    return categorical_mask
+    # Split based on threshold
+    low_card = [col for col in columns if cardinality[col] <= threshold]
+    high_card = [col for col in columns if cardinality[col] > threshold]
+    
+    return low_card, high_card
 
-def create_preprocessor(X: Union[pd.DataFrame, np.ndarray]) -> ColumnTransformer:
-    """Create a preprocessor for the given data.
+# Alias for backward compatibility
+get_card_split = categorical_cardinality_threshold
+
+def create_preprocessor(data, enable_polynomial_features=True, return_type='pipeline'):
+    """Create a preprocessor for mixed data types.
     
     Parameters
     ----------
-    X : array-like of shape (n_samples, n_features)
-        Input data.
+    data : array-like or pd.DataFrame
+        Input data to determine feature types
+    enable_polynomial_features : bool, optional (default=True)
+        Whether to include polynomial features in the preprocessing pipeline
+    return_type : str, optional (default='pipeline')
+        Type of transformer to return. One of:
+        - 'pipeline': Return full Pipeline including polynomial features
+        - 'column': Return only ColumnTransformer
         
     Returns
     -------
-    ColumnTransformer
-        Preprocessor that handles numerical and categorical features.
+    sklearn.base.BaseEstimator
+        Preprocessor object (either Pipeline or ColumnTransformer)
     """
-    # Convert to numpy if DataFrame
-    if isinstance(X, pd.DataFrame):
-        column_names = X.columns
-        X_values = X.values
-    else:
-        X_values = X
-        column_names = [f"feature_{i}" for i in range(X_values.shape[1])]
+    # Import required classes to ensure they're available in the local scope
+    from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder, PolynomialFeatures
+    from sklearn.impute import SimpleImputer
+    from sklearn.pipeline import Pipeline
+    from sklearn.compose import ColumnTransformer
     
-    # Identify categorical columns
-    categorical_mask = categorical_cardinality_threshold(X_values)
-    categorical_indices = categorical_mask
+    # Convert numpy array to DataFrame for type detection
+    if isinstance(data, np.ndarray):
+        # Create a DataFrame with feature column names
+        column_names = [f"feature_{i}" for i in range(data.shape[1])]
+        data = pd.DataFrame(data, columns=column_names)
+    elif not isinstance(data, pd.DataFrame):
+        # Handle other array-like inputs
+        try:
+            data = pd.DataFrame(data)
+        except Exception as e:
+            logger.warning(f"Error converting data to DataFrame: {e}. Using empty preprocessor.")
+            # Return a simple scaler as fallback
+            return StandardScaler()
     
-    # Create list of numeric indices (all columns not in categorical_mask)
-    numerical_indices = [i for i in range(X_values.shape[1]) if i not in categorical_indices]
+    # Get column types
+    numeric_features = list(data.select_dtypes(include=['int64', 'float64', 'int32', 'float32']).columns)
+    categorical_features = list(data.select_dtypes(include=['object', 'category']).columns)
     
-    # Create transformers
     transformers = []
     
-    if numerical_indices:
-        numeric_transformer = Pipeline(
-            steps=[
-                ('imputer', SimpleImputer(strategy='median')),
-                ('scaler', StandardScaler())
-            ]
-        )
-        transformers.append(('num', numeric_transformer, numerical_indices))
+    # Add numeric transformer if there are numeric features
+    if numeric_features:
+        numeric_pipeline = Pipeline([
+            ('imputer', SimpleImputer(strategy='median')),
+            ('scaler', StandardScaler())
+        ])
+        transformers.append(('numeric', numeric_pipeline, numeric_features))
     
-    if categorical_indices:
-        categorical_transformer = Pipeline(
-            steps=[
+    # Add categorical transformers if there are categorical features
+    if categorical_features:
+        low_card, high_card = categorical_cardinality_threshold(data, categorical_features)
+        if low_card:
+            categorical_pipeline = Pipeline([
                 ('imputer', SimpleImputer(strategy='most_frequent')),
-                ('encoder', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-            ]
-        )
-        transformers.append(('cat', categorical_transformer, categorical_indices))
+                ('encoder', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'))
+            ])
+            transformers.append(('cat', categorical_pipeline, low_card))
+        
+        # For high cardinality categorical features, use OrdinalEncoder
+        if high_card:
+            high_card_pipeline = Pipeline([
+                ('imputer', SimpleImputer(strategy='most_frequent')),
+                ('encoder', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1))
+            ])
+            transformers.append(('high_cat', high_card_pipeline, high_card))
     
-    # Create column transformer
-    preprocessor = ColumnTransformer(
-        transformers=transformers,
-        remainder='drop'
-    )
+    # If data is a numpy array or only has one type of feature,
+    # use numeric pipeline on all features
+    if not transformers:
+        numeric_pipeline = Pipeline([
+            ('imputer', SimpleImputer(strategy='median')),
+            ('scaler', StandardScaler())
+        ])
+        transformers.append(('all', numeric_pipeline, list(range(data.shape[1]))))
     
-    return preprocessor 
+    # Create the preprocessor without polynomial features first
+    base_preprocessor = ColumnTransformer(transformers, remainder='passthrough')
+    
+    # Return based on type requested
+    if return_type == 'column' or not enable_polynomial_features:
+        return base_preprocessor
+    
+    # Add polynomial features if enabled and there are numeric features
+    if numeric_features or not transformers:
+        return Pipeline([
+            ('preprocessor', base_preprocessor),
+            ('poly', PolynomialFeatures(degree=2, include_bias=False))
+        ])
+    
+    return base_preprocessor

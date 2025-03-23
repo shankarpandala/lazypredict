@@ -3,10 +3,8 @@ import numpy as np
 import pandas as pd
 from lazypredict import (
     LazyClassifier, 
-    LazyRegressor, 
-    LazyOrdinalRegressor, 
-    LazySurvivalAnalysis, 
-    LazySequencePredictor
+    LazyRegressor,
+    Supervised
 )
 from sklearn.datasets import load_breast_cancer, load_iris, load_diabetes
 from sklearn.model_selection import train_test_split
@@ -128,69 +126,21 @@ class TestLazyRegressor(unittest.TestCase):
         except Exception as e:
             self.fail(f"MLflow integration failed: {e}")
 
-class TestLazyOrdinalRegressor(unittest.TestCase):
-    def setUp(self):
-        # Use iris dataset instead of fetch_openml which might not be available
-        data = load_iris()
-        # Convert to binary problem for simplicity
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            data.data, data.target, test_size=0.2, random_state=42
-        )
-        self.ordinal_regressor = LazyOrdinalRegressor(verbose=0, ignore_warnings=True, custom_metric=None)
+"""Tests for supervised learning module."""
 
-    def test_initialization(self):
-        self.assertIsInstance(self.ordinal_regressor, LazyOrdinalRegressor)
+import unittest
+from lazypredict import (
+    LazyClassifier,
+    LazyRegressor,
+    Supervised,
+)
 
-    def test_fit(self):
-        # This assumes LazyOrdinalRegressor has been implemented properly.
-        # If it returns None (placeholder), adjust the assertion
-        try:
-            model = self.ordinal_regressor.fit(self.X_train, self.X_test, self.y_train, self.y_test)
-            self.assertIsNotNone(model)
-        except NotImplementedError:
-            self.skipTest("LazyOrdinalRegressor.fit() not fully implemented yet")
-
-class TestLazySurvivalAnalysis(unittest.TestCase):
-    def setUp(self):
-        # Since sksurv might not be installed, create a simple mock dataset
-        np.random.seed(42)
-        self.X_train = np.random.rand(100, 10)
-        # Mock structured array for survival data
-        self.y_train = np.zeros(100, dtype=[('status', bool), ('time', float)])
-        self.y_train['status'] = np.random.randint(0, 2, 100).astype(bool)
-        self.y_train['time'] = np.random.uniform(0, 10, 100)
-        
-        self.survival_analysis = LazySurvivalAnalysis(verbose=0, ignore_warnings=True, custom_metric=None)
-
-    def test_initialization(self):
-        self.assertIsInstance(self.survival_analysis, LazySurvivalAnalysis)
-
-    def test_fit(self):
-        try:
-            import sksurv
-            model = self.survival_analysis.fit(self.X_train, self.y_train)
-            self.assertIsNotNone(model)
-        except (ImportError, NotImplementedError):
-            self.skipTest("scikit-survival not installed or not fully implemented")
-
-class TestLazySequencePredictor(unittest.TestCase):
-    def setUp(self):
-        # Placeholder setup for sequence prediction
-        np.random.seed(42)
-        self.X_train = np.random.rand(100, 10, 5)  # Sequential data
-        self.y_train = np.random.randint(0, 2, 100)
-        self.sequence_predictor = LazySequencePredictor(verbose=0, ignore_warnings=True, custom_metric=None)
-
-    def test_initialization(self):
-        self.assertIsInstance(self.sequence_predictor, LazySequencePredictor)
-
-    def test_fit(self):
-        try:
-            model = self.sequence_predictor.fit(self.X_train, self.y_train)
-            # Could be None if placeholder
-            pass
-        except NotImplementedError:
-            self.skipTest("LazySequencePredictor.fit() not fully implemented yet")
+class TestSupervisedModule(unittest.TestCase):
+    """Test supervised learning module functionality."""
+    
+    def test_supervised_alias(self):
+        """Test Supervised alias points to LazyClassifier."""
+        self.assertEqual(Supervised, LazyClassifier)
 
 if __name__ == '__main__':
     unittest.main()

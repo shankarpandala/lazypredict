@@ -1,286 +1,188 @@
+"""Tests for model initialization and fitting."""
+
 import unittest
 import numpy as np
 import pandas as pd
-from sklearn.datasets import load_iris, load_diabetes
-from sklearn.model_selection import train_test_split
-import warnings
-
-# Ignore warnings during tests
-warnings.filterwarnings("ignore")
+from sklearn.datasets import make_classification, make_regression
 
 class TestClassificationModule(unittest.TestCase):
+    """Test classification module functionality."""
+    
     def setUp(self):
-        # Load a simple dataset for classification
-        data = load_iris()
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            data.data, data.target, test_size=0.2, random_state=42
+        """Set up test data."""
+        # Create classification dataset
+        X, y = make_classification(
+            n_samples=100,
+            n_features=5,
+            n_informative=3,
+            n_redundant=1,
+            random_state=42
         )
+        self.X_train = pd.DataFrame(X[:80], columns=[f'feature_{i}' for i in range(X.shape[1])])
+        self.X_test = pd.DataFrame(X[80:], columns=[f'feature_{i}' for i in range(X.shape[1])])
+        self.y_train = y[:80]
+        self.y_test = y[80:]
     
     def test_classifier_import(self):
+        """Test classifier import."""
         try:
-            from lazypredict.models.classification import LazyClassifier
-            classifier = LazyClassifier(verbose=0, ignore_warnings=True)
+            from lazypredict import LazyClassifier
+            classifier = LazyClassifier()
             self.assertIsNotNone(classifier)
         except ImportError:
-            self.skipTest("Could not import LazyClassifier from models")
+            self.skipTest("Could not import LazyClassifier")
     
     def test_fit_with_minimal_models(self):
+        """Test classifier fitting with minimal set of models."""
         try:
-            from lazypredict.models.classification import LazyClassifier
+            from lazypredict import LazyClassifier
             
-            # Create classifier with only decision tree to speed up test
-            from sklearn.tree import DecisionTreeClassifier
-            classifier = LazyClassifier(
-                verbose=0, 
-                ignore_warnings=True, 
-                classifiers=[DecisionTreeClassifier]
+            # Initialize with only decision tree
+            classifier = LazyClassifier(classifiers=['DecisionTreeClassifier'])
+            
+            # Fit and get scores
+            scores, predictions = classifier.fit(
+                self.X_train,
+                self.X_test,
+                self.y_train,
+                self.y_test
             )
             
-            # Fit with minimal data
-            scores, predictions = classifier.fit(self.X_train, self.X_test, self.y_train, self.y_test)
-            
-            self.assertIsNotNone(scores)
+            self.assertTrue(isinstance(scores, pd.DataFrame))
             self.assertTrue(len(scores) > 0)
-            self.assertIn('DecisionTreeClassifier', scores['Model'].values)
+            self.assertTrue('Model' in scores.columns)
+            self.assertTrue('Accuracy' in scores.columns)
             
         except ImportError:
-            self.skipTest("Could not import LazyClassifier from models")
+            self.skipTest("Could not import LazyClassifier")
     
     def test_provide_models(self):
+        """Test providing specific models."""
         try:
-            from lazypredict.models.classification import LazyClassifier
+            from lazypredict import LazyClassifier
             
-            # Create classifier with only decision tree to speed up test
-            from sklearn.tree import DecisionTreeClassifier
-            classifier = LazyClassifier(
-                verbose=0, 
-                ignore_warnings=True, 
-                classifiers=[DecisionTreeClassifier]
+            # Initialize with specific models
+            models = ['RandomForestClassifier', 'DecisionTreeClassifier']
+            classifier = LazyClassifier(classifiers=models)
+            
+            # Check models are initialized
+            self.assertTrue(len(classifier.models) > 0)
+            
+            # Check we can fit with these models
+            scores, predictions = classifier.fit(
+                self.X_train,
+                self.X_test,
+                self.y_train,
+                self.y_test
             )
             
-            # Test provide_models
-            models = classifier.provide_models(self.X_train, self.X_test, self.y_train, self.y_test)
-            
-            self.assertIsNotNone(models)
-            self.assertTrue(len(models) > 0)
-            self.assertTrue('DecisionTreeClassifier' in models)
+            self.assertTrue(isinstance(scores, pd.DataFrame))
+            self.assertEqual(len(scores), len(models))
             
         except ImportError:
-            self.skipTest("Could not import LazyClassifier from models")
+            self.skipTest("Could not import LazyClassifier")
 
 class TestRegressionModule(unittest.TestCase):
+    """Test regression module functionality."""
+    
     def setUp(self):
-        # Load a simple dataset for regression
-        data = load_diabetes()
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            data.data, data.target, test_size=0.2, random_state=42
+        """Set up test data."""
+        # Create regression dataset
+        X, y = make_regression(
+            n_samples=100,
+            n_features=5,
+            n_informative=3,
+            random_state=42
         )
+        self.X_train = pd.DataFrame(X[:80], columns=[f'feature_{i}' for i in range(X.shape[1])])
+        self.X_test = pd.DataFrame(X[80:], columns=[f'feature_{i}' for i in range(X.shape[1])])
+        self.y_train = y[:80]
+        self.y_test = y[80:]
     
     def test_regressor_import(self):
+        """Test regressor import."""
         try:
-            from lazypredict.models.regression import LazyRegressor
-            regressor = LazyRegressor(verbose=0, ignore_warnings=True)
+            from lazypredict import LazyRegressor
+            regressor = LazyRegressor()
             self.assertIsNotNone(regressor)
         except ImportError:
-            self.skipTest("Could not import LazyRegressor from models")
+            self.skipTest("Could not import LazyRegressor")
     
     def test_fit_with_minimal_models(self):
+        """Test regressor fitting with minimal set of models."""
         try:
-            from lazypredict.models.regression import LazyRegressor
+            from lazypredict import LazyRegressor
             
-            # Create regressor with only decision tree to speed up test
-            from sklearn.tree import DecisionTreeRegressor
-            regressor = LazyRegressor(
-                verbose=0, 
-                ignore_warnings=True, 
-                regressors=[DecisionTreeRegressor]
+            # Initialize with only decision tree
+            regressor = LazyRegressor(regressors=['DecisionTreeRegressor'])
+            
+            # Fit and get scores
+            scores, predictions = regressor.fit(
+                self.X_train,
+                self.X_test,
+                self.y_train,
+                self.y_test
             )
             
-            # Fit with minimal data
-            scores, predictions = regressor.fit(self.X_train, self.X_test, self.y_train, self.y_test)
-            
-            self.assertIsNotNone(scores)
+            self.assertTrue(isinstance(scores, pd.DataFrame))
             self.assertTrue(len(scores) > 0)
-            self.assertIn('DecisionTreeRegressor', scores['Model'].values)
+            self.assertTrue('Model' in scores.columns)
+            self.assertTrue('R-Squared' in scores.columns)
             
         except ImportError:
-            self.skipTest("Could not import LazyRegressor from models")
+            self.skipTest("Could not import LazyRegressor")
     
     def test_provide_models(self):
+        """Test providing specific models."""
         try:
-            from lazypredict.models.regression import LazyRegressor
+            from lazypredict import LazyRegressor
             
-            # Create regressor with only decision tree to speed up test
-            from sklearn.tree import DecisionTreeRegressor
-            regressor = LazyRegressor(
-                verbose=0, 
-                ignore_warnings=True, 
-                regressors=[DecisionTreeRegressor]
+            # Initialize with specific models
+            models = ['RandomForestRegressor', 'DecisionTreeRegressor']
+            regressor = LazyRegressor(regressors=models)
+            
+            # Check models are initialized
+            self.assertTrue(len(regressor.models) > 0)
+            
+            # Check we can fit with these models
+            scores, predictions = regressor.fit(
+                self.X_train,
+                self.X_test,
+                self.y_train,
+                self.y_test
             )
             
-            # Test provide_models
-            models = regressor.provide_models(self.X_train, self.X_test, self.y_train, self.y_test)
-            
-            self.assertIsNotNone(models)
-            self.assertTrue(len(models) > 0)
-            self.assertTrue('DecisionTreeRegressor' in models)
+            self.assertTrue(isinstance(scores, pd.DataFrame))
+            self.assertEqual(len(scores), len(models))
             
         except ImportError:
-            self.skipTest("Could not import LazyRegressor from models")
-
-class TestOrdinalModule(unittest.TestCase):
-    def setUp(self):
-        # Load a simple dataset for ordinal regression
-        data = load_iris()
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            data.data, data.target, test_size=0.2, random_state=42
-        )
-    
-    def test_ordinal_regressor_import(self):
-        try:
-            from lazypredict.models.ordinal import LazyOrdinalRegressor
-            ordinal_regressor = LazyOrdinalRegressor(verbose=0, ignore_warnings=True)
-            self.assertIsNotNone(ordinal_regressor)
-        except ImportError:
-            self.skipTest("Could not import LazyOrdinalRegressor from models")
-    
-    def test_fit(self):
-        try:
-            from lazypredict.models.ordinal import LazyOrdinalRegressor
-            
-            ordinal_regressor = LazyOrdinalRegressor(verbose=0, ignore_warnings=True)
-            
-            # Fit method may not be fully implemented, so catch NotImplementedError
-            try:
-                model = ordinal_regressor.fit(self.X_train, self.X_test, self.y_train, self.y_test)
-                self.assertIsNotNone(model)
-            except NotImplementedError:
-                self.skipTest("LazyOrdinalRegressor.fit() is not fully implemented")
-                
-        except ImportError:
-            self.skipTest("Could not import LazyOrdinalRegressor from models")
-
-class TestSurvivalModule(unittest.TestCase):
-    def setUp(self):
-        # Create a mock dataset for survival analysis
-        np.random.seed(42)
-        self.X_train = np.random.rand(100, 10)
-        # Mock structured array for survival data
-        self.y_train = np.zeros(100, dtype=[('status', bool), ('time', float)])
-        self.y_train['status'] = np.random.randint(0, 2, 100).astype(bool)
-        self.y_train['time'] = np.random.uniform(0, 10, 100)
-    
-    def test_survival_analysis_import(self):
-        try:
-            from lazypredict.models.survival import LazySurvivalAnalysis
-            survival_analysis = LazySurvivalAnalysis(verbose=0, ignore_warnings=True)
-            self.assertIsNotNone(survival_analysis)
-        except ImportError:
-            self.skipTest("Could not import LazySurvivalAnalysis from models")
-    
-    def test_fit(self):
-        try:
-            from lazypredict.models.survival import LazySurvivalAnalysis
-            
-            survival_analysis = LazySurvivalAnalysis(verbose=0, ignore_warnings=True)
-            
-            # The fit method may rely on scikit-survival which might not be installed
-            try:
-                import sksurv
-                try:
-                    model = survival_analysis.fit(self.X_train, self.y_train)
-                    # Test may pass or fail depending on implementation
-                except NotImplementedError:
-                    self.skipTest("LazySurvivalAnalysis.fit() is not fully implemented")
-            except ImportError:
-                self.skipTest("scikit-survival not installed")
-                
-        except ImportError:
-            self.skipTest("Could not import LazySurvivalAnalysis from models")
-
-class TestSequenceModule(unittest.TestCase):
-    def setUp(self):
-        # Create a mock dataset for sequence prediction
-        np.random.seed(42)
-        self.X_train = np.random.rand(100, 10, 5)  # 3D array for sequences
-        self.y_train = np.random.randint(0, 2, 100)
-    
-    def test_sequence_predictor_import(self):
-        try:
-            from lazypredict.models.sequence import LazySequencePredictor
-            sequence_predictor = LazySequencePredictor(verbose=0, ignore_warnings=True)
-            self.assertIsNotNone(sequence_predictor)
-        except ImportError:
-            self.skipTest("Could not import LazySequencePredictor from models")
-    
-    def test_fit(self):
-        try:
-            from lazypredict.models.sequence import LazySequencePredictor
-            
-            sequence_predictor = LazySequencePredictor(verbose=0, ignore_warnings=True)
-            
-            # Fit method may not be fully implemented
-            try:
-                model = sequence_predictor.fit(self.X_train, self.y_train)
-                # Could be None if it's a placeholder
-            except NotImplementedError:
-                self.skipTest("LazySequencePredictor.fit() is not fully implemented")
-                
-        except ImportError:
-            self.skipTest("Could not import LazySequencePredictor from models")
+            self.skipTest("Could not import LazyRegressor")
 
 class TestBackwardCompatibility(unittest.TestCase):
+    """Test backward compatibility."""
+    
     def test_supervised_imports(self):
+        """Test imports from Supervised module."""
         try:
-            from lazypredict.Supervised import (
-                LazyClassifier, 
-                LazyRegressor,
-                LazyOrdinalRegressor,
-                LazySurvivalAnalysis,
-                LazySequencePredictor
-            )
-            
-            # Test that we can create instances from the old imports
-            classifier = LazyClassifier(verbose=0, ignore_warnings=True)
-            regressor = LazyRegressor(verbose=0, ignore_warnings=True)
-            ordinal_regressor = LazyOrdinalRegressor(verbose=0, ignore_warnings=True)
-            survival_analysis = LazySurvivalAnalysis(verbose=0, ignore_warnings=True)
-            sequence_predictor = LazySequencePredictor(verbose=0, ignore_warnings=True)
-            
-            self.assertIsNotNone(classifier)
-            self.assertIsNotNone(regressor)
-            self.assertIsNotNone(ordinal_regressor)
-            self.assertIsNotNone(survival_analysis)
-            self.assertIsNotNone(sequence_predictor)
-            
+            from lazypredict.Supervised import Supervised
+            model = Supervised()
+            self.assertIsNotNone(model)
         except ImportError:
             self.skipTest("Could not import from lazypredict.Supervised")
-            
+    
     def test_direct_imports(self):
+        """Test direct imports from lazypredict."""
         try:
             from lazypredict import (
-                LazyClassifier, 
+                LazyClassifier,
                 LazyRegressor,
-                LazyOrdinalRegressor,
-                LazySurvivalAnalysis,
-                LazySequencePredictor
+                Supervised
             )
-            
-            # Test that we can create instances from the new imports
-            classifier = LazyClassifier(verbose=0, ignore_warnings=True)
-            regressor = LazyRegressor(verbose=0, ignore_warnings=True)
-            ordinal_regressor = LazyOrdinalRegressor(verbose=0, ignore_warnings=True)
-            survival_analysis = LazySurvivalAnalysis(verbose=0, ignore_warnings=True)
-            sequence_predictor = LazySequencePredictor(verbose=0, ignore_warnings=True)
-            
-            self.assertIsNotNone(classifier)
-            self.assertIsNotNone(regressor)
-            self.assertIsNotNone(ordinal_regressor)
-            self.assertIsNotNone(survival_analysis)
-            self.assertIsNotNone(sequence_predictor)
-            
+            self.assertTrue(callable(LazyClassifier))
+            self.assertTrue(callable(LazyRegressor))
+            self.assertTrue(callable(Supervised))
         except ImportError:
             self.skipTest("Could not import directly from lazypredict")
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

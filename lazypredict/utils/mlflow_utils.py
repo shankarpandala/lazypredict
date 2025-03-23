@@ -5,14 +5,12 @@ import logging
 import os
 import tempfile
 from typing import Any, Dict, List, Optional, Union
-
 import pandas as pd
 
 logger = logging.getLogger("lazypredict.mlflow")
 
 # Flag to track if MLflow is available
 MLFLOW_AVAILABLE = False
-
 try:
     import mlflow
     MLFLOW_AVAILABLE = True
@@ -46,7 +44,7 @@ def start_run(
     run_name: Optional[str] = None,
     experiment_name: Optional[str] = "lazypredict",
     tags: Optional[Dict[str, str]] = None,
-) -> None:
+) -> Optional[Any]:
     """Start a new MLflow run.
     
     Parameters
@@ -57,34 +55,44 @@ def start_run(
         Name of the experiment.
     tags : Dict[str, str], optional (default=None)
         Tags to set on the run.
+        
+    Returns
+    -------
+    Optional[Any]
+        The active MLflow run, if successful.
     """
     if not MLFLOW_AVAILABLE:
         logger.warning("MLflow not installed. Experiment tracking disabled.")
-        return
+        return None
         
     try:
-        # End any active run
+        # End any active run safely
         active_run = mlflow.active_run()
         if active_run:
             mlflow.end_run()
         
         # Set experiment
-        mlflow.set_experiment(experiment_name)
+        try:
+            mlflow.set_experiment(experiment_name)
+        except Exception as e:
+            logger.warning(f"Could not set experiment {experiment_name}: {e}. Using default experiment.")
         
         # Start run
-        mlflow.start_run(run_name=run_name)
+        run = mlflow.start_run(run_name=run_name)
         
         # Set tags
-        if tags:
+        if tags and run:
             mlflow.set_tags(tags)
             
-        active_run = mlflow.active_run()
-        if active_run and active_run.info:
-            logger.info(f"Started MLflow run: {active_run.info.run_id}")
+        if run and run.info:
+            logger.info(f"Started MLflow run: {run.info.run_id}")
+            return run
         else:
             logger.warning("Failed to start MLflow run")
+            return None
     except Exception as e:
         logger.error(f"Error starting MLflow run: {e}")
+        return None
 
 def end_run() -> None:
     """End the active MLflow run."""
@@ -114,12 +122,24 @@ def log_params(params: Dict[str, Any]) -> None:
         return
         
     try:
+        # Ensure we have an active run
         active_run = mlflow.active_run()
-        if active_run:
-            mlflow.log_params(params)
-            logger.debug(f"Logged parameters: {params}")
-        else:
-            logger.warning("No active MLflow run. Parameters not logged.")
+        if not active_run:
+            logger.warning("No active MLflow run. Starting a new run.")
+            start_run()
+            
+        # Clean params to ensure all values are MLflow compatible
+        clean_params = {}
+        for k, v in params.items():
+            if v is None:
+                clean_params[k] = "None"
+            elif isinstance(v, (str, int, float, bool)):
+                clean_params[k] = v
+            else:
+                clean_params[k] = str(v)
+        
+        mlflow.log_params(clean_params)
+        logger.debug(f"Logged parameters: {clean_params}")
     except Exception as e:
         logger.error(f"Error logging parameters: {e}")
 
@@ -138,12 +158,18 @@ def log_metric(key: str, value: Union[float, int]) -> None:
         return
         
     try:
+        # Ensure we have an active run
         active_run = mlflow.active_run()
-        if active_run:
-            mlflow.log_metric(key, value)
+        if not active_run:
+            logger.warning("No active MLflow run. Starting a new run.")
+            start_run()
+            
+        # Check if value is valid for MLflow
+        if value is not None and not pd.isna(value):
+            mlflow.log_metric(key, float(value))
             logger.debug(f"Logged metric: {key}={value}")
         else:
-            logger.warning("No active MLflow run. Metric not logged.")
+            logger.debug(f"Skipped logging invalid metric value: {key}={value}")
     except Exception as e:
         logger.error(f"Error logging metric: {e}")
 
@@ -162,12 +188,14 @@ def log_model(model: Any, model_name: str) -> None:
         return
         
     try:
+        # Ensure we have an active run
         active_run = mlflow.active_run()
-        if active_run:
-            mlflow.sklearn.log_model(model, model_name)
-            logger.debug(f"Logged model: {model_name}")
-        else:
-            logger.warning("No active MLflow run. Model not logged.")
+        if not active_run:
+            logger.warning("No active MLflow run. Starting a new run.")
+            start_run()
+            
+        mlflow.sklearn.log_model(model, model_name)
+        logger.debug(f"Logged model: {model_name}")
     except Exception as e:
         logger.error(f"Error logging model: {e}")
 
@@ -184,12 +212,14 @@ def log_artifacts(local_dir: str) -> None:
         return
         
     try:
+        # Ensure we have an active run
         active_run = mlflow.active_run()
-        if active_run:
-            mlflow.log_artifacts(local_dir)
-            logger.debug(f"Logged artifacts from: {local_dir}")
-        else:
-            logger.warning("No active MLflow run. Artifacts not logged.")
+        if not active_run:
+            logger.warning("No active MLflow run. Starting a new run.")
+            start_run()
+            
+        mlflow.log_artifacts(local_dir)
+        logger.debug(f"Logged artifacts from: {local_dir}")
     except Exception as e:
         logger.error(f"Error logging artifacts: {e}")
 
@@ -214,21 +244,34 @@ def log_model_performance(
         return
         
     try:
+        # Ensure we have an active run
         active_run = mlflow.active_run()
-        if active_run:
-            # Log metrics
-            for key, value in metrics.items():
-                if value is not None:  # Only log non-None values
-                    mlflow.log_metric(f"{model_name}_{key}", value)
+        if not active_run:
+            logger.warning("No active MLflow run. Starting a new run.")
+            start_run()
             
-            # Log parameters
-            if params:
-                prefixed_params = {f"{model_name}_{k}": v for k, v in params.items()}
-                mlflow.log_params(prefixed_params)
+        # Log metrics
+        for key, value in metrics.items():
+            if value is not None and not pd.isna(value):  # Only log valid values
+                try:
+                    mlflow.log_metric(f"{model_name}_{key}", float(value))
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not convert metric {key}={value} to float, skipping.")
+        
+        # Log parameters
+        if params:
+            prefixed_params = {}
+            for k, v in params.items():
+                if v is None:
+                    prefixed_params[f"{model_name}_{k}"] = "None"
+                elif isinstance(v, (str, int, float, bool)):
+                    prefixed_params[f"{model_name}_{k}"] = v
+                else:
+                    prefixed_params[f"{model_name}_{k}"] = str(v)
+                    
+            mlflow.log_params(prefixed_params)
                 
-            logger.debug(f"Logged performance for model: {model_name}")
-        else:
-            logger.warning("No active MLflow run. Model performance not logged.")
+        logger.debug(f"Logged performance for model: {model_name}")
     except Exception as e:
         logger.error(f"Error logging model performance: {e}")
 
@@ -247,21 +290,23 @@ def log_dataframe(df: pd.DataFrame, artifact_name: str) -> None:
         return
         
     try:
+        # Ensure we have an active run
         active_run = mlflow.active_run()
-        if active_run:
-            # Create a temporary directory
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                # Ensure the directory exists
-                os.makedirs(tmp_dir, exist_ok=True)
-                
-                # Save DataFrame to CSV
-                file_path = os.path.join(tmp_dir, f"{artifact_name}.csv")
-                df.to_csv(file_path, index=False)
-                
-                # Log the file as an artifact
-                mlflow.log_artifact(file_path)
-                logger.debug(f"Logged DataFrame as artifact: {artifact_name}")
-        else:
-            logger.warning("No active MLflow run. DataFrame not logged.")
+        if not active_run:
+            logger.warning("No active MLflow run. Starting a new run.")
+            active_run = start_run()
+            
+        # Create a temporary directory
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Ensure the directory exists
+            os.makedirs(tmp_dir, exist_ok=True)
+            
+            # Save DataFrame to CSV
+            file_path = os.path.join(tmp_dir, f"{artifact_name}.csv")
+            df.to_csv(file_path, index=False)
+            
+            # Log the file as an artifact
+            mlflow.log_artifact(file_path)
+            logger.debug(f"Logged DataFrame as artifact: {artifact_name}")
     except Exception as e:
-        logger.error(f"Error logging DataFrame: {e}") 
+        logger.error(f"Error logging DataFrame: {e}")

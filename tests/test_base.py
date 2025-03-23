@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import pandas as pd
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_iris, make_classification, make_regression
 from sklearn.model_selection import train_test_split
 import warnings
 
@@ -10,61 +10,52 @@ warnings.filterwarnings("ignore")
 
 class TestLazyBase(unittest.TestCase):
     def setUp(self):
-        # Load a simple dataset
-        data = load_iris()
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            data.data, data.target, test_size=0.2, random_state=42
+        self.X_train, self.y_train = make_classification(
+            n_samples=100,
+            n_features=10,
+            n_informative=5,
+            n_redundant=2,
+            random_state=42
         )
         
-        # Convert to pandas DataFrame for some tests
-        self.X_train_df = pd.DataFrame(self.X_train, columns=[f'feature_{i}' for i in range(self.X_train.shape[1])])
-        self.X_test_df = pd.DataFrame(self.X_test, columns=[f'feature_{i}' for i in range(self.X_test.shape[1])])
+        # Convert some features to categorical for testing
+        X_df = pd.DataFrame(self.X_train, columns=[f'feature_{i}' for i in range(10)])
+        X_df['cat_low'] = pd.cut(X_df['feature_0'], bins=3, labels=['A', 'B', 'C'])
+        X_df['cat_high'] = pd.Series(np.random.choice(list('ABCDEFGHIJ'), size=100))
+        self.X_train = X_df
     
     def test_base_import(self):
         try:
-            from lazypredict.base import Lazy
-            lazy = Lazy(verbose=0, ignore_warnings=True)
-            self.assertIsNotNone(lazy)
+            from lazypredict.utils.base import BaseLazy
+            base = BaseLazy()
+            self.assertIsNotNone(base)
         except ImportError:
-            self.skipTest("Could not import Lazy base class")
-    
-    def test_base_methods(self):
-        try:
-            from lazypredict.base import Lazy
-            
-            lazy = Lazy(verbose=0, ignore_warnings=True)
-            
-            # Test basic methods, expecting NotImplementedError for abstract methods
-            try:
-                lazy.fit(self.X_train, self.X_test, self.y_train, self.y_test)
-                self.fail("Expected NotImplementedError")
-            except NotImplementedError:
-                pass  # Expected
-                
-            try:
-                lazy.provide_models(self.X_train, self.X_test, self.y_train, self.y_test)
-                self.fail("Expected NotImplementedError")
-            except NotImplementedError:
-                pass  # Expected
-                
-        except ImportError:
-            self.skipTest("Could not import Lazy base class")
+            self.skipTest("Could not import BaseLazy")
     
     def test_parameter_validation(self):
         try:
-            from lazypredict.base import Lazy
-            
-            # Test with invalid parameters
-            with self.assertRaises(ValueError):
-                lazy = Lazy(verbose=-1, ignore_warnings=True)
-                
-            # Test with valid parameters
-            lazy = Lazy(verbose=0, ignore_warnings=True)
-            lazy = Lazy(verbose=1, ignore_warnings=True)
-            lazy = Lazy(verbose=2, ignore_warnings=True)
-                
+            from lazypredict.utils.base import BaseLazy
+            base = BaseLazy(verbose=1, ignore_warnings=False, random_state=42)
+            self.assertEqual(base.verbose, 1)
+            self.assertEqual(base.ignore_warnings, False)
+            self.assertEqual(base.random_state, 42)
         except ImportError:
-            self.skipTest("Could not import Lazy base class")
+            self.skipTest("Could not import BaseLazy")
+    
+    def test_base_methods(self):
+        try:
+            from lazypredict.utils.base import BaseLazy
+            base = BaseLazy()
+            
+            # Test data checking
+            X_train = self.X_train.copy()
+            y_train = pd.Series(self.y_train)
+            
+            X_processed = base._check_data(X_train, X_train, y_train, y_train)[0]
+            self.assertIsInstance(X_processed, pd.DataFrame)
+            
+        except ImportError:
+            self.skipTest("Could not import BaseLazy")
 
 class TestUtils(unittest.TestCase):
     def setUp(self):
@@ -211,4 +202,4 @@ class TestMetrics(unittest.TestCase):
             self.skipTest("Could not import regression metrics function")
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

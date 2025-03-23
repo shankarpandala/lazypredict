@@ -1,0 +1,22 @@
+# Global code owners
+* @shankarpandala
+
+# Core package files
+/lazypredict/ @shankarpandala
+
+# Test files
+/tests/ @shankarpandala
+
+# Documentation
+/docs/ @shankarpandala
+
+# Build configuration
+setup.py @shankarpandala
+pyproject.toml @shankarpandala
+MANIFEST.in @shankarpandala
+
+# CI/CD configuration
+/.github/workflows/ @shankarpandala
+
+# Conda-forge recipe
+/conda-forge/ @shankarpandala

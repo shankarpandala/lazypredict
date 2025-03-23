@@ -1,5 +1,5 @@
 Welcome to Lazy Predict's documentation!
-======================================
+========================================
 
 .. toctree::
    :maxdepth: 2
@@ -8,10 +8,20 @@ Welcome to Lazy Predict's documentation!
    readme
    installation
    usage
-   modules
    contributing
    authors
    history
+
+API Reference
+============
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Documentation:
+
+   modules/lazypredict
+   modules/models
+   modules/utils
 
 Indices and tables
 ==================

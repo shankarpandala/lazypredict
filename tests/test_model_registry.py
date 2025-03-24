@@ -12,10 +12,7 @@ class TestModelRegistry(unittest.TestCase):
     def test_classification_registry(self):
         """Test classification model registry."""
         try:
-            from lazypredict.models.model_registry import (
-                CLASSIFIERS,
-                get_classification_models,
-            )
+            from lazypredict.models.model_registry import CLASSIFIERS, get_classification_models
 
             # Test getting all models
             models = get_classification_models()
@@ -37,10 +34,7 @@ class TestModelRegistry(unittest.TestCase):
     def test_regression_registry(self):
         """Test regression model registry."""
         try:
-            from lazypredict.models.model_registry import (
-                REGRESSORS,
-                get_regression_models,
-            )
+            from lazypredict.models.model_registry import REGRESSORS, get_regression_models
 
             # Test getting all models
             models = get_regression_models()
@@ -62,10 +56,7 @@ class TestModelRegistry(unittest.TestCase):
     def test_classifier_filter(self):
         """Test classifier filtering."""
         try:
-            from lazypredict.models.model_registry import (
-                CLASSIFIERS,
-                filter_models,
-            )
+            from lazypredict.models.model_registry import CLASSIFIERS, filter_models
 
             # Test filtering with exclude list
             filtered = filter_models(CLASSIFIERS, exclude=["RandomForestClassifier"])
@@ -85,10 +76,7 @@ class TestModelRegistry(unittest.TestCase):
     def test_regressor_filter(self):
         """Test regressor filtering."""
         try:
-            from lazypredict.models.model_registry import (
-                REGRESSORS,
-                filter_models,
-            )
+            from lazypredict.models.model_registry import REGRESSORS, filter_models
 
             # Test filtering with exclude list
             filtered = filter_models(REGRESSORS, exclude=["RandomForestRegressor"])
@@ -108,9 +96,7 @@ class TestModelRegistry(unittest.TestCase):
     def test_classifier_initialization(self):
         """Test classifier initialization."""
         try:
-            from lazypredict.models.model_registry import (
-                get_classification_models,
-            )
+            from lazypredict.models.model_registry import get_classification_models
 
             models = get_classification_models()
             for model_class in models:

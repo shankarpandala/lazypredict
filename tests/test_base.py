@@ -155,10 +155,7 @@ class TestMetrics(unittest.TestCase):
 
     def test_metrics_import(self):
         try:
-            from lazypredict.metrics import (
-                get_classification_metrics,
-                get_regression_metrics,
-            )
+            from lazypredict.metrics import get_classification_metrics, get_regression_metrics
 
             self.assertTrue(callable(get_classification_metrics))
             self.assertTrue(callable(get_regression_metrics))

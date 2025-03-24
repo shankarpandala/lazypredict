@@ -101,9 +101,7 @@ class TestPreprocessingUtils(unittest.TestCase):
     def test_categorical_cardinality_threshold(self):
         """Test categorical cardinality threshold function."""
         try:
-            from lazypredict.utils.preprocessing import (
-                categorical_cardinality_threshold,
-            )
+            from lazypredict.utils.preprocessing import categorical_cardinality_threshold
 
             data = pd.DataFrame(
                 {

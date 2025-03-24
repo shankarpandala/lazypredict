@@ -6,21 +6,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .base import (
-    BaseLazy,
-    check_X_y,
-    get_model_name,
-)
-from .gpu import (
-    get_best_model,
-    get_cpu_model,
-    is_cuml_available,
-    is_gpu_available,
-)
-from .metrics import (
-    get_classification_metrics,
-    get_regression_metrics,
-)
+from .base import BaseLazy, check_X_y, get_model_name
+from .gpu import get_best_model, get_cpu_model, is_cuml_available, is_gpu_available
+from .metrics import get_classification_metrics, get_regression_metrics
 from .mlflow_utils import (
     configure_mlflow,
     end_run,
@@ -32,11 +20,7 @@ from .mlflow_utils import (
     log_params,
     start_run,
 )
-from .preprocessing import (
-    categorical_cardinality_threshold,
-    create_preprocessor,
-    get_card_split,
-)
+from .preprocessing import categorical_cardinality_threshold, create_preprocessor, get_card_split
 
 logger = logging.getLogger("lazypredict.utils")
 

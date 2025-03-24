@@ -158,11 +158,7 @@ class TestLazyRegressor(unittest.TestCase):
 
 import unittest
 
-from lazypredict import (
-    LazyClassifier,
-    LazyRegressor,
-    Supervised,
-)
+from lazypredict import LazyClassifier, LazyRegressor, Supervised
 
 
 class TestSupervisedModule(unittest.TestCase):

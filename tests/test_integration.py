@@ -110,10 +110,7 @@ class TestPackageIntegration(unittest.TestCase):
     def test_supervised_backwards_compatibility(self):
         try:
             # Test with minimal models (just one) to keep tests fast
-            from sklearn.tree import (
-                DecisionTreeClassifier,
-                DecisionTreeRegressor,
-            )
+            from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
             from lazypredict.Supervised import LazyClassifier, LazyRegressor
 

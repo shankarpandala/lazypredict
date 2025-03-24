@@ -11,9 +11,7 @@ class TestHelpers(unittest.TestCase):
 
     def test_get_card_split(self):
         """Test categorical cardinality threshold function."""
-        from lazypredict.utils.preprocessing import (
-            categorical_cardinality_threshold,
-        )
+        from lazypredict.utils.preprocessing import categorical_cardinality_threshold
 
         # Create test data with known cardinality
         data = pd.DataFrame(

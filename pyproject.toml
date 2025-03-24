@@ -11,7 +11,7 @@ authors = [
 description = "Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning"
 readme = "README.md"
 requires-python = ">=3.8"
-license = "MIT"
+license = { text = "MIT" }
 keywords = ["lazypredict", "machine learning", "data science", "automated machine learning"]
 classifiers = [
     "Development Status :: 4 - Beta",

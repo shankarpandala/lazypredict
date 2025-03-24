@@ -13,7 +13,7 @@ with open("HISTORY.md") as history_file:
 
 # Core requirements
 core_requirements = [
-    "numpy>=1.17.0",
+    "numpy>=1.19.5",
     "pandas>=1.0.0",
     "tqdm>=4.45.0",
     "scikit-learn>=1.0.0",

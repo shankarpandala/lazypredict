@@ -18,7 +18,7 @@ jobs:
         dependency-versions: ['minimum', 'latest']
         include:
           - dependency-versions: minimum
-            numpy-version: '1.17.0'
+            numpy-version: '1.19.5'  # Updated minimum version
             pandas-version: '1.0.0'
             scikit-learn-version: '1.0.0'
           - dependency-versions: latest
@@ -43,12 +43,16 @@ jobs:
           pyproject.toml
           requirements*.txt
     
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install build
+    
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install '.[dev]'
+        python -m pip install '.[dev]'
         if [ "${{ matrix.dependency-versions }}" = "minimum" ]; then
-          pip install "numpy==${{ matrix.numpy-version }}" "pandas==${{ matrix.pandas-version }}" "scikit-learn==${{ matrix.scikit-learn-version }}"
+          python -m pip install "numpy==${{ matrix.numpy-version }}" "pandas==${{ matrix.pandas-version }}" "scikit-learn==${{ matrix.scikit-learn-version }}"
         fi
     
     - name: Run style checks

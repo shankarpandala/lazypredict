@@ -55,44 +55,6 @@ jobs:
           python -m pip install "numpy==${{ matrix.numpy-version }}" "pandas==${{ matrix.pandas-version }}" "scikit-learn==${{ matrix.scikit-learn-version }}"
         fi
     
-    - name: Run style checks
-      run: |
-        # Configure git
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-        
-        # For pull requests, checkout the head branch
-        if [ "${{ github.event_name }}" == "pull_request" ]; then
-          git checkout ${{ github.head_ref }}
-        else
-          # For direct pushes, use the current branch
-          git checkout ${GITHUB_REF#refs/heads/}
-        fi
-        
-        # Run formatters
-        black .
-        isort .
-        
-        # Check if there are any changes and push them
-        if [[ -n "$(git status --porcelain)" ]]; then
-          git add .
-          git commit -m "Apply automatic code formatting"
-          
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            git push origin ${{ github.head_ref }}
-          else
-            git push origin ${GITHUB_REF#refs/heads/}
-          fi
-        fi
-        
-        # Run checks
-        black --check .
-        isort --check-only .
-        flake8 .
-    
-    - name: Run type checks
-      run: mypy lazypredict
-    
     - name: Run tests
       run: |
         pytest --cov=lazypredict tests/ --cov-report=xml

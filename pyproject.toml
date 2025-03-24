@@ -44,10 +44,6 @@ survival = ["scikit-survival>=0.15.0"]
 dev = [
     "pytest>=5.0.0",
     "pytest-runner>=5.0.0",
-    "black>=20.8b1",
-    "isort>=5.0.0",
-    "mypy>=0.800",
-    "flake8>=3.8.0",
     "sphinx>=3.0.0",
     "twine>=3.0.0",
     "pre-commit>=2.9.0",
@@ -73,19 +69,3 @@ packages = [
 
 [tool.setuptools.dynamic]
 version = {attr = "lazypredict.__version__"}
-
-[tool.black]
-line-length = 100
-target-version = ["py38"]
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 100
-
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true

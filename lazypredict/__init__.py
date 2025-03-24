@@ -5,9 +5,10 @@ __email__ = "shankar.pandala@live.com"
 __version__ = "0.2.12"
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
-from .Supervised import Supervised, LazyClassifier, LazyRegressor
+from .Supervised import LazyClassifier, LazyRegressor, Supervised
 
 __all__ = [
     "Supervised",

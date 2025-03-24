@@ -10,8 +10,9 @@ This package contains various test modules for different components:
 - test_model_registry.py: Tests to verify all models are properly registered
 """
 
-# Make imports easier for discovery
-from .test_models import *
 from .test_base import *
 from .test_integration import *
 from .test_model_registry import *
+
+# Make imports easier for discovery
+from .test_models import *

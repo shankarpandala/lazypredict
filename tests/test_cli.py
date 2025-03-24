@@ -1,8 +1,11 @@
+import unittest
+
 import pytest
 from click.testing import CliRunner
+
 from lazypredict import cli
 from lazypredict.cli import main
-import unittest
+
 
 class TestCLI(unittest.TestCase):
     def test_main(self):
@@ -17,5 +20,6 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("--help  Show this message and exit.", result.output)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

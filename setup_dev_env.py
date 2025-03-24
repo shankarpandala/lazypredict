@@ -7,8 +7,9 @@ This script installs required dependencies and sets up the package for developme
 """
 
 import os
-import sys
 import subprocess
+import sys
+
 
 def run_command(command):
     """Run a shell command and print output"""
@@ -19,32 +20,34 @@ def run_command(command):
         return False
     return True
 
+
 def setup_environment():
     """Set up the development environment"""
     print("Setting up lazypredict development environment...")
-    
+
     # Install dependencies
     print("\nInstalling dependencies...")
     if not run_command("pip install -r requirements.txt"):
         print("Failed to install main dependencies")
         return False
-    
+
     if not run_command("pip install pytest mlflow pytest-cov"):
         print("Failed to install test dependencies")
         return False
-    
+
     # Install the package in development mode
     print("\nInstalling lazypredict in development mode...")
     if not run_command("pip install -e ."):
         print("Failed to install package in development mode")
         return False
-    
+
     print("\nSetup complete! You can now run examples and tests.")
     print("\nTo run all tests: python -m tests.run_tests")
     print("To run specific tests: python -m tests.run_tests test_models")
     print("To run examples: python examples/classification_example.py")
-    
+
     return True
+
 
 def main():
     """Main function"""
@@ -52,5 +55,6 @@ def main():
         return 0
     return 1
 
+
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())

@@ -3,7 +3,7 @@
 
 """The setup script."""
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md") as readme_file:
     readme = readme_file.read()
@@ -59,7 +59,11 @@ setup(
     ],
     description="Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning",
     long_description_content_type="text/markdown",
-    entry_points={"console_scripts": ["lazypredict=lazypredict.cli:main",],},
+    entry_points={
+        "console_scripts": [
+            "lazypredict=lazypredict.cli:main",
+        ],
+    },
     install_requires=core_requirements,
     license="MIT license",
     long_description=readme + "\n\n" + history,
@@ -71,7 +75,7 @@ setup(
     test_suite="tests",
     tests_require=["pytest>=5.0.0"],
     url="https://github.com/shankarpandala/lazypredict",
-    version='0.3.0',
+    version="0.3.0",
     zip_safe=False,
     extras_require={
         "dev": dev_requirements,
@@ -80,9 +84,9 @@ setup(
         "gpu": gpu_requirements,
         "survival": survival_requirements,
         "all": (
-            mlflow_requirements 
-            + optuna_requirements 
-            + gpu_requirements 
+            mlflow_requirements
+            + optuna_requirements
+            + gpu_requirements
             + survival_requirements
         ),
     },

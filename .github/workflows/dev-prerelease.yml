@@ -3,9 +3,11 @@ name: Dev Pre-release
 on:
   pull_request:
     branches: [ dev ]
+    types: [ opened, synchronize, reopened, ready_for_review ]
 
 jobs:
   test:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,6 +24,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
+        cache-dependency-path: |
+          setup.py
+          pyproject.toml
+          requirements*.txt
     
     - name: Install dependencies
       run: |
@@ -30,18 +36,22 @@ jobs:
     
     - name: Run style checks
       run: |
+        # Configure git
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
+        
+        # For pull requests, checkout the head branch
+        git checkout ${{ github.head_ref }}
         
         # Run formatters
         black .
         isort .
         
-        # Check if there are any changes
+        # Check if there are any changes and push them
         if [[ -n "$(git status --porcelain)" ]]; then
           git add .
           git commit -m "Apply automatic code formatting"
-          git push
+          git push origin ${{ github.head_ref }}
         fi
         
         # Run checks
@@ -52,17 +62,37 @@ jobs:
     - name: Run type checks
       run: mypy lazypredict
     
-    - name: Run tests
+    - name: Run tests with coverage requirements
       run: |
-        pytest --cov=lazypredict tests/
+        pytest --cov=lazypredict tests/ --cov-report=xml --cov-fail-under=80
     
     - name: Upload coverage
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        fail_ci_if_error: true
+
+  dependency-check:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    
+    - name: Check dependencies
+      run: |
+        python -m pip install --upgrade pip safety
+        pip install '.[dev]'
+        safety check
 
   pre-release:
-    needs: test
+    needs: [test, dependency-check]
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     permissions:
@@ -79,6 +109,10 @@ jobs:
       with:
         python-version: '3.12'
         cache: 'pip'
+        cache-dependency-path: |
+          setup.py
+          pyproject.toml
+          requirements*.txt
     
     - name: Install dependencies
       run: |
@@ -94,23 +128,44 @@ jobs:
     - name: Generate Pre-release Version
       id: version
       run: |
-        # Get current version
+        # Get current version and PR info
         CURRENT_VERSION=$(grep -Po "__version__ = \"\K[^\"]*" lazypredict/__init__.py)
         PR_NUMBER=$(echo $GITHUB_REF | sed -n 's/.*\/\([0-9]*\)\/merge/\1/p')
-        # Create pre-release version with PR number
-        PRE_VERSION="${CURRENT_VERSION}-dev${PR_NUMBER}"
+        COMMIT_SHA=$(git rev-parse --short HEAD)
+        
+        # Create pre-release version with PR number and commit hash
+        PRE_VERSION="${CURRENT_VERSION}-dev${PR_NUMBER}.${COMMIT_SHA}"
         echo "VERSION=${PRE_VERSION}" >> $GITHUB_ENV
         
         # Update version in files
         sed -i "s/__version__ = \".*\"/__version__ = \"${PRE_VERSION}\"/" lazypredict/__init__.py
     
-    - name: Build package
-      run: python -m build
+    - name: Build and verify package
+      run: |
+        # Build package
+        python -m build
+        
+        # Run additional verification
+        pip install dist/*.whl
+        python -c "import lazypredict; print(lazypredict.__version__)"
+        pytest --cov=lazypredict tests/ --cov-report=term-missing
     
     - name: Check package
       run: twine check dist/*
     
-    - name: Publish to PyPI as pre-release
+    - name: Publish to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+        TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
+      run: |
+        twine upload --skip-existing dist/* --verbose
+    
+    - name: Verify Test PyPI Installation
+      run: |
+        pip install --index-url https://test.pypi.org/simple/ lazypredict==${{ env.VERSION }}
+    
+    - name: Publish to PyPI
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
@@ -127,8 +182,15 @@ jobs:
       with:
         tag_name: "v${{ env.VERSION }}"
         name: "Pre-release v${{ env.VERSION }}"
+        body: |
+          🚧 This is a pre-release version of lazypredict.
+          
+          Changes in this pre-release:
+          - PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}
+          - Commit: ${{ github.sha }}
+          
+          ⚠️ This version is for testing purposes. Use with caution in production.
         prerelease: true
-        files: |
-          dist/*
+        files: dist/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

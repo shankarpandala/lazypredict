@@ -15,6 +15,17 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        dependency-versions: ['minimum', 'latest']
+        include:
+          - dependency-versions: minimum
+            numpy-version: '1.17.0'
+            pandas-version: '1.0.0'
+            scikit-learn-version: '1.0.0'
+          - dependency-versions: latest
+            numpy-version: '*'
+            pandas-version: '*'
+            scikit-learn-version: '*'
+      fail-fast: false
 
     steps:
     - uses: actions/checkout@v4
@@ -27,26 +38,47 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
+        cache-dependency-path: |
+          setup.py
+          pyproject.toml
+          requirements*.txt
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install '.[dev]'
+        if [ "${{ matrix.dependency-versions }}" = "minimum" ]; then
+          pip install "numpy==${{ matrix.numpy-version }}" "pandas==${{ matrix.pandas-version }}" "scikit-learn==${{ matrix.scikit-learn-version }}"
+        fi
     
     - name: Run style checks
       run: |
+        # Configure git
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
+        
+        # For pull requests, checkout the head branch
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          git checkout ${{ github.head_ref }}
+        else
+          # For direct pushes, use the current branch
+          git checkout ${GITHUB_REF#refs/heads/}
+        fi
         
         # Run formatters
         black .
         isort .
         
-        # Check if there are any changes
+        # Check if there are any changes and push them
         if [[ -n "$(git status --porcelain)" ]]; then
           git add .
           git commit -m "Apply automatic code formatting"
-          git push
+          
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            git push origin ${{ github.head_ref }}
+          else
+            git push origin ${GITHUB_REF#refs/heads/}
+          fi
         fi
         
         # Run checks
@@ -59,12 +91,14 @@ jobs:
     
     - name: Run tests
       run: |
-        pytest --cov=lazypredict tests/
+        pytest --cov=lazypredict tests/ --cov-report=xml
     
     - name: Upload coverage
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        fail_ci_if_error: true
 
   docs:
     needs: test
@@ -78,19 +112,16 @@ jobs:
       with:
         python-version: '3.12'
         cache: 'pip'
+        cache-dependency-path: |
+          setup.py
+          pyproject.toml
+          requirements*.txt
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install '.[dev]'
         pip install sphinx sphinx-rtd-theme myst-parser myst-nb
-    
-    - name: Create docs directory if it doesn't exist
-      run: |
-        mkdir -p docs
-        if [ ! -f docs/Makefile ]; then
-          sphinx-quickstart -q --sep --project=lazypredict --author="Shankar Rao Pandala" docs
-        fi
     
     - name: Build documentation
       run: |
@@ -101,12 +132,17 @@ jobs:
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
+        publish_dir: ./docs/build/html
+        keep_files: true
+        commit_message: "docs: update documentation"
 
   publish:
     needs: [test, docs]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
     - uses: actions/checkout@v4
@@ -115,6 +151,10 @@ jobs:
       with:
         python-version: '3.12'
         cache: 'pip'
+        cache-dependency-path: |
+          setup.py
+          pyproject.toml
+          requirements*.txt
     
     - name: Install dependencies
       run: |
@@ -132,3 +172,11 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: twine upload dist/*
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref }}
+        name: Release ${{ github.ref_name }}
+        generate_release_notes: true
+        files: dist/*

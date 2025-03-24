@@ -23,6 +23,10 @@ jobs:
       with:
         python-version: '3.12'
         cache: 'pip'
+        cache-dependency-path: |
+          setup.py
+          pyproject.toml
+          requirements*.txt
     
     - name: Install dependencies
       run: |
@@ -34,6 +38,17 @@ jobs:
       run: |
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
+    
+    - name: Generate Release Notes
+      id: release_notes
+      run: |
+        # Get commits since last release
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        CHANGES=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+        echo "CHANGES<<EOF" >> $GITHUB_ENV
+        echo "Changes since ${LAST_TAG}:" >> $GITHUB_ENV
+        echo "${CHANGES}" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
     
     - name: Bump Patch Version
       id: bump_version
@@ -49,8 +64,15 @@ jobs:
         git push
         git push --tags
     
-    - name: Build package
-      run: python -m build
+    - name: Build and verify package
+      run: |
+        # Build package
+        python -m build
+        
+        # Verify the built package
+        pip install dist/*.whl
+        python -c "import lazypredict; print(lazypredict.__version__)"
+        pytest --cov=lazypredict tests/ --cov-report=term-missing
     
     - name: Check package
       run: twine check dist/*
@@ -63,11 +85,25 @@ jobs:
         body: |
           Release of version v${{ env.VERSION }}
           
-          Changes merged from dev branch to main.
+          ${{ env.CHANGES }}
+          
+          This release was automatically created from the dev branch.
         files: |
           dist/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Publish to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+        TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
+      run: |
+        twine upload --skip-existing dist/* --verbose
+    
+    - name: Verify Test PyPI Installation
+      run: |
+        pip install --index-url https://test.pypi.org/simple/ --no-deps lazypredict==${{ env.VERSION }}
     
     - name: Publish to PyPI
       env:
@@ -75,3 +111,20 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: |
         twine upload dist/*
+    
+    - name: Verify PyPI Release
+      run: |
+        # Wait for package to be available
+        sleep 60
+        # Create new environment to verify clean installation
+        python -m venv test_env
+        source test_env/bin/activate
+        pip install lazypredict==${{ env.VERSION }}
+        python -c "import lazypredict; assert lazypredict.__version__ == '${{ env.VERSION }}'"
+    
+    - name: Sync dev branch
+      run: |
+        git checkout dev
+        git pull
+        git merge main
+        git push origin dev

@@ -108,17 +108,13 @@ def get_classification_models(
                 try:
                     from sklearn.utils import all_estimators
 
-                    classifiers = dict(
-                        all_estimators(type_filter="classifier")
-                    )
+                    classifiers = dict(all_estimators(type_filter="classifier"))
                     if name in classifiers:
                         model_class = classifiers[name]
                         register_classifier(name, model_class)
                         models.append(model_class)
                     else:
-                        logger.warning(
-                            f"Model {name} not found in classifier registry"
-                        )
+                        logger.warning(f"Model {name} not found in classifier registry")
                 except Exception as e:
                     logger.warning(f"Error finding model {name}: {str(e)}")
         else:
@@ -170,9 +166,7 @@ def get_regression_models(
                         register_regressor(name, model_class)
                         models.append(model_class)
                     else:
-                        logger.warning(
-                            f"Model {name} not found in regressor registry"
-                        )
+                        logger.warning(f"Model {name} not found in regressor registry")
                 except Exception as e:
                     logger.warning(f"Error finding model {name}: {str(e)}")
         else:
@@ -234,9 +228,7 @@ def filter_models(
     if exclude is None:
         return models
 
-    return {
-        name: model for name, model in models.items() if name not in exclude
-    }
+    return {name: model for name, model in models.items() if name not in exclude}
 
 
 def reset_registry():

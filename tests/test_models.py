@@ -20,12 +20,8 @@ class TestClassificationModule(unittest.TestCase):
             n_redundant=1,
             random_state=42,
         )
-        self.X_train = pd.DataFrame(
-            X[:80], columns=[f"feature_{i}" for i in range(X.shape[1])]
-        )
-        self.X_test = pd.DataFrame(
-            X[80:], columns=[f"feature_{i}" for i in range(X.shape[1])]
-        )
+        self.X_train = pd.DataFrame(X[:80], columns=[f"feature_{i}" for i in range(X.shape[1])])
+        self.X_test = pd.DataFrame(X[80:], columns=[f"feature_{i}" for i in range(X.shape[1])])
         self.y_train = y[:80]
         self.y_test = y[80:]
 
@@ -90,15 +86,9 @@ class TestRegressionModule(unittest.TestCase):
     def setUp(self):
         """Set up test data."""
         # Create regression dataset
-        X, y = make_regression(
-            n_samples=100, n_features=5, n_informative=3, random_state=42
-        )
-        self.X_train = pd.DataFrame(
-            X[:80], columns=[f"feature_{i}" for i in range(X.shape[1])]
-        )
-        self.X_test = pd.DataFrame(
-            X[80:], columns=[f"feature_{i}" for i in range(X.shape[1])]
-        )
+        X, y = make_regression(n_samples=100, n_features=5, n_informative=3, random_state=42)
+        self.X_train = pd.DataFrame(X[:80], columns=[f"feature_{i}" for i in range(X.shape[1])])
+        self.X_test = pd.DataFrame(X[80:], columns=[f"feature_{i}" for i in range(X.shape[1])])
         self.y_train = y[:80]
         self.y_test = y[80:]
 

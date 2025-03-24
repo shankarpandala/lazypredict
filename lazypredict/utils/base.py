@@ -14,9 +14,7 @@ from sklearn.utils import all_estimators
 # Configure logging
 logger = logging.getLogger("lazypredict")
 handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -116,9 +114,7 @@ class BaseLazy:
         if isinstance(y_train, pd.Series) or isinstance(y_train, pd.DataFrame):
             y_train = y_train.values
         if y_test is not None:
-            if isinstance(y_test, pd.Series) or isinstance(
-                y_test, pd.DataFrame
-            ):
+            if isinstance(y_test, pd.Series) or isinstance(y_test, pd.DataFrame):
                 y_test = y_test.values
 
         return X_train, X_test, y_train, y_test
@@ -136,9 +132,7 @@ class BaseLazy:
 
             return torch.cuda.is_available()
         except ImportError:
-            logger.warning(
-                "torch not installed. GPU acceleration not available."
-            )
+            logger.warning("torch not installed. GPU acceleration not available.")
             return False
 
     def _get_estimators(
@@ -160,9 +154,7 @@ class BaseLazy:
         """
         try:
             estimators = all_estimators(type_filter=estimator_type)
-            return [
-                est for est in estimators if est[0] not in excluded_estimators
-            ]
+            return [est for est in estimators if est[0] not in excluded_estimators]
         except Exception as e:
             logger.error(f"Error getting estimators: {e}")
             return []

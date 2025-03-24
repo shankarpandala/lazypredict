@@ -21,15 +21,9 @@ class TestLazyBase(unittest.TestCase):
         )
 
         # Convert some features to categorical for testing
-        X_df = pd.DataFrame(
-            self.X_train, columns=[f"feature_{i}" for i in range(10)]
-        )
-        X_df["cat_low"] = pd.cut(
-            X_df["feature_0"], bins=3, labels=["A", "B", "C"]
-        )
-        X_df["cat_high"] = pd.Series(
-            np.random.choice(list("ABCDEFGHIJ"), size=100)
-        )
+        X_df = pd.DataFrame(self.X_train, columns=[f"feature_{i}" for i in range(10)])
+        X_df["cat_low"] = pd.cut(X_df["feature_0"], bins=3, labels=["A", "B", "C"])
+        X_df["cat_high"] = pd.Series(np.random.choice(list("ABCDEFGHIJ"), size=100))
         self.X_train = X_df
 
     def test_base_import(self):
@@ -62,9 +56,7 @@ class TestLazyBase(unittest.TestCase):
             X_train = self.X_train.copy()
             y_train = pd.Series(self.y_train)
 
-            X_processed = base._check_data(X_train, X_train, y_train, y_train)[
-                0
-            ]
+            X_processed = base._check_data(X_train, X_train, y_train, y_train)[0]
             self.assertIsInstance(X_processed, pd.DataFrame)
 
         except ImportError:
@@ -79,9 +71,7 @@ class TestUtils(unittest.TestCase):
         self.y = np.random.randint(0, 2, 100)
 
         # Create pandas DataFrame
-        self.X_df = pd.DataFrame(
-            self.X, columns=[f"feature_{i}" for i in range(self.X.shape[1])]
-        )
+        self.X_df = pd.DataFrame(self.X, columns=[f"feature_{i}" for i in range(self.X.shape[1])])
 
     def test_utils_import(self):
         try:
@@ -140,10 +130,8 @@ class TestMetrics(unittest.TestCase):
     def setUp(self):
         # Load a simple dataset
         data = load_iris()
-        self.X_train, self.X_test, self.y_train, self.y_test = (
-            train_test_split(
-                data.data, data.target, test_size=0.2, random_state=42
-            )
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            data.data, data.target, test_size=0.2, random_state=42
         )
 
         # Create binary classification data
@@ -153,9 +141,7 @@ class TestMetrics(unittest.TestCase):
             self.X_test_binary,
             self.y_train_binary,
             self.y_test_binary,
-        ) = train_test_split(
-            data.data, self.y_binary, test_size=0.2, random_state=42
-        )
+        ) = train_test_split(data.data, self.y_binary, test_size=0.2, random_state=42)
 
         # Create regression data
         np.random.seed(42)
@@ -165,9 +151,7 @@ class TestMetrics(unittest.TestCase):
             self.X_test_reg,
             self.y_train_reg,
             self.y_test_reg,
-        ) = train_test_split(
-            data.data, self.y_regression, test_size=0.2, random_state=42
-        )
+        ) = train_test_split(data.data, self.y_regression, test_size=0.2, random_state=42)
 
     def test_metrics_import(self):
         try:

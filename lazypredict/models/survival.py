@@ -63,9 +63,7 @@ class LazySurvivalAnalysis(Lazy):
         scores : pandas.DataFrame
             DataFrame with performance metrics for each model
         """
-        raise NotImplementedError(
-            "LazySurvivalAnalysis.fit() is not implemented yet"
-        )
+        raise NotImplementedError("LazySurvivalAnalysis.fit() is not implemented yet")
 
     def provide_models(self, X, y):
         """
@@ -84,6 +82,4 @@ class LazySurvivalAnalysis(Lazy):
         models : dict
             Dictionary with trained models
         """
-        raise NotImplementedError(
-            "LazySurvivalAnalysis.provide_models() is not implemented yet"
-        )
+        raise NotImplementedError("LazySurvivalAnalysis.provide_models() is not implemented yet")

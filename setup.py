@@ -84,10 +84,7 @@ setup(
         "gpu": gpu_requirements,
         "survival": survival_requirements,
         "all": (
-            mlflow_requirements
-            + optuna_requirements
-            + gpu_requirements
-            + survival_requirements
+            mlflow_requirements + optuna_requirements + gpu_requirements + survival_requirements
         ),
     },
 )

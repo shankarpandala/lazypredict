@@ -38,9 +38,7 @@ def is_cuml_available() -> bool:
 
         return True
     except ImportError:
-        logger.warning(
-            "cuML not installed. GPU acceleration for ML models not available."
-        )
+        logger.warning("cuML not installed. GPU acceleration for ML models not available.")
         return False
 
 
@@ -201,7 +199,5 @@ def get_best_model(model_name: str, prefer_gpu: bool = True) -> Optional[Type]:
     if cpu_model is not None:
         return cpu_model
 
-    logger.warning(
-        f"Model {model_name} not found in either GPU or CPU implementations"
-    )
+    logger.warning(f"Model {model_name} not found in either GPU or CPU implementations")
     return None

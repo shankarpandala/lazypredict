@@ -17,10 +17,8 @@ class TestPackageIntegration(unittest.TestCase):
         diabetes = load_diabetes()
 
         # Classification data
-        self.X_class, self.X_class_test, self.y_class, self.y_class_test = (
-            train_test_split(
-                iris.data, iris.target, test_size=0.2, random_state=42
-            )
+        self.X_class, self.X_class_test, self.y_class, self.y_class_test = train_test_split(
+            iris.data, iris.target, test_size=0.2, random_state=42
         )
 
         # Binary data
@@ -30,23 +28,17 @@ class TestPackageIntegration(unittest.TestCase):
             self.X_binary_test,
             self.y_binary,
             self.y_binary_test,
-        ) = train_test_split(
-            iris.data, self.y_binary, test_size=0.2, random_state=42
-        )
+        ) = train_test_split(iris.data, self.y_binary, test_size=0.2, random_state=42)
 
         # Regression data
-        self.X_reg, self.X_reg_test, self.y_reg, self.y_reg_test = (
-            train_test_split(
-                diabetes.data, diabetes.target, test_size=0.2, random_state=42
-            )
+        self.X_reg, self.X_reg_test, self.y_reg, self.y_reg_test = train_test_split(
+            diabetes.data, diabetes.target, test_size=0.2, random_state=42
         )
 
         # Convert to pandas for some tests
         feat_names = [f"feature_{i}" for i in range(iris.data.shape[1])]
         self.X_class_df = pd.DataFrame(self.X_class, columns=feat_names)
-        self.X_class_test_df = pd.DataFrame(
-            self.X_class_test, columns=feat_names
-        )
+        self.X_class_test_df = pd.DataFrame(self.X_class_test, columns=feat_names)
 
     def test_classification_direct_import(self):
         try:
@@ -84,14 +76,10 @@ class TestPackageIntegration(unittest.TestCase):
 
             self.assertIsNotNone(scores_df)
             self.assertTrue(isinstance(scores_df, pd.DataFrame))
-            self.assertTrue(
-                "DecisionTreeClassifier" in scores_df["Model"].values
-            )
+            self.assertTrue("DecisionTreeClassifier" in scores_df["Model"].values)
 
         except ImportError:
-            self.skipTest(
-                "Could not import LazyClassifier directly from lazypredict"
-            )
+            self.skipTest("Could not import LazyClassifier directly from lazypredict")
 
     def test_regression_direct_import(self):
         try:
@@ -117,9 +105,7 @@ class TestPackageIntegration(unittest.TestCase):
             self.assertTrue("DecisionTreeRegressor" in scores["Model"].values)
 
         except ImportError:
-            self.skipTest(
-                "Could not import LazyRegressor directly from lazypredict"
-            )
+            self.skipTest("Could not import LazyRegressor directly from lazypredict")
 
     def test_supervised_backwards_compatibility(self):
         try:
@@ -199,20 +185,14 @@ class TestPackageIntegration(unittest.TestCase):
             self.assertTrue("Custom Metric" in scores.columns)
 
         except ImportError:
-            self.skipTest(
-                "Could not import LazyClassifier directly from lazypredict"
-            )
+            self.skipTest("Could not import LazyClassifier directly from lazypredict")
 
     def test_model_types_compatibility(self):
         try:
             from lazypredict import LazyClassifier as DirectClassifier
             from lazypredict import LazyRegressor as DirectRegressor
-            from lazypredict.models.classification import (
-                LazyClassifier as ClassificationLazy,
-            )
-            from lazypredict.models.regression import (
-                LazyRegressor as RegressionLazy,
-            )
+            from lazypredict.models.classification import LazyClassifier as ClassificationLazy
+            from lazypredict.models.regression import LazyRegressor as RegressionLazy
 
             # Verify these are the same class
             self.assertEqual(ClassificationLazy, DirectClassifier)

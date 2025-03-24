@@ -23,9 +23,7 @@ logger = logging.getLogger("lazypredict.preprocessing")
 def categorical_cardinality_threshold(data, columns, threshold=10):
     """Split categorical columns based on cardinality threshold."""
     if isinstance(data, np.ndarray):
-        data = pd.DataFrame(
-            data, columns=[f"feature_{i}" for i in range(data.shape[1])]
-        )
+        data = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(data.shape[1])])
 
     if not isinstance(columns, (list, tuple)):
         columns = list(columns)
@@ -52,9 +50,7 @@ def categorical_cardinality_threshold(data, columns, threshold=10):
 get_card_split = categorical_cardinality_threshold
 
 
-def create_preprocessor(
-    data, enable_polynomial_features=True, return_type="pipeline"
-):
+def create_preprocessor(data, enable_polynomial_features=True, return_type="pipeline"):
     """Create a preprocessor for mixed data types.
 
     Parameters
@@ -94,21 +90,15 @@ def create_preprocessor(
         try:
             data = pd.DataFrame(data)
         except Exception as e:
-            logger.warning(
-                f"Error converting data to DataFrame: {e}. Using empty preprocessor."
-            )
+            logger.warning(f"Error converting data to DataFrame: {e}. Using empty preprocessor.")
             # Return a simple scaler as fallback
             return StandardScaler()
 
     # Get column types
     numeric_features = list(
-        data.select_dtypes(
-            include=["int64", "float64", "int32", "float32"]
-        ).columns
+        data.select_dtypes(include=["int64", "float64", "int32", "float32"]).columns
     )
-    categorical_features = list(
-        data.select_dtypes(include=["object", "category"]).columns
-    )
+    categorical_features = list(data.select_dtypes(include=["object", "category"]).columns)
 
     transformers = []
 
@@ -124,9 +114,7 @@ def create_preprocessor(
 
     # Add categorical transformers if there are categorical features
     if categorical_features:
-        low_card, high_card = categorical_cardinality_threshold(
-            data, categorical_features
-        )
+        low_card, high_card = categorical_cardinality_threshold(data, categorical_features)
         if low_card:
             categorical_pipeline = Pipeline(
                 [
@@ -168,14 +156,10 @@ def create_preprocessor(
                 ("scaler", StandardScaler()),
             ]
         )
-        transformers.append(
-            ("all", numeric_pipeline, list(range(data.shape[1])))
-        )
+        transformers.append(("all", numeric_pipeline, list(range(data.shape[1]))))
 
     # Create the preprocessor without polynomial features first
-    base_preprocessor = ColumnTransformer(
-        transformers, remainder="passthrough"
-    )
+    base_preprocessor = ColumnTransformer(transformers, remainder="passthrough")
 
     # Return based on type requested
     if return_type == "column" or not enable_polynomial_features:

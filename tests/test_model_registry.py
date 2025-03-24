@@ -20,9 +20,7 @@ class TestModelRegistry(unittest.TestCase):
             # Test getting all models
             models = get_classification_models()
             self.assertTrue(len(models) > 0)
-            self.assertTrue(
-                all(issubclass(model, BaseEstimator) for model in models)
-            )
+            self.assertTrue(all(issubclass(model, BaseEstimator) for model in models))
 
             # Test getting specific models
             models = get_classification_models(["RandomForestClassifier"])
@@ -34,9 +32,7 @@ class TestModelRegistry(unittest.TestCase):
             self.assertEqual(len(models), 0)
 
         except ImportError as e:
-            self.skipTest(
-                f"Could not import CLASSIFIERS from classification module: {str(e)}"
-            )
+            self.skipTest(f"Could not import CLASSIFIERS from classification module: {str(e)}")
 
     def test_regression_registry(self):
         """Test regression model registry."""
@@ -49,9 +45,7 @@ class TestModelRegistry(unittest.TestCase):
             # Test getting all models
             models = get_regression_models()
             self.assertTrue(len(models) > 0)
-            self.assertTrue(
-                all(issubclass(model, BaseEstimator) for model in models)
-            )
+            self.assertTrue(all(issubclass(model, BaseEstimator) for model in models))
 
             # Test getting specific models
             models = get_regression_models(["RandomForestRegressor"])
@@ -63,9 +57,7 @@ class TestModelRegistry(unittest.TestCase):
             self.assertEqual(len(models), 0)
 
         except ImportError as e:
-            self.skipTest(
-                f"Could not import REGRESSORS from regression module: {str(e)}"
-            )
+            self.skipTest(f"Could not import REGRESSORS from regression module: {str(e)}")
 
     def test_classifier_filter(self):
         """Test classifier filtering."""
@@ -76,9 +68,7 @@ class TestModelRegistry(unittest.TestCase):
             )
 
             # Test filtering with exclude list
-            filtered = filter_models(
-                CLASSIFIERS, exclude=["RandomForestClassifier"]
-            )
+            filtered = filter_models(CLASSIFIERS, exclude=["RandomForestClassifier"])
             self.assertNotIn("RandomForestClassifier", filtered)
 
             # Test filtering with empty exclude list
@@ -101,9 +91,7 @@ class TestModelRegistry(unittest.TestCase):
             )
 
             # Test filtering with exclude list
-            filtered = filter_models(
-                REGRESSORS, exclude=["RandomForestRegressor"]
-            )
+            filtered = filter_models(REGRESSORS, exclude=["RandomForestRegressor"])
             self.assertNotIn("RandomForestRegressor", filtered)
 
             # Test filtering with empty exclude list
@@ -136,9 +124,7 @@ class TestModelRegistry(unittest.TestCase):
                     self.assertEqual(model.random_state, 42)
 
         except ImportError:
-            self.skipTest(
-                "Could not import CLASSIFIERS from classification module"
-            )
+            self.skipTest("Could not import CLASSIFIERS from classification module")
 
     def test_regressor_initialization(self):
         """Test regressor initialization."""

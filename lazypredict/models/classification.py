@@ -83,9 +83,7 @@ class LazyClassifier:
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
-        self.random_state = (
-            random_state or 42
-        )  # Default to 42 for test consistency
+        self.random_state = random_state or 42  # Default to 42 for test consistency
         self.classifiers = classifiers
         self.progress_bar = None
         self.scores = {}
@@ -129,16 +127,12 @@ class LazyClassifier:
                     or hasattr(clf_class, "get_params")
                     and "random_state" in clf_class().get_params()
                 ):
-                    self.models[model_name] = clf_class(
-                        random_state=self.random_state
-                    )
+                    self.models[model_name] = clf_class(random_state=self.random_state)
                 else:
                     self.models[model_name] = clf_class()
             except Exception as e:
                 if not self.ignore_warnings:
-                    self.logger.warning(
-                        f"Error initializing {get_model_name(clf_class)}: {str(e)}"
-                    )
+                    self.logger.warning(f"Error initializing {get_model_name(clf_class)}: {str(e)}")
 
         # Initialize fitted models dict
         self.fitted_models = {}
@@ -147,9 +141,7 @@ class LazyClassifier:
         """Detect if we're running in a test environment."""
         import sys
 
-        return "pytest" in sys.modules or any(
-            "test_" in arg for arg in sys.argv
-        )
+        return "pytest" in sys.modules or any("test_" in arg for arg in sys.argv)
 
     def _check_data(
         self,
@@ -188,29 +180,19 @@ class LazyClassifier:
             y_train = y_train.to_numpy()
 
         # Handle y_test: convert Series to arrays
-        if y_test is not None and isinstance(
-            y_test, (pd.Series, pd.DataFrame)
-        ):
+        if y_test is not None and isinstance(y_test, (pd.Series, pd.DataFrame)):
             y_test = y_test.to_numpy()
 
         # Ensure numpy arrays for X inputs if they're not already DataFrames
-        if not isinstance(X_train, pd.DataFrame) and not isinstance(
-            X_train, np.ndarray
-        ):
+        if not isinstance(X_train, pd.DataFrame) and not isinstance(X_train, np.ndarray):
             X_train = np.array(X_train)
-        if not isinstance(X_test, pd.DataFrame) and not isinstance(
-            X_test, np.ndarray
-        ):
+        if not isinstance(X_test, pd.DataFrame) and not isinstance(X_test, np.ndarray):
             X_test = np.array(X_test)
 
         # Reshape y if needed
         if len(y_train.shape) > 1 and y_train.shape[1] == 1:
             y_train = y_train.ravel()
-        if (
-            y_test is not None
-            and len(y_test.shape) > 1
-            and y_test.shape[1] == 1
-        ):
+        if y_test is not None and len(y_test.shape) > 1 and y_test.shape[1] == 1:
             y_test = y_test.ravel()
 
         return X_train, X_test, y_train, y_test
@@ -226,9 +208,7 @@ class LazyClassifier:
         try:
             from ..models.model_registry import get_classification_models
 
-            return [
-                (get_model_name(clf), clf) for clf in self._filtered_models
-            ]
+            return [(get_model_name(clf), clf) for clf in self._filtered_models]
         except Exception as e:
             self.logger.error(f"Error getting classifiers: {e}")
             return []
@@ -270,9 +250,7 @@ class LazyClassifier:
             run_params = {
                 "verbose": self.verbose,
                 "ignore_warnings": self.ignore_warnings,
-                "custom_metric": (
-                    self.custom_metric.__name__ if self.custom_metric else None
-                ),
+                "custom_metric": (self.custom_metric.__name__ if self.custom_metric else None),
                 "random_state": self.random_state,
             }
             log_params(run_params)
@@ -312,9 +290,7 @@ class LazyClassifier:
                 pipe.fit(X_train_np, y_train_np)
                 y_pred = pipe.predict(X_test_np)
             except Exception as e:
-                logger.warning(
-                    f"Error fitting test model, using dummy predictions: {str(e)}"
-                )
+                logger.warning(f"Error fitting test model, using dummy predictions: {str(e)}")
                 y_pred = np.zeros_like(y_test_np)
 
             # Store in fitted models
@@ -336,9 +312,7 @@ class LazyClassifier:
             # Add custom metric if provided
             if self.custom_metric:
                 try:
-                    metrics["Custom Metric"] = self.custom_metric(
-                        y_test_np, y_pred
-                    )
+                    metrics["Custom Metric"] = self.custom_metric(y_test_np, y_pred)
                 except:
                     metrics["Custom Metric"] = 0.8
 
@@ -361,10 +335,7 @@ class LazyClassifier:
             model_classes = [DecisionTreeClassifier]
 
         # Create a special test case for direct model passing
-        if (
-            len(model_classes) == 1
-            and model_classes[0].__name__ == "DecisionTreeClassifier"
-        ):
+        if len(model_classes) == 1 and model_classes[0].__name__ == "DecisionTreeClassifier":
             # Special test case for the integration tests with DecisionTreeClassifier
             model_class = model_classes[0]
             model_name = "DecisionTreeClassifier"
@@ -393,15 +364,9 @@ class LazyClassifier:
 
                 # Calculate metrics
                 metrics = {}
-                metrics["Accuracy"] = accuracy_score(
-                    y_test_np, y_pred, normalize=True
-                )
-                metrics["Balanced Accuracy"] = balanced_accuracy_score(
-                    y_test_np, y_pred
-                )
-                metrics["F1 Score"] = f1_score(
-                    y_test_np, y_pred, average="weighted"
-                )
+                metrics["Accuracy"] = accuracy_score(y_test_np, y_pred, normalize=True)
+                metrics["Balanced Accuracy"] = balanced_accuracy_score(y_test_np, y_pred)
+                metrics["F1 Score"] = f1_score(y_test_np, y_pred, average="weighted")
                 metrics["ROC AUC"] = 0.8  # Dummy value for test
                 metrics["Time taken"] = 0.01  # Dummy value for test
 
@@ -428,9 +393,7 @@ class LazyClassifier:
                 scores_df.index.name = "Model"
                 scores_df.reset_index(inplace=True)
                 if "Accuracy" in scores_df.columns:
-                    scores_df = scores_df.sort_values(
-                        "Accuracy", ascending=False
-                    )
+                    scores_df = scores_df.sort_values("Accuracy", ascending=False)
                 return scores_df, predictions
 
         # Fit each classifier
@@ -440,9 +403,7 @@ class LazyClassifier:
             try:
                 # Check if GPU model is available
                 if self.random_state:
-                    gpu_model_class = get_best_model(
-                        model_name, prefer_gpu=True
-                    )
+                    gpu_model_class = get_best_model(model_name, prefer_gpu=True)
                     if gpu_model_class is not None:
                         model_class = gpu_model_class
 
@@ -472,27 +433,17 @@ class LazyClassifier:
 
                 # Calculate metrics
                 metrics = {}
-                metrics["Accuracy"] = accuracy_score(
-                    y_test_np, y_pred, normalize=True
-                )
-                metrics["Balanced Accuracy"] = balanced_accuracy_score(
-                    y_test_np, y_pred
-                )
-                metrics["F1 Score"] = f1_score(
-                    y_test_np, y_pred, average="weighted"
-                )
+                metrics["Accuracy"] = accuracy_score(y_test_np, y_pred, normalize=True)
+                metrics["Balanced Accuracy"] = balanced_accuracy_score(y_test_np, y_pred)
+                metrics["F1 Score"] = f1_score(y_test_np, y_pred, average="weighted")
 
                 # Calculate ROC AUC if possible (requires predict_proba)
                 if hasattr(pipe, "predict_proba"):
                     try:
-                        if (
-                            len(np.unique(y_test_np)) > 1
-                        ):  # Only calculate for non-degenerate cases
+                        if len(np.unique(y_test_np)) > 1:  # Only calculate for non-degenerate cases
                             y_proba = pipe.predict_proba(X_test_np)
                             if y_proba.shape[1] == 2:  # Binary case
-                                metrics["ROC AUC"] = roc_auc_score(
-                                    y_test_np, y_proba[:, 1]
-                                )
+                                metrics["ROC AUC"] = roc_auc_score(y_test_np, y_proba[:, 1])
                             else:  # Multi-class case
                                 metrics["ROC AUC"] = roc_auc_score(
                                     y_test_np,
@@ -502,9 +453,7 @@ class LazyClassifier:
                                 )
                     except Exception as e:
                         if not self.ignore_warnings:
-                            logger.warning(
-                                f"Error calculating ROC AUC for {model_name}: {str(e)}"
-                            )
+                            logger.warning(f"Error calculating ROC AUC for {model_name}: {str(e)}")
                         metrics["ROC AUC"] = float("nan")
                 else:
                     metrics["ROC AUC"] = float("nan")
@@ -542,9 +491,7 @@ class LazyClassifier:
 
                 # Even with error, try to add a dummy entry to ensure we have at least one model
                 if len(scores_dict) == 0 and len(model_classes) <= 3:
-                    logger.warning(
-                        f"Adding dummy entry for {model_name} due to error"
-                    )
+                    logger.warning(f"Adding dummy entry for {model_name} due to error")
                     scores_dict[model_name] = {
                         "Accuracy": 0.0,
                         "Balanced Accuracy": 0.0,
@@ -629,15 +576,11 @@ class LazyClassifier:
         """
         # If models haven't been fitted yet, fit them
         if not hasattr(self, "fitted_models") or not self.fitted_models:
-            print(
-                "Calling fit() from provide_models() since fitted_models is empty"
-            )
+            print("Calling fit() from provide_models() since fitted_models is empty")
             self.fit(X_train, X_test, y_train, y_test)
 
         # Log before fallback
-        print(
-            f"After fit(): fitted_models has {len(self.fitted_models)} items"
-        )
+        print(f"After fit(): fitted_models has {len(self.fitted_models)} items")
 
         # If still no models, try to add at least two models for test cases
         if not self.fitted_models or len(self.fitted_models) < 1:
@@ -649,12 +592,8 @@ class LazyClassifier:
             from sklearn.tree import DecisionTreeClassifier
 
             test_models = {
-                "DecisionTreeClassifier": DecisionTreeClassifier(
-                    random_state=self.random_state
-                ),
-                "RandomForestClassifier": RandomForestClassifier(
-                    random_state=self.random_state
-                ),
+                "DecisionTreeClassifier": DecisionTreeClassifier(random_state=self.random_state),
+                "RandomForestClassifier": RandomForestClassifier(random_state=self.random_state),
             }
 
             # Convert to DataFrames for column specification compatibility
@@ -662,9 +601,7 @@ class LazyClassifier:
                 # Create processor - handle numpy arrays by converting to DataFrames first
                 if not isinstance(X_train, pd.DataFrame):
                     # Convert to DataFrame with feature column names
-                    feature_names = [
-                        f"feature_{i}" for i in range(X_train.shape[1])
-                    ]
+                    feature_names = [f"feature_{i}" for i in range(X_train.shape[1])]
                     X_train_df = pd.DataFrame(X_train, columns=feature_names)
                     X_test_df = pd.DataFrame(X_test, columns=feature_names)
                 else:
@@ -705,16 +642,12 @@ class LazyClassifier:
                     except Exception as e:
                         print(f"Error fitting fallback model {name}: {e}")
                         if not self.ignore_warnings:
-                            logger.warning(
-                                f"Error fitting {name} in provide_models fallback: {e}"
-                            )
+                            logger.warning(f"Error fitting {name} in provide_models fallback: {e}")
             except Exception as e:
                 print(f"Error setting up fallback preprocessor: {e}")
 
         # Log after fallback
-        print(
-            f"Final result: fitted_models has {len(self.fitted_models)} items"
-        )
+        print(f"Final result: fitted_models has {len(self.fitted_models)} items")
 
         # Return the fitted models
         return self.fitted_models
@@ -764,9 +697,7 @@ class LazyClassifier:
             from sklearn.model_selection import cross_val_score
             from sklearn.preprocessing import StandardScaler
         except ImportError:
-            logger.error(
-                "Optuna not installed. Please install optuna to use this function."
-            )
+            logger.error("Optuna not installed. Please install optuna to use this function.")
             return {}
 
         # Check input data - ensure we're using Dataframes for X
@@ -802,35 +733,19 @@ class LazyClassifier:
                 "ExtraTreesClassifier",
             ]:
                 param_dist = {
-                    "n_estimators": optuna.distributions.IntDistribution(
-                        50, 1000
-                    ),
+                    "n_estimators": optuna.distributions.IntDistribution(50, 1000),
                     "max_depth": optuna.distributions.IntDistribution(3, 50),
-                    "min_samples_split": optuna.distributions.IntDistribution(
-                        2, 20
-                    ),
-                    "min_samples_leaf": optuna.distributions.IntDistribution(
-                        1, 20
-                    ),
-                    "max_features": optuna.distributions.CategoricalDistribution(
-                        ["sqrt", "log2"]
-                    ),
+                    "min_samples_split": optuna.distributions.IntDistribution(2, 20),
+                    "min_samples_leaf": optuna.distributions.IntDistribution(1, 20),
+                    "max_features": optuna.distributions.CategoricalDistribution(["sqrt", "log2"]),
                 }
             elif estimator_name == "XGBClassifier":
                 param_dist = {
-                    "n_estimators": optuna.distributions.IntDistribution(
-                        50, 1000
-                    ),
+                    "n_estimators": optuna.distributions.IntDistribution(50, 1000),
                     "max_depth": optuna.distributions.IntDistribution(3, 50),
-                    "learning_rate": optuna.distributions.FloatDistribution(
-                        0.01, 0.3
-                    ),
-                    "subsample": optuna.distributions.FloatDistribution(
-                        0.5, 1.0
-                    ),
-                    "colsample_bytree": optuna.distributions.FloatDistribution(
-                        0.5, 1.0
-                    ),
+                    "learning_rate": optuna.distributions.FloatDistribution(0.01, 0.3),
+                    "subsample": optuna.distributions.FloatDistribution(0.5, 1.0),
+                    "colsample_bytree": optuna.distributions.FloatDistribution(0.5, 1.0),
                 }
             else:
                 logger.warning(
@@ -843,24 +758,16 @@ class LazyClassifier:
             # Sample hyperparameters
             params = {}
             for param_name, distribution in param_dist.items():
-                if isinstance(
-                    distribution, optuna.distributions.IntDistribution
-                ):
+                if isinstance(distribution, optuna.distributions.IntDistribution):
                     params[param_name] = trial.suggest_int(
                         param_name, distribution.low, distribution.high
                     )
-                elif isinstance(
-                    distribution, optuna.distributions.FloatDistribution
-                ):
+                elif isinstance(distribution, optuna.distributions.FloatDistribution):
                     params[param_name] = trial.suggest_float(
                         param_name, distribution.low, distribution.high
                     )
-                elif isinstance(
-                    distribution, optuna.distributions.CategoricalDistribution
-                ):
-                    params[param_name] = trial.suggest_categorical(
-                        param_name, distribution.choices
-                    )
+                elif isinstance(distribution, optuna.distributions.CategoricalDistribution):
+                    params[param_name] = trial.suggest_categorical(param_name, distribution.choices)
 
             # Create model with sampled params
             model = estimator(**params)
@@ -874,9 +781,7 @@ class LazyClassifier:
             )
 
             # Evaluate model
-            scores = cross_val_score(
-                pipe, X_train, y_train, cv=cv, scoring=scoring, n_jobs=n_jobs
-            )
+            scores = cross_val_score(pipe, X_train, y_train, cv=cv, scoring=scoring, n_jobs=n_jobs)
             return scores.mean()
 
         # Create study and optimize

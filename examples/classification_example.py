@@ -30,13 +30,9 @@ except ImportError:
         # Try importing from old structure for backward compatibility
         from lazypredict.Supervised import LazyClassifier
 
-        print(
-            "Successfully imported from old structure (backward compatibility)"
-        )
+        print("Successfully imported from old structure (backward compatibility)")
     except ImportError:
-        raise ImportError(
-            "Failed to import LazyClassifier from either location"
-        )
+        raise ImportError("Failed to import LazyClassifier from either location")
 
 
 def custom_f1_metric(y_true, y_pred):
@@ -52,15 +48,11 @@ def main():
     y = pd.Series(data.target, name="target")
 
     # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     print("\n1. Basic Classification Example:")
     # Basic classification with all models
-    clf = LazyClassifier(
-        verbose=1, ignore_warnings=True, random_state=42, predictions=True
-    )
+    clf = LazyClassifier(verbose=1, ignore_warnings=True, random_state=42, predictions=True)
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
     print("\nModel Comparison:")
     print(models)
@@ -72,9 +64,7 @@ def main():
         print(f"MLflow tracking URI: {mlflow_uri}")
 
         # Run with MLflow tracking
-        clf_mlflow = LazyClassifier(
-            verbose=1, ignore_warnings=True, random_state=42
-        )
+        clf_mlflow = LazyClassifier(verbose=1, ignore_warnings=True, random_state=42)
         models_mlflow, _ = clf_mlflow.fit(
             X_train, X_test, y_train, y_test, mlflow_tracking_uri=mlflow_uri
         )
@@ -84,9 +74,7 @@ def main():
     from sklearn.ensemble import RandomForestClassifier
 
     clf_opt = LazyClassifier(verbose=1, ignore_warnings=True, random_state=42)
-    best_params = clf_opt.fit_optimize(
-        X_train, y_train, RandomForestClassifier
-    )
+    best_params = clf_opt.fit_optimize(X_train, y_train, RandomForestClassifier)
     print("Best RandomForest Parameters:", best_params)
 
     print("\n4. Custom Metric Example:")

@@ -179,9 +179,7 @@ def log_metric(key: str, value: Union[float, int]) -> None:
             mlflow.log_metric(key, float(value))
             logger.debug(f"Logged metric: {key}={value}")
         else:
-            logger.debug(
-                f"Skipped logging invalid metric value: {key}={value}"
-            )
+            logger.debug(f"Skipped logging invalid metric value: {key}={value}")
     except Exception as e:
         logger.error(f"Error logging metric: {e}")
 
@@ -267,15 +265,11 @@ def log_model_performance(
 
         # Log metrics
         for key, value in metrics.items():
-            if value is not None and not pd.isna(
-                value
-            ):  # Only log valid values
+            if value is not None and not pd.isna(value):  # Only log valid values
                 try:
                     mlflow.log_metric(f"{model_name}_{key}", float(value))
                 except (ValueError, TypeError):
-                    logger.warning(
-                        f"Could not convert metric {key}={value} to float, skipping."
-                    )
+                    logger.warning(f"Could not convert metric {key}={value} to float, skipping.")
 
         # Log parameters
         if params:

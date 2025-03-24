@@ -46,9 +46,7 @@ def get_classification_metrics(y_true, y_pred, y_score=None):
     n_classes = len(np.unique(y_true))
     if n_classes == 2:
         metrics["F1 Score"] = f1_score(y_true, y_pred, average="binary")
-        metrics["Precision"] = precision_score(
-            y_true, y_pred, average="binary"
-        )
+        metrics["Precision"] = precision_score(y_true, y_pred, average="binary")
         metrics["Recall"] = recall_score(y_true, y_pred, average="binary")
 
         # Calculate ROC AUC if probability scores are provided
@@ -60,17 +58,13 @@ def get_classification_metrics(y_true, y_pred, y_score=None):
     else:
         # For multiclass problems
         metrics["F1 Score"] = f1_score(y_true, y_pred, average="weighted")
-        metrics["Precision"] = precision_score(
-            y_true, y_pred, average="weighted"
-        )
+        metrics["Precision"] = precision_score(y_true, y_pred, average="weighted")
         metrics["Recall"] = recall_score(y_true, y_pred, average="weighted")
 
         # ROC AUC is more complex for multiclass
         if y_score is not None:
             try:
-                metrics["ROC AUC"] = roc_auc_score(
-                    y_true, y_score, multi_class="ovr"
-                )
+                metrics["ROC AUC"] = roc_auc_score(y_true, y_score, multi_class="ovr")
             except:
                 metrics["ROC AUC"] = np.nan
 

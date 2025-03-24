@@ -12,9 +12,7 @@ import unittest
 import warnings
 
 # Add the parent directory to sys.path
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Ignore warnings during tests
 warnings.filterwarnings("ignore")

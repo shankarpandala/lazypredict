@@ -24,9 +24,7 @@ from sklearn.metrics import (
 logger = logging.getLogger("lazypredict.metrics")
 
 
-def adjusted_rsquared(
-    y_true: np.ndarray, y_pred: np.ndarray, n_features: int
-) -> float:
+def adjusted_rsquared(y_true: np.ndarray, y_pred: np.ndarray, n_features: int) -> float:
     """Calculate adjusted R-squared score.
 
     Parameters
@@ -85,9 +83,7 @@ def get_regression_metrics(
 
     # Add adjusted R-squared if n_features is provided
     if n_features is not None:
-        metrics["Adjusted R-Squared"] = adjusted_rsquared(
-            y_true, y_pred, n_features
-        )
+        metrics["Adjusted R-Squared"] = adjusted_rsquared(y_true, y_pred, n_features)
 
     # Add custom metric if provided
     if custom_metric is not None:
@@ -125,15 +121,9 @@ def get_classification_metrics(
     """
     metrics = {
         "Accuracy": accuracy_score(y_true, y_pred),
-        "Precision": precision_score(
-            y_true, y_pred, average="weighted", zero_division=0
-        ),
-        "Recall": recall_score(
-            y_true, y_pred, average="weighted", zero_division=0
-        ),
-        "F1 Score": f1_score(
-            y_true, y_pred, average="weighted", zero_division=0
-        ),
+        "Precision": precision_score(y_true, y_pred, average="weighted", zero_division=0),
+        "Recall": recall_score(y_true, y_pred, average="weighted", zero_division=0),
+        "F1 Score": f1_score(y_true, y_pred, average="weighted", zero_division=0),
     }
 
     # Add ROC AUC if probabilities are available

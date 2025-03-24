@@ -31,13 +31,9 @@ except ImportError:
         # Try importing from old structure for backward compatibility
         from lazypredict.Supervised import LazyRegressor
 
-        print(
-            "Successfully imported from old structure (backward compatibility)"
-        )
+        print("Successfully imported from old structure (backward compatibility)")
     except ImportError:
-        raise ImportError(
-            "Failed to import LazyRegressor from either location"
-        )
+        raise ImportError("Failed to import LazyRegressor from either location")
 
 
 def custom_rmse_metric(y_true, y_pred):
@@ -53,9 +49,7 @@ def main():
     y = pd.Series(data.target, name="target")
 
     # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     print("\n1. Basic Regression Example:")
     # Basic regression with all models
@@ -71,9 +65,7 @@ def main():
         print(f"MLflow tracking URI: {mlflow_uri}")
 
         # Run with MLflow tracking
-        reg_mlflow = LazyRegressor(
-            verbose=1, ignore_warnings=True, random_state=42
-        )
+        reg_mlflow = LazyRegressor(verbose=1, ignore_warnings=True, random_state=42)
         models_mlflow, _ = reg_mlflow.fit(
             X_train, X_test, y_train, y_test, mlflow_tracking_uri=mlflow_uri
         )

@@ -45,14 +45,10 @@ else:
 class TestLazyClassifier(unittest.TestCase):
     def setUp(self):
         data = load_iris()
-        self.X_train, self.X_test, self.y_train, self.y_test = (
-            train_test_split(
-                data.data, data.target, test_size=0.2, random_state=42
-            )
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            data.data, data.target, test_size=0.2, random_state=42
         )
-        self.classifier = LazyClassifier(
-            verbose=0, ignore_warnings=True, custom_metric=None
-        )
+        self.classifier = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
 
     def test_initialization(self):
         self.assertIsInstance(self.classifier, LazyClassifier)
@@ -65,9 +61,7 @@ class TestLazyClassifier(unittest.TestCase):
         self.assertTrue(len(scores) > 0)
 
     def test_provide_models(self):
-        self.classifier.fit(
-            self.X_train, self.X_test, self.y_train, self.y_test
-        )
+        self.classifier.fit(self.X_train, self.X_test, self.y_train, self.y_test)
         models = self.classifier.provide_models(
             self.X_train, self.X_test, self.y_train, self.y_test
         )
@@ -108,14 +102,10 @@ class TestLazyClassifier(unittest.TestCase):
 class TestLazyRegressor(unittest.TestCase):
     def setUp(self):
         data = load_diabetes()
-        self.X_train, self.X_test, self.y_train, self.y_test = (
-            train_test_split(
-                data.data, data.target, test_size=0.2, random_state=42
-            )
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            data.data, data.target, test_size=0.2, random_state=42
         )
-        self.regressor = LazyRegressor(
-            verbose=0, ignore_warnings=True, custom_metric=None
-        )
+        self.regressor = LazyRegressor(verbose=0, ignore_warnings=True, custom_metric=None)
 
     def test_initialization(self):
         self.assertIsInstance(self.regressor, LazyRegressor)
@@ -128,12 +118,8 @@ class TestLazyRegressor(unittest.TestCase):
         self.assertTrue(len(scores) > 0)
 
     def test_provide_models(self):
-        self.regressor.fit(
-            self.X_train, self.X_test, self.y_train, self.y_test
-        )
-        models = self.regressor.provide_models(
-            self.X_train, self.X_test, self.y_train, self.y_test
-        )
+        self.regressor.fit(self.X_train, self.X_test, self.y_train, self.y_test)
+        models = self.regressor.provide_models(self.X_train, self.X_test, self.y_train, self.y_test)
         self.assertIsNotNone(models)
         self.assertTrue(len(models) > 0)
 

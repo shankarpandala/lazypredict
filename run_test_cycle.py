@@ -57,9 +57,7 @@ def run_test_cycle(test_module=None, run_example=None):
 
 def main():
     """Main function"""
-    parser = argparse.ArgumentParser(
-        description="Run a test cycle for lazypredict"
-    )
+    parser = argparse.ArgumentParser(description="Run a test cycle for lazypredict")
     parser.add_argument("--test", "-t", help="Specific test module to run")
     parser.add_argument(
         "--example",

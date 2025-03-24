@@ -63,9 +63,7 @@ class LazySequencePredictor(Lazy):
         scores : pandas.DataFrame
             DataFrame with performance metrics for each model
         """
-        raise NotImplementedError(
-            "LazySequencePredictor.fit() is not implemented yet"
-        )
+        raise NotImplementedError("LazySequencePredictor.fit() is not implemented yet")
 
     def provide_models(self, X, y):
         """
@@ -84,6 +82,4 @@ class LazySequencePredictor(Lazy):
         models : dict
             Dictionary with trained models
         """
-        raise NotImplementedError(
-            "LazySequencePredictor.provide_models() is not implemented yet"
-        )
+        raise NotImplementedError("LazySequencePredictor.provide_models() is not implemented yet")

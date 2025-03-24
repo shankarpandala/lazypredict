@@ -10,9 +10,7 @@ import numpy as np
 import pandas as pd
 
 # Configure logger
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
-)
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -47,9 +45,7 @@ class Lazy:
 
             return torch.cuda.is_available()
         except ImportError:
-            logger.warning(
-                "torch not installed. GPU acceleration not available."
-            )
+            logger.warning("torch not installed. GPU acceleration not available.")
             return False
 
     def _check_data(self, X_train, X_test, y_train, y_test):
@@ -125,9 +121,7 @@ class Lazy:
         predictions : dict
             Dictionary with predictions for each model
         """
-        raise NotImplementedError(
-            "This method should be implemented by subclasses"
-        )
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     def provide_models(self, X_train, X_test, y_train, y_test):
         """
@@ -154,6 +148,4 @@ class Lazy:
         models : dict
             Dictionary with trained models
         """
-        raise NotImplementedError(
-            "This method should be implemented by subclasses"
-        )
+        raise NotImplementedError("This method should be implemented by subclasses")

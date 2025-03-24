@@ -59,9 +59,7 @@ class LazyRegressor:
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
-        self.random_state = (
-            random_state or 42
-        )  # Default to 42 for test consistency
+        self.random_state = random_state or 42  # Default to 42 for test consistency
         self.regressors_list = regressors
         self.progress_bar = None
         self.scores = {}
@@ -99,19 +97,14 @@ class LazyRegressor:
             try:
                 model_name = get_model_name(reg_class)
                 if hasattr(reg_class, "random_state") or (
-                    hasattr(reg_class, "get_params")
-                    and "random_state" in reg_class().get_params()
+                    hasattr(reg_class, "get_params") and "random_state" in reg_class().get_params()
                 ):
-                    self.models[model_name] = reg_class(
-                        random_state=self.random_state
-                    )
+                    self.models[model_name] = reg_class(random_state=self.random_state)
                 else:
                     self.models[model_name] = reg_class()
             except Exception as e:
                 if not self.ignore_warnings:
-                    self.logger.warning(
-                        f"Error initializing {get_model_name(reg_class)}: {str(e)}"
-                    )
+                    self.logger.warning(f"Error initializing {get_model_name(reg_class)}: {str(e)}")
 
         # Initialize fitted models dict
         self.fitted_models = {}
@@ -120,9 +113,7 @@ class LazyRegressor:
         """Detect if we're running in a test environment."""
         import sys
 
-        return "pytest" in sys.modules or any(
-            "test_" in arg for arg in sys.argv
-        )
+        return "pytest" in sys.modules or any("test_" in arg for arg in sys.argv)
 
     def _check_data(
         self,
@@ -161,29 +152,19 @@ class LazyRegressor:
             y_train = y_train.to_numpy()
 
         # Handle y_test: convert Series to arrays
-        if y_test is not None and isinstance(
-            y_test, (pd.Series, pd.DataFrame)
-        ):
+        if y_test is not None and isinstance(y_test, (pd.Series, pd.DataFrame)):
             y_test = y_test.to_numpy()
 
         # Ensure numpy arrays for X inputs if they're not already DataFrames
-        if not isinstance(X_train, pd.DataFrame) and not isinstance(
-            X_train, np.ndarray
-        ):
+        if not isinstance(X_train, pd.DataFrame) and not isinstance(X_train, np.ndarray):
             X_train = np.array(X_train)
-        if not isinstance(X_test, pd.DataFrame) and not isinstance(
-            X_test, np.ndarray
-        ):
+        if not isinstance(X_test, pd.DataFrame) and not isinstance(X_test, np.ndarray):
             X_test = np.array(X_test)
 
         # Reshape y if needed
         if len(y_train.shape) > 1 and y_train.shape[1] == 1:
             y_train = y_train.ravel()
-        if (
-            y_test is not None
-            and len(y_test.shape) > 1
-            and y_test.shape[1] == 1
-        ):
+        if y_test is not None and len(y_test.shape) > 1 and y_test.shape[1] == 1:
             y_test = y_test.ravel()
 
         return X_train, X_test, y_train, y_test
@@ -229,9 +210,7 @@ class LazyRegressor:
             run_params = {
                 "verbose": self.verbose,
                 "ignore_warnings": self.ignore_warnings,
-                "custom_metric": (
-                    self.custom_metric.__name__ if self.custom_metric else None
-                ),
+                "custom_metric": (self.custom_metric.__name__ if self.custom_metric else None),
                 "random_state": self.random_state,
             }
             log_params(run_params)
@@ -269,9 +248,7 @@ class LazyRegressor:
                 pipe.fit(X_train_np, y_train_np)
                 y_pred = pipe.predict(X_test_np)
             except Exception as e:
-                logger.warning(
-                    f"Error fitting test model, using dummy predictions: {str(e)}"
-                )
+                logger.warning(f"Error fitting test model, using dummy predictions: {str(e)}")
                 y_pred = np.zeros_like(y_test_np)
 
             # Store in fitted models
@@ -293,9 +270,7 @@ class LazyRegressor:
             # Add custom metric if provided
             if self.custom_metric:
                 try:
-                    metrics["Custom Metric"] = self.custom_metric(
-                        y_test_np, y_pred
-                    )
+                    metrics["Custom Metric"] = self.custom_metric(y_test_np, y_pred)
                 except:
                     metrics["Custom Metric"] = 0.8
 
@@ -303,9 +278,7 @@ class LazyRegressor:
             self.scores[model_name] = metrics
 
             # Create DataFrame and return
-            scores_df = pd.DataFrame.from_dict(
-                self.scores, orient="index"
-            ).reset_index()
+            scores_df = pd.DataFrame.from_dict(self.scores, orient="index").reset_index()
             scores_df.rename(columns={"index": "Model"}, inplace=True)
             return scores_df, self.predictions
 
@@ -332,9 +305,7 @@ class LazyRegressor:
                     model = model_class()
 
                 # Create pipeline
-                pipe = Pipeline(
-                    [("preprocessor", preprocessor), ("regressor", model)]
-                )
+                pipe = Pipeline([("preprocessor", preprocessor), ("regressor", model)])
 
                 # Fit model
                 pipe.fit(X_train_np, y_train_np)
@@ -368,16 +339,12 @@ class LazyRegressor:
 
             # Return early for test case
             if self.scores:
-                scores_df = pd.DataFrame.from_dict(
-                    self.scores, orient="index"
-                ).reset_index()
+                scores_df = pd.DataFrame.from_dict(self.scores, orient="index").reset_index()
                 scores_df.rename(columns={"index": "Model"}, inplace=True)
                 return scores_df, self.predictions
 
         # Set up progress bar
-        self.progress_bar = tqdm(
-            self._filtered_models, desc="Fitting regressors"
-        )
+        self.progress_bar = tqdm(self._filtered_models, desc="Fitting regressors")
 
         # Train and evaluate each model
         for Model in self.progress_bar:
@@ -392,9 +359,7 @@ class LazyRegressor:
                     model = Model()
 
                 # Create pipeline
-                pipe = Pipeline(
-                    [("preprocessor", preprocessor), ("regressor", model)]
-                )
+                pipe = Pipeline([("preprocessor", preprocessor), ("regressor", model)])
 
                 # Fit model
                 pipe.fit(X_train_np, y_train_np)
@@ -404,9 +369,7 @@ class LazyRegressor:
                 self.predictions[model_name] = y_pred
 
                 # Calculate metrics
-                metrics = get_regression_metrics(
-                    y_test_np, y_pred, n_features=X_train_np.shape[1]
-                )
+                metrics = get_regression_metrics(y_test_np, y_pred, n_features=X_train_np.shape[1])
                 metrics["Time taken"] = time.time() - start_time
 
                 # Add custom metric if provided
@@ -432,9 +395,7 @@ class LazyRegressor:
 
                 # Even with error, try to add a dummy entry for test cases
                 if len(self.scores) == 0 and len(self._filtered_models) <= 3:
-                    logger.warning(
-                        f"Adding dummy entry for {model_name} due to error"
-                    )
+                    logger.warning(f"Adding dummy entry for {model_name} due to error")
                     self.scores[model_name] = {
                         "R-Squared": 0.0,
                         "Adjusted R-Squared": 0.0,
@@ -477,9 +438,7 @@ class LazyRegressor:
             return pd.DataFrame(columns=columns), {}
 
         # Create DataFrame from scores
-        scores_df = pd.DataFrame.from_dict(
-            self.scores, orient="index"
-        ).reset_index()
+        scores_df = pd.DataFrame.from_dict(self.scores, orient="index").reset_index()
         scores_df.rename(columns={"index": "Model"}, inplace=True)
 
         # Sort by R-Squared value
@@ -532,12 +491,8 @@ class LazyRegressor:
             from sklearn.tree import DecisionTreeRegressor
 
             test_models = {
-                "DecisionTreeRegressor": DecisionTreeRegressor(
-                    random_state=self.random_state
-                ),
-                "RandomForestRegressor": RandomForestRegressor(
-                    random_state=self.random_state
-                ),
+                "DecisionTreeRegressor": DecisionTreeRegressor(random_state=self.random_state),
+                "RandomForestRegressor": RandomForestRegressor(random_state=self.random_state),
             }
 
             # Convert to DataFrames for column specification compatibility
@@ -545,9 +500,7 @@ class LazyRegressor:
                 # Create processor - handle numpy arrays by converting to DataFrames first
                 if not isinstance(X_train, pd.DataFrame):
                     # Convert to DataFrame with feature column names
-                    feature_names = [
-                        f"feature_{i}" for i in range(X_train.shape[1])
-                    ]
+                    feature_names = [f"feature_{i}" for i in range(X_train.shape[1])]
                     X_train_df = pd.DataFrame(X_train, columns=feature_names)
                     X_test_df = pd.DataFrame(X_test, columns=feature_names)
                 else:
@@ -585,14 +538,10 @@ class LazyRegressor:
                         self.fitted_models[name] = pipe
                     except Exception as e:
                         if not self.ignore_warnings:
-                            logger.warning(
-                                f"Error fitting {name} in provide_models fallback: {e}"
-                            )
+                            logger.warning(f"Error fitting {name} in provide_models fallback: {e}")
             except Exception as e:
                 if not self.ignore_warnings:
-                    logger.warning(
-                        f"Error setting up fallback preprocessor: {e}"
-                    )
+                    logger.warning(f"Error setting up fallback preprocessor: {e}")
 
         # Return fitted models
         return self.fitted_models
@@ -614,9 +563,7 @@ class LazyRegressor:
             from sklearn.model_selection import cross_val_score
             from sklearn.preprocessing import StandardScaler
         except ImportError:
-            logger.error(
-                "Optuna not installed. Please install optuna to use this function."
-            )
+            logger.error("Optuna not installed. Please install optuna to use this function.")
             return {}
 
         # Special case handling for the integration test with RandomForestClassifier
@@ -651,19 +598,11 @@ class LazyRegressor:
         if param_dist is None:
             if estimator_name == "RandomForestRegressor":
                 param_dist = {
-                    "n_estimators": optuna.distributions.IntDistribution(
-                        50, 1000
-                    ),
+                    "n_estimators": optuna.distributions.IntDistribution(50, 1000),
                     "max_depth": optuna.distributions.IntDistribution(3, 50),
-                    "min_samples_split": optuna.distributions.IntDistribution(
-                        2, 20
-                    ),
-                    "min_samples_leaf": optuna.distributions.IntDistribution(
-                        1, 20
-                    ),
-                    "max_features": optuna.distributions.CategoricalDistribution(
-                        ["sqrt", "log2"]
-                    ),
+                    "min_samples_split": optuna.distributions.IntDistribution(2, 20),
+                    "min_samples_leaf": optuna.distributions.IntDistribution(1, 20),
+                    "max_features": optuna.distributions.CategoricalDistribution(["sqrt", "log2"]),
                 }
             else:
                 logger.warning(
@@ -676,24 +615,16 @@ class LazyRegressor:
             # Sample hyperparameters
             params = {}
             for param_name, distribution in param_dist.items():
-                if isinstance(
-                    distribution, optuna.distributions.IntDistribution
-                ):
+                if isinstance(distribution, optuna.distributions.IntDistribution):
                     params[param_name] = trial.suggest_int(
                         param_name, distribution.low, distribution.high
                     )
-                elif isinstance(
-                    distribution, optuna.distributions.FloatDistribution
-                ):
+                elif isinstance(distribution, optuna.distributions.FloatDistribution):
                     params[param_name] = trial.suggest_float(
                         param_name, distribution.low, distribution.high
                     )
-                elif isinstance(
-                    distribution, optuna.distributions.CategoricalDistribution
-                ):
-                    params[param_name] = trial.suggest_categorical(
-                        param_name, distribution.choices
-                    )
+                elif isinstance(distribution, optuna.distributions.CategoricalDistribution):
+                    params[param_name] = trial.suggest_categorical(param_name, distribution.choices)
 
             # Create model with sampled params
             model = estimator(**params)
@@ -707,9 +638,7 @@ class LazyRegressor:
             )
 
             # Evaluate model
-            scores = cross_val_score(
-                pipe, X_train, y_train, cv=cv, scoring=scoring, n_jobs=n_jobs
-            )
+            scores = cross_val_score(pipe, X_train, y_train, cv=cv, scoring=scoring, n_jobs=n_jobs)
             return scores.mean()
 
         # Create study and optimize

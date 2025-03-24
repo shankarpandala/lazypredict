@@ -34,8 +34,8 @@ class TestBaseUtils(unittest.TestCase):
             y_train = np.random.rand(10)
             y_test = np.random.rand(5)
 
-            X_train_out, X_test_out, y_train_out, y_test_out = (
-                base._check_data(X_train, X_test, y_train, y_test)
+            X_train_out, X_test_out, y_train_out, y_test_out = base._check_data(
+                X_train, X_test, y_train, y_test
             )
 
             self.assertIsInstance(X_train_out, pd.DataFrame)
@@ -49,10 +49,8 @@ class TestBaseUtils(unittest.TestCase):
             y_train_series = pd.Series(y_train)
             y_test_series = pd.Series(y_test)
 
-            X_train_out, X_test_out, y_train_out, y_test_out = (
-                base._check_data(
-                    X_train_df, X_test_df, y_train_series, y_test_series
-                )
+            X_train_out, X_test_out, y_train_out, y_test_out = base._check_data(
+                X_train_df, X_test_df, y_train_series, y_test_series
             )
 
             self.assertIsInstance(X_train_out, pd.DataFrame)
@@ -145,23 +143,17 @@ class TestPreprocessingUtils(unittest.TestCase):
             self.assertIsInstance(preprocessor, ColumnTransformer)
 
             # Test with pipeline return type
-            preprocessor = create_preprocessor(
-                self.data, return_type="pipeline"
-            )
+            preprocessor = create_preprocessor(self.data, return_type="pipeline")
             self.assertIsInstance(preprocessor, Pipeline)
 
             # Test with polynomial features disabled
-            preprocessor = create_preprocessor(
-                self.data, enable_polynomial_features=False
-            )
+            preprocessor = create_preprocessor(self.data, enable_polynomial_features=False)
             self.assertIsInstance(preprocessor, ColumnTransformer)
 
             # Test with numpy array input
             X = np.random.rand(10, 2)
             preprocessor = create_preprocessor(X)
-            self.assertTrue(
-                isinstance(preprocessor, (Pipeline, ColumnTransformer))
-            )
+            self.assertTrue(isinstance(preprocessor, (Pipeline, ColumnTransformer)))
 
         except ImportError:
             self.skipTest("Could not import preprocessing utilities")
@@ -213,9 +205,7 @@ class TestGPUUtils(unittest.TestCase):
             from lazypredict.utils.gpu import get_best_model
 
             # Test with a common model
-            model_class = get_best_model(
-                "RandomForestClassifier", prefer_gpu=False
-            )
+            model_class = get_best_model("RandomForestClassifier", prefer_gpu=False)
 
             # The test should pass whether or not the model is found
             if model_class is not None:
@@ -308,9 +298,7 @@ class TestMLflowUtils(unittest.TestCase):
 
             # We need to patch tempfile.TemporaryDirectory
             with patch("tempfile.TemporaryDirectory") as mock_temp_dir:
-                mock_temp_dir.return_value.__enter__.return_value = (
-                    "/tmp/temp_dir"
-                )
+                mock_temp_dir.return_value.__enter__.return_value = "/tmp/temp_dir"
                 log_dataframe(df, "test_artifact")
 
                 # Assert log_artifact was called (path will be different each time)

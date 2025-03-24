@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, dev ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main, master ]
@@ -48,7 +48,7 @@ jobs:
   docs:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')
 
     steps:
     - uses: actions/checkout@v4
@@ -62,7 +62,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install '.[dev]'
-        pip install sphinx-rtd-theme myst-parser
+        pip install sphinx sphinx-rtd-theme myst-parser
+    
+    - name: Create docs directory if it doesn't exist
+      run: |
+        mkdir -p docs
+        if [ ! -f docs/Makefile ]; then
+          sphinx-quickstart -q --sep --project=lazypredict --author="Shankar Rao Pandala" docs
+        fi
     
     - name: Build documentation
       run: |

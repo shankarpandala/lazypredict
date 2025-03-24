@@ -1,0 +1,117 @@
+name: Dev Pre-release
+
+on:
+  pull_request:
+    branches: [ dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install '.[dev]'
+    
+    - name: Run style checks
+      run: |
+        black --check .
+        isort --check-only .
+        flake8 .
+    
+    - name: Run type checks
+      run: mypy lazypredict
+    
+    - name: Run tests
+      run: |
+        pytest --cov=lazypredict tests/
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  pre-release:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: dev
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install '.[dev]'
+        pip install build twine bump2version
+    
+    - name: Configure Git
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+    
+    - name: Generate Pre-release Version
+      id: version
+      run: |
+        # Get current version
+        CURRENT_VERSION=$(grep -Po "__version__ = \"\K[^\"]*" lazypredict/__init__.py)
+        PR_NUMBER=$(echo $GITHUB_REF | sed -n 's/.*\/\([0-9]*\)\/merge/\1/p')
+        # Create pre-release version with PR number
+        PRE_VERSION="${CURRENT_VERSION}-dev${PR_NUMBER}"
+        echo "VERSION=${PRE_VERSION}" >> $GITHUB_ENV
+        
+        # Update version in files
+        sed -i "s/__version__ = \".*\"/__version__ = \"${PRE_VERSION}\"/" lazypredict/__init__.py
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package
+      run: twine check dist/*
+    
+    - name: Publish to PyPI as pre-release
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        twine upload --skip-existing dist/* --verbose
+
+    - name: Create Pre-release Tag
+      run: |
+        git tag -a "v${{ env.VERSION }}" -m "Pre-release version v${{ env.VERSION }}"
+        git push origin "v${{ env.VERSION }}"
+    
+    - name: Create GitHub Pre-release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: "v${{ env.VERSION }}"
+        name: "Pre-release v${{ env.VERSION }}"
+        prerelease: true
+        files: |
+          dist/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

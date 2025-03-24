@@ -1,0 +1,77 @@
+name: Release Patch Version
+
+on:
+  pull_request:
+    branches: [ main, master ]
+    types: [ closed ]
+
+jobs:
+  patch-release:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev'
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install '.[dev]'
+        pip install build twine bump2version
+    
+    - name: Configure Git
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+    
+    - name: Bump Patch Version
+      id: bump_version
+      run: |
+        # Bump patch version
+        bump2version patch --verbose
+        
+        # Get the new version
+        NEW_VERSION=$(grep -Po "__version__ = \"\K[^\"]*" lazypredict/__init__.py)
+        echo "VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+        
+        # Push the changes
+        git push
+        git push --tags
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package
+      run: twine check dist/*
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: "v${{ env.VERSION }}"
+        name: "Release v${{ env.VERSION }}"
+        body: |
+          Release of version v${{ env.VERSION }}
+          
+          Changes merged from dev branch to main.
+        files: |
+          dist/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        twine upload dist/*

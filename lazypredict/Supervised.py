@@ -213,6 +213,7 @@ class LazyClassifier:
         predictions=False,
         random_state=42,
         classifiers="all",
+        transformers=True,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -221,6 +222,7 @@ class LazyClassifier:
         self.models = {}
         self.random_state = random_state
         self.classifiers = classifiers
+        self.transformers = transformers
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -262,20 +264,29 @@ class LazyClassifier:
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
-        numeric_features = X_train.select_dtypes(include=[np.number]).columns
-        categorical_features = X_train.select_dtypes(include=["object"]).columns
+        if self.transformers is True:
+            numeric_features = X_train.select_dtypes(include=[np.number]).columns
+            categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        categorical_low, categorical_high = get_card_split(
-            X_train, categorical_features
-        )
+            categorical_low, categorical_high = get_card_split(
+                X_train, categorical_features
+            )
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
-            ]
-        )
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ("numeric", numeric_transformer, numeric_features),
+                    ("categorical_low", categorical_transformer_low, categorical_low),
+                    ("categorical_high", categorical_transformer_high, categorical_high),
+                ]
+            )
+        elif self.transformers is False or self.transformers is None:
+            preprocessor = ColumnTransformer(
+                transformers=[],
+                remainder="passthrough"
+            )
+        elif isinstance(self.transformers, ColumnTransformer):
+            preprocessor = self.transformers
+
 
         if self.classifiers == "all":
             self.classifiers = CLASSIFIERS
@@ -432,7 +443,7 @@ class LazyClassifier:
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
-        return scores, predictions_df if self.predictions is True else scores
+        return scores, predictions_df if self.predictions is True else None
 
     def provide_models(self, X_train, X_test, y_train, y_test):
         """

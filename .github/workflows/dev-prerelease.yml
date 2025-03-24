@@ -30,13 +30,21 @@ jobs:
     
     - name: Run style checks
       run: |
-        black .
-        isort .
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
-        git add .
-        git diff-index --quiet HEAD || git commit -m "Apply automatic code formatting"
-        git push
+        
+        # Run formatters
+        black .
+        isort .
+        
+        # Check if there are any changes
+        if [[ -n "$(git status --porcelain)" ]]; then
+          git add .
+          git commit -m "Apply automatic code formatting"
+          git push
+        fi
+        
+        # Run checks
         black --check .
         isort --check-only .
         flake8 .

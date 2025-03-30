@@ -5,7 +5,7 @@ Supervised Models
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import datetime
 import time
 from sklearn.pipeline import Pipeline
@@ -18,6 +18,9 @@ from sklearn.base import ClassifierMixin
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
+    euclidean_distances,
+    precision_score,
+    recall_score,
     roc_auc_score,
     f1_score,
     r2_score,
@@ -210,6 +213,7 @@ class LazyClassifier:
         predictions=False,
         random_state=42,
         classifiers="all",
+        transformers=True,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -218,6 +222,7 @@ class LazyClassifier:
         self.models = {}
         self.random_state = random_state
         self.classifiers = classifiers
+        self.transformers = transformers
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -246,6 +251,8 @@ class LazyClassifier:
         B_Accuracy = []
         ROC_AUC = []
         F1 = []
+        PRECISION = []
+        RECALL = []
         names = []
         TIME = []
         predictions = {}
@@ -257,20 +264,29 @@ class LazyClassifier:
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
 
-        numeric_features = X_train.select_dtypes(include=[np.number]).columns
-        categorical_features = X_train.select_dtypes(include=["object"]).columns
+        if self.transformers is True:
+            numeric_features = X_train.select_dtypes(include=[np.number]).columns
+            categorical_features = X_train.select_dtypes(include=["object"]).columns
 
-        categorical_low, categorical_high = get_card_split(
-            X_train, categorical_features
-        )
+            categorical_low, categorical_high = get_card_split(
+                X_train, categorical_features
+            )
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
-            ]
-        )
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ("numeric", numeric_transformer, numeric_features),
+                    ("categorical_low", categorical_transformer_low, categorical_low),
+                    ("categorical_high", categorical_transformer_high, categorical_high),
+                ]
+            )
+        elif self.transformers is False or self.transformers is None:
+            preprocessor = ColumnTransformer(
+                transformers=[],
+                remainder="passthrough"
+            )
+        elif isinstance(self.transformers, ColumnTransformer):
+            preprocessor = self.transformers
+
 
         if self.classifiers == "all":
             self.classifiers = CLASSIFIERS
@@ -289,35 +305,73 @@ class LazyClassifier:
             start = time.time()
             try:
                 if "random_state" in model().get_params().keys():
-                    pipe = Pipeline(
-                        steps=[
-                            ("preprocessor", preprocessor),
-                            ("classifier", model(random_state=self.random_state)),
-                        ]
-                    )
+                    if "probability" not in model().get_params().keys():
+                        pipe = Pipeline(
+                            steps=[
+                                ("preprocessor", preprocessor),
+                                ("classifier", model(
+                                    random_state=self.random_state)),
+                            ]
+                        )
+                    else:
+                        pipe = Pipeline(
+                            steps=[
+                                ("preprocessor", preprocessor),
+                                ("classifier", model(
+                                    random_state=self.random_state, probability=True)),
+                            ]
+                        )
                 else:
-                    pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), ("classifier", model())]
-                    )
+                    if "probability" not in model().get_params().keys():
+                        pipe = Pipeline(
+                            steps=[("preprocessor", preprocessor),
+                                   ("classifier", model())]
+                        )
+                    else:
+                        pipe = Pipeline(
+                            steps=[("preprocessor", preprocessor),
+                                   ("classifier", model(probability=True))]
+                        )
 
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
+                
+                try:
+                    y_score = pipe.predict_proba(X_test)[:, 1]
+                except:
+                    try:
+                        y_score = pipe.decision_function(X_test)
+                    except:
+                        # Predict centroids and distances
+                        centroids = pipe.named_steps['classifier'].centroids_
+                        distances = euclidean_distances(X_test, centroids)
+
+                        # Use negative distances to the positive class centroid as the score
+                        # (Smaller distance => Higher score for positive class)
+                        # Assuming binary classification with class labels 0 and 1
+                        y_score = -distances[:, 1]
+
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
                 f1 = f1_score(y_test, y_pred, average="weighted")
+                precision = precision_score(y_test, y_pred, average="weighted")
+                recall = recall_score(y_test, y_pred, average="weighted")
                 try:
-                    roc_auc = roc_auc_score(y_test, y_pred)
+                    roc_auc = roc_auc_score(y_test, y_score)
                 except Exception as exception:
                     roc_auc = None
                     if self.ignore_warnings is False:
                         print("ROC AUC couldn't be calculated for " + name)
                         print(exception)
+                
                 names.append(name)
                 Accuracy.append(accuracy)
                 B_Accuracy.append(b_accuracy)
                 ROC_AUC.append(roc_auc)
                 F1.append(f1)
+                PRECISION.append(precision)
+                RECALL.append(recall)
                 TIME.append(time.time() - start)
                 if self.custom_metric is not None:
                     custom_metric = self.custom_metric(y_test, y_pred)
@@ -331,6 +385,8 @@ class LazyClassifier:
                                 "Balanced Accuracy": b_accuracy,
                                 "ROC AUC": roc_auc,
                                 "F1 Score": f1,
+                                "Precision": precision,
+                                "Recall": recall,
                                 self.custom_metric.__name__: custom_metric,
                                 "Time taken": time.time() - start,
                             }
@@ -343,6 +399,8 @@ class LazyClassifier:
                                 "Balanced Accuracy": b_accuracy,
                                 "ROC AUC": roc_auc,
                                 "F1 Score": f1,
+                                "Precision": precision,
+                                "Recall": recall,
                                 "Time taken": time.time() - start,
                             }
                         )
@@ -360,6 +418,8 @@ class LazyClassifier:
                     "Balanced Accuracy": B_Accuracy,
                     "ROC AUC": ROC_AUC,
                     "F1 Score": F1,
+                    "Precision": PRECISION,
+                    "Recall": RECALL,
                     "Time Taken": TIME,
                 }
             )
@@ -371,17 +431,19 @@ class LazyClassifier:
                     "Balanced Accuracy": B_Accuracy,
                     "ROC AUC": ROC_AUC,
                     "F1 Score": F1,
+                    "Precision": PRECISION,
+                    "Recall": RECALL,
                     self.custom_metric.__name__: CUSTOM_METRIC,
                     "Time Taken": TIME,
                 }
             )
-        scores = scores.sort_values(by="Balanced Accuracy", ascending=False).set_index(
+        scores = scores.sort_values(by="ROC AUC", ascending=False).set_index(
             "Model"
         )
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
-        return scores, predictions_df if self.predictions is True else scores
+        return scores, predictions_df if self.predictions is True else None
 
     def provide_models(self, X_train, X_test, y_train, y_test):
         """

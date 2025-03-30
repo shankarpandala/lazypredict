@@ -1,0 +1,51 @@
+{% set name = "lazypredict" %}
+{% set version = "0.2.13" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/lazypredict-{{ version }}.tar.gz
+  sha256: a3a557365a83cb4d2fefc47adcb73fb0709888fb3708756f8e5c22e39ad443f0
+
+build:
+  entry_points:
+    - lazypredict=lazypredict.cli:main
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  number: 0
+
+requirements:
+  host:
+    - python >=3.8
+    - pytest-runner
+    - pip
+  run:
+    - python >=3.8
+    - click
+    - scikit-learn
+    - pandas
+    - tqdm
+    - joblib
+    - lightgbm
+    - xgboost
+
+test:
+  imports:
+    - lazypredict
+  commands:
+    - pip check
+    - lazypredict --help
+  requires:
+    - pip
+
+about:
+  home: https://github.com/shankarpandala/lazypredict
+  summary: Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning
+  license: MIT
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - shankarpandala

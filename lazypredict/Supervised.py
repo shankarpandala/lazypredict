@@ -8,6 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 import datetime
 import time
+import os
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
@@ -28,6 +29,29 @@ import xgboost
 
 # import catboost
 import lightgbm
+
+# Import MLflow for model tracking
+try:
+    import mlflow
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
+
+# Check if MLflow tracking URI is set (like in Databricks 'databricks-uc')
+def is_mlflow_tracking_enabled():
+    """Checks if MLflow tracking is enabled via environment variable."""
+    tracking_uri = os.environ.get('MLFLOW_TRACKING_URI')
+    return MLFLOW_AVAILABLE and tracking_uri is not None
+
+# Initialize MLflow if tracking URI is set
+def setup_mlflow():
+    """Initialize MLflow if tracking URI is set through environment variable."""
+    if is_mlflow_tracking_enabled():
+        tracking_uri = os.environ.get('MLFLOW_TRACKING_URI')
+        mlflow.set_tracking_uri(tracking_uri)
+        mlflow.autolog()
+        return True
+    return False
 
 warnings.filterwarnings("ignore")
 pd.set_option("display.precision", 2)
@@ -218,6 +242,8 @@ class LazyClassifier:
         self.models = {}
         self.random_state = random_state
         self.classifiers = classifiers
+        # Initialize MLflow if tracking URI is set
+        self.mlflow_enabled = setup_mlflow()
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -288,6 +314,12 @@ class LazyClassifier:
         for name, model in tqdm(self.classifiers):
             start = time.time()
             try:
+                # Start MLflow run for this specific model if MLflow is enabled
+                mlflow_active_run = None
+                if self.mlflow_enabled and MLFLOW_AVAILABLE:
+                    mlflow_active_run = mlflow.start_run(run_name=f"LazyClassifier-{name}")
+                    mlflow.log_param("model_name", name)
+                    
                 if "random_state" in model().get_params().keys():
                     pipe = Pipeline(
                         steps=[
@@ -313,6 +345,16 @@ class LazyClassifier:
                     if self.ignore_warnings is False:
                         print("ROC AUC couldn't be calculated for " + name)
                         print(exception)
+                
+                # Log metrics to MLflow if enabled
+                if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                    mlflow.log_metric("accuracy", accuracy)
+                    mlflow.log_metric("balanced_accuracy", b_accuracy)
+                    mlflow.log_metric("f1_score", f1)
+                    if roc_auc is not None:
+                        mlflow.log_metric("roc_auc", roc_auc)
+                    mlflow.log_metric("training_time", time.time() - start)
+                
                 names.append(name)
                 Accuracy.append(accuracy)
                 B_Accuracy.append(b_accuracy)
@@ -322,6 +364,10 @@ class LazyClassifier:
                 if self.custom_metric is not None:
                     custom_metric = self.custom_metric(y_test, y_pred)
                     CUSTOM_METRIC.append(custom_metric)
+                    # Log custom metric to MLflow if enabled
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                        mlflow.log_metric(self.custom_metric.__name__, custom_metric)
+                
                 if self.verbose > 0:
                     if self.custom_metric is not None:
                         print(
@@ -348,7 +394,16 @@ class LazyClassifier:
                         )
                 if self.predictions:
                     predictions[name] = y_pred
+                    
+                # End MLflow run for this model
+                if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                    mlflow.end_run()
+                    
             except Exception as exception:
+                # End MLflow run if it was started but an error occurred
+                if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                    mlflow.end_run()
+                
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
@@ -517,6 +572,8 @@ class LazyRegressor:
         self.models = {}
         self.random_state = random_state
         self.regressors = regressors
+        # Initialize MLflow if tracking URI is set
+        self.mlflow_enabled = setup_mlflow()
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
@@ -587,6 +644,12 @@ class LazyRegressor:
         for name, model in tqdm(self.regressors):
             start = time.time()
             try:
+                # Start MLflow run for this specific model if MLflow is enabled
+                mlflow_active_run = None
+                if self.mlflow_enabled and MLFLOW_AVAILABLE:
+                    mlflow_active_run = mlflow.start_run(run_name=f"LazyRegressor-{name}")
+                    mlflow.log_param("model_name", name)
+                    
                 if "random_state" in model().get_params().keys():
                     pipe = Pipeline(
                         steps=[
@@ -608,6 +671,13 @@ class LazyRegressor:
                     r_squared, X_test.shape[0], X_test.shape[1]
                 )
                 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+                
+                # Log metrics to MLflow if enabled
+                if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                    mlflow.log_metric("r_squared", r_squared)
+                    mlflow.log_metric("adjusted_r_squared", adj_rsquared)
+                    mlflow.log_metric("rmse", rmse)
+                    mlflow.log_metric("training_time", time.time() - start)
 
                 names.append(name)
                 R2.append(r_squared)
@@ -618,6 +688,9 @@ class LazyRegressor:
                 if self.custom_metric:
                     custom_metric = self.custom_metric(y_test, y_pred)
                     CUSTOM_METRIC.append(custom_metric)
+                    # Log custom metric to MLflow if enabled
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                        mlflow.log_metric(self.custom_metric.__name__, custom_metric)
 
                 if self.verbose > 0:
                     scores_verbose = {
@@ -634,7 +707,16 @@ class LazyRegressor:
                     print(scores_verbose)
                 if self.predictions:
                     predictions[name] = y_pred
+                    
+                # End MLflow run for this model
+                if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                    mlflow.end_run()
+                    
             except Exception as exception:
+                # End MLflow run if it was started but an error occurred
+                if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                    mlflow.end_run()
+                    
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)

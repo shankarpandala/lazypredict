@@ -51,6 +51,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/shankarpandala/lazypredict",
-    version='2.13',
+    version='2.15',
     zip_safe=False,
 )

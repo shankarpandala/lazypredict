@@ -64,9 +64,9 @@ removed_classifiers = [
     "GaussianProcessClassifier",
     "HistGradientBoostingClassifier",
     "MLPClassifier",
-    "LogisticRegressionCV", 
-    "MultiOutputClassifier", 
-    "MultinomialNB", 
+    "LogisticRegressionCV",
+    "MultiOutputClassifier",
+    "MultinomialNB",
     "OneVsOneClassifier",
     "OneVsRestClassifier",
     "OutputCodeClassifier",
@@ -76,20 +76,20 @@ removed_classifiers = [
 
 removed_regressors = [
     "TheilSenRegressor",
-    "ARDRegression", 
-    "CCA", 
-    "IsotonicRegression", 
+    "ARDRegression",
+    "CCA",
+    "IsotonicRegression",
     "StackingRegressor",
-    "MultiOutputRegressor", 
-    "MultiTaskElasticNet", 
-    "MultiTaskElasticNetCV", 
-    "MultiTaskLasso", 
-    "MultiTaskLassoCV", 
-    "PLSCanonical", 
-    "PLSRegression", 
-    "RadiusNeighborsRegressor", 
-    "RegressorChain", 
-    "VotingRegressor", 
+    "MultiOutputRegressor",
+    "MultiTaskElasticNet",
+    "MultiTaskElasticNetCV",
+    "MultiTaskLasso",
+    "MultiTaskLassoCV",
+    "PLSCanonical",
+    "PLSRegression",
+    "RadiusNeighborsRegressor",
+    "RegressorChain",
+    "VotingRegressor",
 ]
 
 CLASSIFIERS = [
@@ -245,6 +245,15 @@ class LazyClassifier:
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
+    def _convert_bool_to_int(self, df):
+        """
+        Converts boolean columns in a DataFrame to integers (0 and 1).
+        """
+        for col in df.columns:
+            if df[col].dtype == bool:
+                df[col] = df[col].astype(int)
+        return df
+
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
         Parameters
@@ -282,6 +291,10 @@ class LazyClassifier:
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
             X_test = pd.DataFrame(X_test)
+
+        # Convert boolean columns to integers
+        X_train = self._convert_bool_to_int(X_train)
+        X_test = self._convert_bool_to_int(X_test)
 
         numeric_features = X_train.select_dtypes(include=[np.number]).columns
         categorical_features = X_train.select_dtypes(include=["object"]).columns
@@ -459,7 +472,7 @@ class LazyClassifier:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:
@@ -762,7 +775,7 @@ class LazyRegressor:
         Returns
         -------
         models: dict-object,
-            Returns a dictionary with each model pipeline as value 
+            Returns a dictionary with each model pipeline as value
             with key as name of models.
         """
         if len(self.models.keys()) == 0:

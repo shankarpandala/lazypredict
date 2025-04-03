@@ -54,8 +54,8 @@ def setup_mlflow():
     return False
 
 warnings.filterwarnings("ignore")
-pd.set_option("display.precision", 2)
-pd.set_option("display.float_format", lambda x: "%.2f" % x)
+pd.set_option("display.precision", 4) 
+pd.set_option("display.float_format", lambda x: "%.4f" % x)
 
 removed_classifiers = [
     "ClassifierChain",

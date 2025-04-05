@@ -99,17 +99,44 @@ Lazy Predict works seamlessly with pandas DataFrames:
 Using with MLflow
 ---------------
 
-Lazy Predict integrates with MLflow for experiment tracking:
+Lazy Predict has built-in MLflow integration for experiment tracking. You can enable it by setting the MLflow tracking URI:
 
 .. code-block:: python
 
     import os
-    os.environ['MLFLOW_TRACKING_URI'] = 'sqlite:///mlflow.db'
+    os.environ['MLFLOW_TRACKING_URI'] = 'sqlite:///mlflow.db'  # Local SQLite tracking
+    # Or for remote tracking:
+    # os.environ['MLFLOW_TRACKING_URI'] = 'http://your-mlflow-server:5000'
 
     # MLflow tracking will be automatically enabled
     reg = LazyRegressor(verbose=0, ignore_warnings=True)
     models, predictions = reg.fit(X_train, X_test, y_train, y_test)
-    # All metrics will be logged to MLflow automatically
+
+The following metrics and artifacts will be automatically logged to MLflow:
+
+* Model metrics (R-squared, RMSE, etc.)
+* Training time
+* Model parameters
+* Model signatures
+* Custom metrics (if provided)
+* Model artifacts for each trained model
+
+You can view the results in the MLflow UI:
+
+.. code-block:: bash
+
+    mlflow ui
+
+For Databricks users:
+~~~~~~~~~~~~~~~~~~
+
+If you're using Databricks, MLflow tracking is automatically configured:
+
+.. code-block:: python
+
+    # MLflow tracking will use Databricks tracking URI automatically
+    reg = LazyRegressor(verbose=0, ignore_warnings=True)
+    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 
 Getting Model Objects
 ------------------

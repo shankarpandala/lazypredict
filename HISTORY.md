@@ -2,6 +2,14 @@
 title: History
 ---
 
+# 2.15 (2025-04-06)
+
+-   Added MLflow integration for experiment tracking
+-   Added support for Python 3.13
+-   Updated all dependencies to latest versions
+-   Improved model logging and tracking capabilities
+-   Added automatic model signature logging with MLflow
+
 # 0.2.11 (2022-02-06)
 
 -   Updated the default version to 3.9

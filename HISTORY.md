@@ -2,7 +2,7 @@
 title: History
 ---
 
-# 2.15 (2025-04-06)
+# 0.2.15 (2025-04-06)
 
 -   Added MLflow integration for experiment tracking
 -   Added support for Python 3.13

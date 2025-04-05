@@ -22,8 +22,6 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
-# sys.path.insert(0, os.path.abspath('..\lazypredict'))
-# print(sys.path)
 import lazypredict
 
 # -- General configuration ---------------------------------------------
@@ -34,7 +32,13 @@ import lazypredict
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.githubpages",
+    "myst_parser"
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -42,15 +46,14 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = [".rst", ".md"]
 
 # The master toctree document.
 master_doc = "index"
 
 # General information about the project.
 project = u"Lazy Predict"
-copyright = u"2022, Shankar Rao Pandala"
+copyright = u"2022-2025, Shankar Rao Pandala"
 author = u"Shankar Rao Pandala"
 
 # The version info for the project you're documenting, acts as replacement
@@ -67,7 +70,7 @@ release = lazypredict.__version__
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -86,13 +89,16 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "default"
+html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
 # documentation.
-#
-# html_theme_options = {}
+html_theme_options = {
+    'navigation_depth': 4,
+    'titles_only': False,
+    'logo_only': False,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -156,7 +162,23 @@ texinfo_documents = [
         u"Lazy Predict Documentation",
         author,
         "lazypredict",
-        "One line description of project.",
-        "Miscellaneous",
+        "Automated machine learning model selection.",
+        "Machine Learning",
     ),
 ]
+
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_preprocess_types = False
+napoleon_type_aliases = None
+napoleon_attr_annotations = True

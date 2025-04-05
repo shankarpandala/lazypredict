@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Examples &mdash; Lazy Predict 2.15 documentation</title>
+  <title>Examples &mdash; Lazy Predict 0.2.16 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=d19175c4"></script>
+      <script src="_static/documentation_options.js?v=e2418eca"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -62,7 +62,10 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#working-with-pandas-dataframes">Working with Pandas DataFrames</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#using-with-mlflow">Using with MLflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-with-mlflow">Using with MLflow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#for-databricks-users">For Databricks users:</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#getting-model-objects">Getting Model Objects</a></li>
 </ul>
 </li>
@@ -181,16 +184,39 @@
 </section>
 <section id="using-with-mlflow">
 <h2>Using with MLflow<a class="headerlink" href="#using-with-mlflow" title="Link to this heading"></a></h2>
-<p>Lazy Predict integrates with MLflow for experiment tracking:</p>
+<p>Lazy Predict has built-in MLflow integration for experiment tracking. You can enable it by setting the MLflow tracking URI:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MLFLOW_TRACKING_URI&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;sqlite:///mlflow.db&#39;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MLFLOW_TRACKING_URI&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;sqlite:///mlflow.db&#39;</span>  <span class="c1"># Local SQLite tracking</span>
+<span class="c1"># Or for remote tracking:</span>
+<span class="c1"># os.environ[&#39;MLFLOW_TRACKING_URI&#39;] = &#39;http://your-mlflow-server:5000&#39;</span>
 
 <span class="c1"># MLflow tracking will be automatically enabled</span>
 <span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
-<span class="c1"># All metrics will be logged to MLflow automatically</span>
 </pre></div>
 </div>
+<p>The following metrics and artifacts will be automatically logged to MLflow:</p>
+<ul class="simple">
+<li><p>Model metrics (R-squared, RMSE, etc.)</p></li>
+<li><p>Training time</p></li>
+<li><p>Model parameters</p></li>
+<li><p>Model signatures</p></li>
+<li><p>Custom metrics (if provided)</p></li>
+<li><p>Model artifacts for each trained model</p></li>
+</ul>
+<p>You can view the results in the MLflow UI:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mlflow<span class="w"> </span>ui
+</pre></div>
+</div>
+<section id="for-databricks-users">
+<h3>For Databricks users:<a class="headerlink" href="#for-databricks-users" title="Link to this heading"></a></h3>
+<p>If you’re using Databricks, MLflow tracking is automatically configured:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># MLflow tracking will use Databricks tracking URI automatically</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 </section>
 <section id="getting-model-objects">
 <h2>Getting Model Objects<a class="headerlink" href="#getting-model-objects" title="Link to this heading"></a></h2>

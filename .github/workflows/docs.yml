@@ -6,10 +6,10 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2  # Updated to v2
+      - uses: actions/checkout@v4  # Updated to v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4  # Updated to v4
         with:
           python-version: '3.x'  # Specify the Python version you need
 
@@ -23,7 +23,7 @@ jobs:
         run: |
           sphinx-build docs docs/_build/html
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4  # Updated to v4
         with:
           name: DocumentationHTML
           path: docs/_build/html/
@@ -41,7 +41,7 @@ jobs:
           # the return code.
 
       - name: Push changes
-        uses: ad-m/github-push-action@v0.6.0  # Updated to a specific version
+        uses: ad-m/github-push-action@v0.6.0
         with:
           branch: gh-pages
           directory: gh-pages

@@ -5,11 +5,19 @@
 [![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
 [![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)
+[![Citations](https://img.shields.io/badge/Citations-37-blue)](https://scholar.google.com/scholar?oi=bibs&hl=en&cites=4325808232671020176,16284230108871951652&as_sdt=5)
 
 Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning.
 
 - Free software: MIT license
 - Documentation: <https://lazypredict.readthedocs.io>
+
+## Features
+- Over 40 built-in machine learning models
+- Automatic model selection for classification and regression 
+- Built-in MLflow integration for experiment tracking
+- Support for Python 3.8 through 3.13
+- Custom metric evaluation support
 
 ## Installation
 
@@ -149,3 +157,22 @@ print(models)
 | GaussianProcessRegressor      |          -0.769174   | -0.367089   |  91.5109 |   0.0770502  |
 | MLPRegressor                  |          -1.86772    | -1.21597    | 116.508  |   0.235267   |
 | KernelRidge                   |          -5.03822    | -3.6659     | 169.061  |   0.0243919  |
+
+## MLflow Integration
+
+Lazy Predict includes built-in MLflow integration. Enable it by setting the MLflow tracking URI:
+
+```python
+import os
+os.environ['MLFLOW_TRACKING_URI'] = 'sqlite:///mlflow.db'
+
+# MLflow tracking will be automatically enabled
+reg = LazyRegressor(verbose=0, ignore_warnings=True)
+models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+```
+
+Automatically tracks:
+- Model metrics (R-squared, RMSE, etc.)
+- Training time
+- Model parameters
+- Model artifacts

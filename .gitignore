@@ -108,3 +108,5 @@ ENV/
 test.ipynb
 notebooks/
 notebook.ipynb
+
+mlruns/

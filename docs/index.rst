@@ -51,12 +51,28 @@ Contents
 
 Features
 --------
+* Over 40 built-in machine learning models
 * Automatic model selection for classification and regression
 * Support for both numerical and categorical features
 * Easy integration with scikit-learn pipelines
-* Model performance comparison
+* Model performance comparison and ranking
+* Built-in MLflow integration for experiment tracking
+* Support for Python 3.8 through 3.13
 * Minimal code required
-* MLflow integration for experiment tracking
+* Automatic model metrics logging
+* Custom metric evaluation support
+* Easy model access and reuse
+
+Key Benefits
+-----------
+* Rapid model prototyping and selection
+* Automated experiment tracking with MLflow
+* Comprehensive model performance comparison
+* Zero-configuration model evaluation
+* Support for local and remote tracking
+* Integration with Databricks environment
+* Parallel model training capability
+* Extensible with custom metrics
 
 Indices and Tables
 -----------------

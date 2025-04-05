@@ -354,6 +354,15 @@ class LazyClassifier:
                     if roc_auc is not None:
                         mlflow.log_metric("roc_auc", roc_auc)
                     mlflow.log_metric("training_time", time.time() - start)
+
+                    # Log the model with signature
+                    try:
+                        signature = mlflow.models.infer_signature(X_train, pipe.predict(X_train))
+                        mlflow.sklearn.log_model(pipe, f"{name}_model", signature=signature,
+                                             registered_model_name=f"lazy_classifier_{name}")
+                    except Exception as e:
+                        if not self.ignore_warnings:
+                            print(f"Failed to log model {name} to MLflow: {str(e)}")
                 
                 names.append(name)
                 Accuracy.append(accuracy)
@@ -678,6 +687,15 @@ class LazyRegressor:
                     mlflow.log_metric("adjusted_r_squared", adj_rsquared)
                     mlflow.log_metric("rmse", rmse)
                     mlflow.log_metric("training_time", time.time() - start)
+
+                    # Log the model with signature
+                    try:
+                        signature = mlflow.models.infer_signature(X_train, pipe.predict(X_train))
+                        mlflow.sklearn.log_model(pipe, f"{name}_model", signature=signature, 
+                                              registered_model_name=f"lazy_regressor_{name}")
+                    except Exception as e:
+                        if not self.ignore_warnings:
+                            print(f"Failed to log model {name} to MLflow: {str(e)}")
 
                 names.append(name)
                 R2.append(r_squared)

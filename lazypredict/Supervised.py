@@ -5,7 +5,19 @@ Supervised Models
 
 import numpy as np
 import pandas as pd
+import sys
 from tqdm import tqdm
+try:
+    from IPython import get_ipython
+    if 'IPKernelApp' in get_ipython().config:
+        # We're in a Jupyter notebook or similar environment
+        from tqdm.notebook import tqdm as notebook_tqdm
+        use_notebook_tqdm = True
+    else:
+        use_notebook_tqdm = False
+except:
+    use_notebook_tqdm = False
+
 import datetime
 import time
 import os
@@ -311,7 +323,9 @@ class LazyClassifier:
                 print(exception)
                 print("Invalid Classifier(s)")
 
-        for name, model in tqdm(self.classifiers):
+        # Use notebook tqdm if in Jupyter environment
+        progress_bar = notebook_tqdm if use_notebook_tqdm else tqdm
+        for name, model in progress_bar(self.classifiers):
             start = time.time()
             try:
                 # Start MLflow run for this specific model if MLflow is enabled
@@ -463,7 +477,7 @@ class LazyClassifier:
             Training vectors, where rows is the number of samples
             and columns is the number of features.
         y_test : array-like,
-            Testing vectors, where rows is the number of samples
+            Training vectors, where rows is the number of samples
             and columns is the number of features.
         Returns
         -------
@@ -650,7 +664,9 @@ class LazyRegressor:
                 print(exception)
                 print("Invalid Regressor(s)")
 
-        for name, model in tqdm(self.regressors):
+        # Use notebook tqdm if in Jupyter environment
+        progress_bar = notebook_tqdm if use_notebook_tqdm else tqdm
+        for name, model in progress_bar(self.regressors):
             start = time.time()
             try:
                 # Start MLflow run for this specific model if MLflow is enabled
@@ -775,7 +791,7 @@ class LazyRegressor:
             Training vectors, where rows is the number of samples
             and columns is the number of features.
         y_test : array-like,
-            Testing vectors, where rows is the number of samples
+            Training vectors, where rows is the number of samples
             and columns is the number of features.
         Returns
         -------

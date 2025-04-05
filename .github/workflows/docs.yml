@@ -23,7 +23,7 @@ jobs:
         run: |
           sphinx-build docs docs/_build/html
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v2
         with:
           name: DocumentationHTML
           path: docs/_build/html/

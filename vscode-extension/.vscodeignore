@@ -1,0 +1,24 @@
+# Source files
+src/
+tsconfig.json
+
+# Tests
+__tests__/
+jest.config.js
+jest.setup.js
+__mocks__/
+jest/
+coverage/
+
+# Development tools
+scripts/
+.vscode/
+.gitignore
+.github/
+node_modules/
+.eslintrc.json
+*.vsix
+
+# Make sure these files are not ignored
+!dist/**
+!resources/**

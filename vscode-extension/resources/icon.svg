@@ -1,0 +1,7 @@
+<!-- Simple SVG icon for LazyPredict UI extension -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="14" fill="#2c2c54"/>
+  <text x="64" y="80" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#ffffff">LP</text>
+  <circle cx="64" cy="40" r="20" fill="#706fd3"/>
+  <path d="M40 70 L88 70 L64 100 Z" fill="#474787"/>
+</svg>

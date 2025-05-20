@@ -1,0 +1,84 @@
+{
+  "name": "lazypredict-ui",
+  "displayName": "LazyPredict UI",
+  "description": "A VS Code extension to provide a UI for the LazyPredict Python package.",
+  "version": "0.0.1",
+  "publisher": "shankarpandala",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shankarpandala/lazypredict"
+  },
+  "homepage": "https://github.com/shankarpandala/lazypredict",
+  "bugs": {
+    "url": "https://github.com/shankarpandala/lazypredict/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Data Science",
+    "Other"
+  ],
+  "keywords": [
+    "machine learning",
+    "python",
+    "data science",
+    "lazy predict",
+    "models"
+  ],
+  "icon": "resources/icon.png",
+  "activationEvents": [],
+  "main": "./dist/src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lazypredict.showUI",
+        "title": "Show LazyPredict UI",
+        "category": "LazyPredict"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "test": "jest",
+    "validate-package": "node ./scripts/validate-package.js",
+    "package": "npm run validate-package && npx @vscode/vsce package",
+    "publish": "npm run validate-package && npx @vscode/vsce publish"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^14.0.0",
+    "@types/chai": "^5.2.2",
+    "@types/glob": "^8.1.0",
+    "@types/jest": "^29.5.5",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.8.2",
+    "@types/react": "^18.2.25",
+    "@types/react-dom": "^18.2.11",
+    "@types/sinon": "^17.0.4",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vscode/vsce": "^3.4.1",
+    "chai": "^5.2.0",
+    "eslint": "^8.50.0",
+    "glob": "^10.3.10",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "mocha": "^10.2.0",
+    "sinon": "^17.0.0",
+    "ts-jest": "^29.3.4",
+    "typescript": "^5.0.0",
+    "vscode-test": "^1.6.1"
+  }
+}

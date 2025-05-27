@@ -25,6 +25,7 @@ from sklearn.metrics import (
     f1_score,
     r2_score,
     mean_squared_error,
+    average_precision_score,
 )
 import warnings
 import xgboost
@@ -225,31 +226,10 @@ class LazyClassifier:
         self.transformers = transformers
 
     def fit(self, X_train, X_test, y_train, y_test):
-        """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
-        Parameters
-        ----------
-        X_train : array-like,
-            Training vectors, where rows is the number of samples
-            and columns is the number of features.
-        X_test : array-like,
-            Testing vectors, where rows is the number of samples
-            and columns is the number of features.
-        y_train : array-like,
-            Training vectors, where rows is the number of samples
-            and columns is the number of features.
-        y_test : array-like,
-            Testing vectors, where rows is the number of samples
-            and columns is the number of features.
-        Returns
-        -------
-        scores : Pandas DataFrame
-            Returns metrics of all the models in a Pandas DataFrame.
-        predictions : Pandas DataFrame
-            Returns predictions of all the models in a Pandas DataFrame.
-        """
         Accuracy = []
         B_Accuracy = []
         ROC_AUC = []
+        PR_SCORE = []
         F1 = []
         PRECISION = []
         RECALL = []
@@ -280,13 +260,9 @@ class LazyClassifier:
                 ]
             )
         elif self.transformers is False or self.transformers is None:
-            preprocessor = ColumnTransformer(
-                transformers=[],
-                remainder="passthrough"
-            )
+            preprocessor = ColumnTransformer(transformers=[], remainder="passthrough")
         elif isinstance(self.transformers, ColumnTransformer):
             preprocessor = self.transformers
-
 
         if self.classifiers == "all":
             self.classifiers = CLASSIFIERS
@@ -309,47 +285,38 @@ class LazyClassifier:
                         pipe = Pipeline(
                             steps=[
                                 ("preprocessor", preprocessor),
-                                ("classifier", model(
-                                    random_state=self.random_state)),
+                                ("classifier", model(random_state=self.random_state)),
                             ]
                         )
                     else:
                         pipe = Pipeline(
                             steps=[
                                 ("preprocessor", preprocessor),
-                                ("classifier", model(
-                                    random_state=self.random_state, probability=True)),
+                                ("classifier", model(random_state=self.random_state, probability=True)),
                             ]
                         )
                 else:
                     if "probability" not in model().get_params().keys():
                         pipe = Pipeline(
-                            steps=[("preprocessor", preprocessor),
-                                   ("classifier", model())]
+                            steps=[("preprocessor", preprocessor), ("classifier", model())]
                         )
                     else:
                         pipe = Pipeline(
-                            steps=[("preprocessor", preprocessor),
-                                   ("classifier", model(probability=True))]
+                            steps=[("preprocessor", preprocessor), ("classifier", model(probability=True))]
                         )
 
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
                 y_pred = pipe.predict(X_test)
-                
+
                 try:
                     y_score = pipe.predict_proba(X_test)[:, 1]
                 except:
                     try:
                         y_score = pipe.decision_function(X_test)
                     except:
-                        # Predict centroids and distances
                         centroids = pipe.named_steps['classifier'].centroids_
                         distances = euclidean_distances(X_test, centroids)
-
-                        # Use negative distances to the positive class centroid as the score
-                        # (Smaller distance => Higher score for positive class)
-                        # Assuming binary classification with class labels 0 and 1
                         y_score = -distances[:, 1]
 
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
@@ -364,52 +331,52 @@ class LazyClassifier:
                     if self.ignore_warnings is False:
                         print("ROC AUC couldn't be calculated for " + name)
                         print(exception)
-                
+
+                try:
+                    pr_score = average_precision_score(y_test, y_score)
+                except Exception as exception:
+                    pr_score = None
+                    if self.ignore_warnings is False:
+                        print("Precision-Recall AUC couldn't be calculated for " + name)
+                        print(exception)
+
                 names.append(name)
                 Accuracy.append(accuracy)
                 B_Accuracy.append(b_accuracy)
                 ROC_AUC.append(roc_auc)
+                PR_SCORE.append(pr_score)
                 F1.append(f1)
                 PRECISION.append(precision)
                 RECALL.append(recall)
                 TIME.append(time.time() - start)
+
                 if self.custom_metric is not None:
                     custom_metric = self.custom_metric(y_test, y_pred)
                     CUSTOM_METRIC.append(custom_metric)
+
                 if self.verbose > 0:
+                    output = {
+                        "Model": name,
+                        "Accuracy": accuracy,
+                        "Balanced Accuracy": b_accuracy,
+                        "ROC AUC": roc_auc,
+                        "Precision-Recall AUC": pr_score,
+                        "F1 Score": f1,
+                        "Precision": precision,
+                        "Recall": recall,
+                        "Time taken": time.time() - start,
+                    }
                     if self.custom_metric is not None:
-                        print(
-                            {
-                                "Model": name,
-                                "Accuracy": accuracy,
-                                "Balanced Accuracy": b_accuracy,
-                                "ROC AUC": roc_auc,
-                                "F1 Score": f1,
-                                "Precision": precision,
-                                "Recall": recall,
-                                self.custom_metric.__name__: custom_metric,
-                                "Time taken": time.time() - start,
-                            }
-                        )
-                    else:
-                        print(
-                            {
-                                "Model": name,
-                                "Accuracy": accuracy,
-                                "Balanced Accuracy": b_accuracy,
-                                "ROC AUC": roc_auc,
-                                "F1 Score": f1,
-                                "Precision": precision,
-                                "Recall": recall,
-                                "Time taken": time.time() - start,
-                            }
-                        )
+                        output[self.custom_metric.__name__] = custom_metric
+                    print(output)
+
                 if self.predictions:
                     predictions[name] = y_pred
             except Exception as exception:
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
+
         if self.custom_metric is None:
             scores = pd.DataFrame(
                 {
@@ -417,6 +384,7 @@ class LazyClassifier:
                     "Accuracy": Accuracy,
                     "Balanced Accuracy": B_Accuracy,
                     "ROC AUC": ROC_AUC,
+                    "Precision-Recall AUC": PR_SCORE,
                     "F1 Score": F1,
                     "Precision": PRECISION,
                     "Recall": RECALL,
@@ -430,6 +398,7 @@ class LazyClassifier:
                     "Accuracy": Accuracy,
                     "Balanced Accuracy": B_Accuracy,
                     "ROC AUC": ROC_AUC,
+                    "Precision-Recall AUC": PR_SCORE,
                     "F1 Score": F1,
                     "Precision": PRECISION,
                     "Recall": RECALL,
@@ -437,14 +406,14 @@ class LazyClassifier:
                     "Time Taken": TIME,
                 }
             )
-        scores = scores.sort_values(by="ROC AUC", ascending=False).set_index(
-            "Model"
-        )
+
+        scores = scores.sort_values(by="ROC AUC", ascending=False).set_index("Model")
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions)
-        return scores, predictions_df if self.predictions is True else None
+            return scores, predictions_df
 
+        return scores, None
     def provide_models(self, X_train, X_test, y_train, y_test):
         """
         This function returns all the model objects trained in fit function.

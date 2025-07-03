@@ -246,6 +246,7 @@ class LazyClassifier:
         predictions=False,
         random_state=42,
         classifiers="all",
+        preprocessor=None
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -254,6 +255,7 @@ class LazyClassifier:
         self.models = {}
         self.random_state = random_state
         self.classifiers = classifiers
+        self.preprocessor = preprocessor
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
@@ -302,7 +304,7 @@ class LazyClassifier:
             X_train, categorical_features
         )
 
-        preprocessor = ColumnTransformer(
+        preprocessor = self.preprocessor if self.preprocessor else ColumnTransformer(
             transformers=[
                 ("numeric", numeric_transformer, numeric_features),
                 ("categorical_low", categorical_transformer_low, categorical_low),
@@ -587,6 +589,7 @@ class LazyRegressor:
         predictions=False,
         random_state=42,
         regressors="all",
+        preprocessor=None
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -595,6 +598,7 @@ class LazyRegressor:
         self.models = {}
         self.random_state = random_state
         self.regressors = regressors
+        self.preprocessor = preprocessor
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
@@ -643,7 +647,7 @@ class LazyRegressor:
             X_train, categorical_features
         )
 
-        preprocessor = ColumnTransformer(
+        preprocessor = self.preprocessor if self.preprocessor else ColumnTransformer(
             transformers=[
                 ("numeric", numeric_transformer, numeric_features),
                 ("categorical_low", categorical_transformer_low, categorical_low),

@@ -2,12 +2,44 @@ import pytest
 import numpy as np
 import pandas as pd
 import os
+import shutil
+from pathlib import Path
 from lazypredict.Supervised import LazyClassifier, LazyRegressor, get_card_split
 from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from sklearn.metrics import mean_absolute_error
 import mlflow
+
+@pytest.fixture(scope="function", autouse=True)
+def cleanup_mlflow():
+    """Clean up MLflow artifacts and database before and after each test."""
+    # Cleanup before test
+    mlflow_files = ["mlflow.db", "mlruns"]
+    for item in mlflow_files:
+        if os.path.exists(item):
+            if os.path.isfile(item):
+                os.remove(item)
+            else:
+                shutil.rmtree(item)
+    
+    # Run test
+    yield
+    
+    # Cleanup after test
+    mlflow.end_run()
+    for item in mlflow_files:
+        if os.path.exists(item):
+            if os.path.isfile(item):
+                try:
+                    os.remove(item)
+                except (PermissionError, OSError):
+                    pass  # File might be locked on Windows
+            else:
+                try:
+                    shutil.rmtree(item)
+                except (PermissionError, OSError):
+                    pass  # Directory might be locked on Windows
 
 def test_lazy_classifier_fit():
     data = load_breast_cancer()

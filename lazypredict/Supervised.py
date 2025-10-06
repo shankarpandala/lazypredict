@@ -7,6 +7,10 @@ Supervised Models with Improvements
 """
 # Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
+# Fix matplotlib backend to avoid tkinter threading issues
+import matplotlib
+matplotlib.use('Agg')
+
 import logging
 import numpy as np
 import pandas as pd

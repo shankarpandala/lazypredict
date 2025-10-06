@@ -46,7 +46,7 @@ def test_mlflow_logging():
     
     # Train models
     print("\n6. Training models (this will log to MLflow)...")
-    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    models = clf.fit(X_train, X_test, y_train, y_test)
     
     print("\n7. Results:")
     print("=" * 80)

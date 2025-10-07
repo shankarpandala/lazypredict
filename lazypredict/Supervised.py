@@ -278,8 +278,21 @@ class BaseLazyEstimator(ABC):
             try:
                 temp_list = []
                 for model in self.models_param:
-                    full_name = (model.__name__, model)
-                    temp_list.append(full_name)
+                    # Handle both model classes and string names
+                    if isinstance(model, str):
+                        # Find model by name in all_models
+                        found = False
+                        for name, model_class in all_models:
+                            if name == model:
+                                temp_list.append((name, model_class))
+                                found = True
+                                break
+                        if not found:
+                            logger.warning(f"Model '{model}' not found in available models")
+                    else:
+                        # Assume it's a model class
+                        full_name = (model.__name__, model)
+                        temp_list.append(full_name)
                 return temp_list
             except Exception as e:
                 logger.error(f"Invalid model(s): {e}")

@@ -153,3 +153,35 @@ You can access the trained model objects:
     
     # Make predictions with specific model
     predictions = random_forest.predict(X_test)
+
+Model Explainability
+-------------------
+
+Understand your models with SHAP-based explainability:
+
+.. code-block:: python
+
+    from lazypredict.Explainer import ModelExplainer
+
+    # After training models
+    clf = LazyClassifier(verbose=0, ignore_warnings=True)
+    models = clf.fit(X_train, X_test, y_train, y_test)
+
+    # Create explainer
+    explainer = ModelExplainer(clf, X_train, X_test)
+
+    # Get feature importance
+    importance = explainer.feature_importance('LogisticRegression', top_n=10)
+    print(importance)
+
+    # Visualize SHAP summary
+    explainer.plot_summary('LogisticRegression')
+
+    # Explain a single prediction
+    explainer.explain_prediction('LogisticRegression', instance_idx=0)
+
+    # Compare models
+    comparison = explainer.compare_models(['LogisticRegression', 'RandomForestClassifier'])
+    print(comparison)
+
+See the :doc:`explainability` page for complete documentation.

@@ -39,6 +39,7 @@ Contents
    :caption: User Guide
 
    modules
+   explainability
    examples
 
 .. toctree::
@@ -53,6 +54,7 @@ Features
 --------
 * Over 40 built-in machine learning models
 * Automatic model selection for classification and regression
+* **SHAP-based model explainability** (NEW!)
 * Support for both numerical and categorical features
 * Easy integration with scikit-learn pipelines
 * Model performance comparison and ranking
@@ -62,6 +64,8 @@ Features
 * Automatic model metrics logging
 * Custom metric evaluation support
 * Easy model access and reuse
+* Feature importance analysis
+* Single prediction explanations
 
 Key Benefits
 -----------

@@ -229,6 +229,11 @@ class BaseLazyEstimator(ABC):
         """
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
+
+        # Validate custom_metric if provided
+        if custom_metric is not None:
+            self._validate_custom_metric(custom_metric)
+
         self.custom_metric = custom_metric
         self.predictions = predictions
         self.random_state = random_state
@@ -236,12 +241,48 @@ class BaseLazyEstimator(ABC):
         self.n_jobs = n_jobs
         self.trained_models: Dict[str, Pipeline] = {}
         self.mlflow_enabled = setup_mlflow()
-        
+
         # Configure logger verbosity
         if verbose > 0:
             logger.setLevel(logging.DEBUG)
         else:
             logger.setLevel(logging.WARNING)
+
+    def _validate_custom_metric(self, metric_func: Callable) -> None:
+        """
+        Validate custom metric function signature.
+
+        Parameters
+        ----------
+        metric_func : callable
+            The custom metric function to validate
+
+        Raises
+        ------
+        ValueError
+            If the metric function doesn't have the correct signature
+        """
+        import inspect
+
+        if not callable(metric_func):
+            raise ValueError("custom_metric must be callable")
+
+        try:
+            sig = inspect.signature(metric_func)
+            params = list(sig.parameters.keys())
+
+            if len(params) != 2:
+                raise ValueError(
+                    f"custom_metric must accept exactly 2 parameters (y_true, y_pred), "
+                    f"got {len(params)}: {params}"
+                )
+
+            logger.info(f"Custom metric '{metric_func.__name__}' validated successfully")
+
+        except Exception as e:
+            if "must accept exactly 2 parameters" in str(e):
+                raise
+            logger.warning(f"Could not validate custom_metric signature: {e}")
     
     def _prepare_data(
         self, 

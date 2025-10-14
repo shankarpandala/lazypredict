@@ -24,11 +24,11 @@ logger = logging.getLogger('lazypredict.explainer')
 class ModelExplainer:
     """
     Provides explainability for trained models using SHAP (SHapley Additive exPlanations).
-    
+
     This class works with any LazyClassifier or LazyRegressor instance that has
     trained models. It generates feature importance and individual prediction
     explanations using SHAP values.
-    
+
     Parameters
     ----------
     lazy_estimator : LazyClassifier or LazyRegressor
@@ -37,7 +37,7 @@ class ModelExplainer:
         Training features used to fit the models
     X_test : array-like
         Test features for generating explanations
-    
+
     Attributes
     ----------
     trained_models : dict
@@ -46,33 +46,44 @@ class ModelExplainer:
         Dictionary of SHAP explainer objects for each model
     shap_values : dict
         Dictionary of computed SHAP values for each model
-    
+
+    Notes
+    -----
+    **Memory Usage Considerations:**
+    - SHAP explainers and values are cached for performance
+    - For 40+ models, cache can consume 100s of MB
+    - Use clear_cache() or clear_model_cache() to free memory when needed
+    - Consider explaining only top-performing models to reduce memory footprint
+
     Examples
     --------
     >>> from lazypredict.Supervised import LazyClassifier
     >>> from lazypredict.Explainer import ModelExplainer
     >>> from sklearn.datasets import load_breast_cancer
     >>> from sklearn.model_selection import train_test_split
-    >>> 
+    >>>
     >>> data = load_breast_cancer()
     >>> X, y = data.data, data.target
     >>> X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-    >>> 
+    >>>
     >>> clf = LazyClassifier(verbose=0, ignore_warnings=True)
     >>> models = clf.fit(X_train, X_test, y_train, y_test)
-    >>> 
+    >>>
     >>> # Create explainer
     >>> explainer = ModelExplainer(clf, X_train, X_test)
-    >>> 
+    >>>
     >>> # Get feature importance for best model
     >>> importance = explainer.feature_importance('LogisticRegression')
     >>> print(importance.head())
-    >>> 
+    >>>
     >>> # Plot SHAP summary for a model
     >>> explainer.plot_summary('LogisticRegression')
-    >>> 
+    >>>
     >>> # Explain a single prediction
     >>> explainer.explain_prediction('LogisticRegression', instance_idx=0)
+    >>>
+    >>> # Clear cache to free memory
+    >>> explainer.clear_cache()
     """
     
     def __init__(
@@ -136,7 +147,14 @@ class ModelExplainer:
             SHAP explainer object
         """
         if model_name not in self.trained_models:
-            raise ValueError(f"Model '{model_name}' not found in trained models")
+            available = list(self.trained_models.keys())
+            similar = [m for m in available if model_name.lower() in m.lower()]
+            msg = f"Model '{model_name}' not found in trained models.\nAvailable models: {', '.join(available[:5])}"
+            if len(available) > 5:
+                msg += f" (and {len(available)-5} more)"
+            if similar:
+                msg += f"\n\nDid you mean one of these?\n  - " + "\n  - ".join(similar[:3])
+            raise ValueError(msg)
         
         if model_name in self.explainers:
             return self.explainers[model_name]
@@ -247,26 +265,29 @@ class ModelExplainer:
     ) -> pd.DataFrame:
         """
         Get feature importance based on mean absolute SHAP values.
-        
+
         Parameters
         ----------
         model_name : str
             Name of the model to explain
         top_n : int, optional
-            Return only top N features
+            Return only top N features (must be positive if provided)
         absolute : bool, default=True
             Use absolute SHAP values (measures impact regardless of direction)
-        
+
         Returns
         -------
         importance_df : pd.DataFrame
             DataFrame with features and their importance scores
-        
+
         Examples
         --------
         >>> importance = explainer.feature_importance('LogisticRegression', top_n=10)
         >>> print(importance)
         """
+        if top_n is not None and top_n <= 0:
+            raise ValueError(f"top_n must be positive, got {top_n}")
+
         shap_values = self._compute_shap_values(model_name)
         
         # Calculate mean absolute SHAP value for each feature
@@ -579,5 +600,46 @@ class ModelExplainer:
             'shap_value': [instance_shap[i] for i in top_indices],
             'abs_shap_value': [abs_shap[i] for i in top_indices]
         })
-        
+
         return top_features_df
+
+    def clear_cache(self) -> None:
+        """
+        Clear all cached SHAP explainers and values to free memory.
+
+        This is useful when working with many models and memory usage becomes
+        a concern. After clearing the cache, SHAP values will be recomputed
+        on the next method call.
+
+        Examples
+        --------
+        >>> explainer = ModelExplainer(clf, X_train, X_test)
+        >>> # Analyze several models...
+        >>> explainer.clear_cache()  # Free memory
+        >>> # Continue with other models...
+        """
+        self.explainers.clear()
+        self.shap_values.clear()
+        self.expected_values.clear()
+        logger.info("Cleared all cached SHAP explainers and values")
+
+    def clear_model_cache(self, model_name: str) -> None:
+        """
+        Clear cached SHAP explainer and values for a specific model.
+
+        Parameters
+        ----------
+        model_name : str
+            Name of the model whose cache should be cleared
+
+        Examples
+        --------
+        >>> explainer.clear_model_cache('RandomForestClassifier')
+        """
+        if model_name in self.explainers:
+            del self.explainers[model_name]
+        if model_name in self.shap_values:
+            del self.shap_values[model_name]
+        if model_name in self.expected_values:
+            del self.expected_values[model_name]
+        logger.info(f"Cleared cache for model: {model_name}")

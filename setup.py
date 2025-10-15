@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """The setup script."""
 
 from setuptools import setup, find_packages
@@ -24,18 +22,21 @@ test_requirements = [
 setup(
     author="Shankar Rao Pandala",
     author_email="shankar.pandala@live.com",
-    python_requires=">=3.8",
+    python_requires=">=3.9,<3.15",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
-        'Programming Language :: Python :: 3.8',
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     description="Lazy Predict help build a lot of basic models without much code and helps understand which models works better without any parameter tuning",
     long_description_content_type="text/markdown",

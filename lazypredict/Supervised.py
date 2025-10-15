@@ -17,6 +17,17 @@ import pandas as pd
 import sys
 from typing import Union, Optional, Tuple, Dict, List, Callable, Any
 from tqdm import tqdm
+
+# Try to use rich progress bar for better visualization
+try:
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn, TimeElapsedColumn
+    from rich.console import Console
+    RICH_AVAILABLE = True
+    console = Console()
+except ImportError:
+    RICH_AVAILABLE = False
+
+# Try to detect Jupyter environment
 try:
     from IPython import get_ipython
     if 'IPKernelApp' in get_ipython().config:
@@ -46,9 +57,27 @@ from sklearn.metrics import (
     mean_squared_error,
 )
 import warnings
-import xgboost
-import lightgbm
 from joblib import Parallel, delayed
+
+# Lazy imports for heavy dependencies
+_xgboost = None
+_lightgbm = None
+
+def _get_xgboost():
+    """Lazy import for xgboost."""
+    global _xgboost
+    if _xgboost is None:
+        import xgboost
+        _xgboost = xgboost
+    return _xgboost
+
+def _get_lightgbm():
+    """Lazy import for lightgbm."""
+    global _lightgbm
+    if _lightgbm is None:
+        import lightgbm
+        _lightgbm = lightgbm
+    return _lightgbm
 
 # Import MLflow for model tracking
 try:
@@ -118,10 +147,22 @@ REGRESSORS: ModelList = [
     if (issubclass(est[1], RegressorMixin) and (est[0] not in removed_regressors))
 ]
 
-REGRESSORS.append(("XGBRegressor", xgboost.XGBRegressor))
-REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
-CLASSIFIERS.append(("XGBClassifier", xgboost.XGBClassifier))
-CLASSIFIERS.append(("LGBMClassifier", lightgbm.LGBMClassifier))
+# Add XGBoost and LightGBM models (lazy loaded)
+def _add_gradient_boosting_models():
+    """Add gradient boosting models to model lists (lazy loaded)."""
+    try:
+        xgb = _get_xgboost()
+        REGRESSORS.append(("XGBRegressor", xgb.XGBRegressor))
+        CLASSIFIERS.append(("XGBClassifier", xgb.XGBClassifier))
+    except ImportError:
+        logger.warning("XGBoost not available. Skipping XGB models.")
+
+    try:
+        lgbm = _get_lightgbm()
+        REGRESSORS.append(("LGBMRegressor", lgbm.LGBMRegressor))
+        CLASSIFIERS.append(("LGBMClassifier", lgbm.LGBMClassifier))
+    except ImportError:
+        logger.warning("LightGBM not available. Skipping LGBM models.")
 
 # Preprocessing pipelines
 numeric_transformer = Pipeline(
@@ -517,13 +558,38 @@ class BaseLazyEstimator(ABC):
         y_test: ArrayLike,
     ) -> List[Optional[Dict]]:
         """Train models sequentially with progress bar."""
-        progress_bar = notebook_tqdm if use_notebook_tqdm else tqdm
         results = []
-        for name, model_class in progress_bar(models):
-            result = self._train_single_model(
-                name, model_class, preprocessor, X_train, y_train, X_test, y_test
-            )
-            results.append(result)
+
+        # Use Rich progress if available, otherwise fall back to tqdm
+        if RICH_AVAILABLE and not use_notebook_tqdm:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TimeElapsedColumn(),
+                TimeRemainingColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task(
+                    f"[cyan]Training {len(models)} models...", total=len(models)
+                )
+                for name, model_class in models:
+                    progress.update(task, description=f"[cyan]Training {name}...")
+                    result = self._train_single_model(
+                        name, model_class, preprocessor, X_train, y_train, X_test, y_test
+                    )
+                    results.append(result)
+                    progress.advance(task)
+        else:
+            # Fallback to tqdm
+            progress_bar = notebook_tqdm if use_notebook_tqdm else tqdm
+            for name, model_class in progress_bar(models, desc="Training models"):
+                result = self._train_single_model(
+                    name, model_class, preprocessor, X_train, y_train, X_test, y_test
+                )
+                results.append(result)
+
         return results
     
     def _train_parallel(
@@ -535,10 +601,21 @@ class BaseLazyEstimator(ABC):
         X_test: pd.DataFrame,
         y_test: ArrayLike,
     ) -> List[Optional[Dict]]:
-        """Train models in parallel using joblib."""
+        """Train models in parallel using joblib with optimizations."""
         logger.info(f"Training models in parallel with n_jobs={self.n_jobs}")
-        
-        results = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
+
+        # Use joblib with optimized settings:
+        # - prefer='threads' for IO-bound tasks (default is 'processes')
+        # - batch_size='auto' for better load balancing
+        # - pre_dispatch='2*n_jobs' to avoid memory issues
+        results = Parallel(
+            n_jobs=self.n_jobs,
+            verbose=self.verbose,
+            prefer='processes',  # Use processes for CPU-bound ML tasks
+            batch_size='auto',    # Auto batch size for better load balancing
+            pre_dispatch='2*n_jobs',  # Limit memory usage
+            max_nbytes='100M',    # Limit shared memory to 100MB
+        )(
             delayed(self._train_single_model)(
                 name, model_class, preprocessor, X_train, y_train, X_test, y_test
             )
@@ -632,6 +709,9 @@ class LazyClassifier(BaseLazyEstimator):
     
     def _get_all_models(self) -> ModelList:
         """Get all available classifiers."""
+        # Ensure gradient boosting models are loaded
+        if len([m for m in CLASSIFIERS if 'XGB' in m[0] or 'LGBM' in m[0]]) == 0:
+            _add_gradient_boosting_models()
         return CLASSIFIERS
     
     def _get_sort_column(self) -> str:
@@ -733,6 +813,9 @@ class LazyRegressor(BaseLazyEstimator):
     
     def _get_all_models(self) -> ModelList:
         """Get all available regressors."""
+        # Ensure gradient boosting models are loaded
+        if len([m for m in REGRESSORS if 'XGB' in m[0] or 'LGBM' in m[0]]) == 0:
+            _add_gradient_boosting_models()
         return REGRESSORS
     
     def _get_sort_column(self) -> str:

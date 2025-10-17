@@ -61,7 +61,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
       fail-fast: false
 
     steps:
@@ -72,7 +72,6 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        allow-prereleases: true
 
     - name: Cache pip dependencies
       uses: actions/cache@v4
@@ -90,12 +89,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install -r requirements.txt
-        python -m pip install pytest pytest-cov pytest-xdist pytest-timeout
+        python -m pip install pytest pytest-cov
       shell: bash
 
     - name: Run tests with pytest
       run: |
-        pytest --cov=lazypredict --cov-report=xml --cov-report=html --cov-report=term -v -n auto --timeout=300
+        pytest --cov=lazypredict --cov-report=xml --cov-report=term -v
       shell: bash
 
     - name: Upload coverage to Codecov
@@ -104,3 +103,4 @@ jobs:
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}

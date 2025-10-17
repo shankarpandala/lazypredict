@@ -5,7 +5,13 @@
       "Bash(gh pr list:*)",
       "Bash(git log:*)",
       "Bash(pytest:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(python:*)",
+      "Bash(findstr:*)",
+      "Bash(gh run list:*)",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

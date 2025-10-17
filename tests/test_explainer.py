@@ -274,19 +274,20 @@ class TestExplainPrediction:
         clf, X_train, X_test = trained_classifier
         explainer = ModelExplainer(clf, X_train, X_test)
 
-        with pytest.raises(ValueError, match="Instance index.*out of range"):
+        with pytest.raises(ValueError, match="instance_idx.*is out of range"):
             explainer.explain_prediction('LogisticRegression', instance_idx=1000)
 
-    def test_explain_prediction_with_instance_data(self, trained_classifier):
-        """Test prediction explanation with instance data."""
+    def test_explain_prediction_multiple_instances(self, trained_classifier):
+        """Test prediction explanation for multiple instances."""
         clf, X_train, X_test = trained_classifier
         explainer = ModelExplainer(clf, X_train, X_test)
 
-        instance = X_test.iloc[0].values
+        # Test first and last instances
         try:
-            explainer.explain_prediction('LogisticRegression', instance_data=instance, show=False)
+            explainer.explain_prediction('LogisticRegression', instance_idx=0, show=False)
+            explainer.explain_prediction('LogisticRegression', instance_idx=len(X_test)-1, show=False)
         except Exception as e:
-            pytest.fail(f"explain_prediction with instance_data raised exception: {e}")
+            pytest.fail(f"explain_prediction for multiple instances raised exception: {e}")
 
 
 @pytest.mark.skipif(not SHAP_AVAILABLE, reason="SHAP not installed")

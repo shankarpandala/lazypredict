@@ -10,5 +10,6 @@ def test_get_card_split():
     })
     cols = ['A', 'B']
     card_low, card_high = get_card_split(df, cols, n=3)
-    assert len(card_low) == 2
-    assert len(card_high) == 0
+    # Both columns have 5 unique values, which is > 3, so they go to card_high
+    assert len(card_low) == 0
+    assert len(card_high) == 2

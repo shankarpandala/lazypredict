@@ -44,18 +44,18 @@ def classify(input_file, target, test_size, output, predictions, n_jobs, random_
             df = pd.read_csv(input_file)
         except pd.errors.EmptyDataError:
             click.echo("Error: The CSV file is empty", err=True)
-            return 1
+            raise SystemExit(1)
         except pd.errors.ParserError as e:
             click.echo(f"Error: Failed to parse CSV file - {str(e)}", err=True)
-            return 1
+            raise SystemExit(1)
         except Exception as e:
             click.echo(f"Error: Failed to read CSV file - {str(e)}", err=True)
-            return 1
+            raise SystemExit(1)
 
         if target not in df.columns:
             click.echo(f"Error: Target column '{target}' not found in dataset", err=True)
             click.echo(f"Available columns: {', '.join(df.columns)}", err=True)
-            return 1
+            raise SystemExit(1)
         
         # Split features and target
         X = df.drop(columns=[target])
@@ -98,7 +98,7 @@ def classify(input_file, target, test_size, output, predictions, n_jobs, random_
             output_dir = os.path.dirname(output)
             if output_dir and not os.path.exists(output_dir):
                 click.echo(f"Error: Output directory does not exist: {output_dir}", err=True)
-                return 1
+                raise SystemExit(1)
 
             models.to_csv(output)
             click.echo(f"\nResults saved to {output}")
@@ -109,13 +109,13 @@ def classify(input_file, target, test_size, output, predictions, n_jobs, random_
                 click.echo(f"Predictions saved to {pred_file}")
 
         return 0
-        
+
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         if verbose > 1:
             import traceback
             traceback.print_exc()
-        return 1
+        raise SystemExit(1)
 
 
 @main.command()
@@ -141,18 +141,18 @@ def regress(input_file, target, test_size, output, predictions, n_jobs, random_s
             df = pd.read_csv(input_file)
         except pd.errors.EmptyDataError:
             click.echo("Error: The CSV file is empty", err=True)
-            return 1
+            raise SystemExit(1)
         except pd.errors.ParserError as e:
             click.echo(f"Error: Failed to parse CSV file - {str(e)}", err=True)
-            return 1
+            raise SystemExit(1)
         except Exception as e:
             click.echo(f"Error: Failed to read CSV file - {str(e)}", err=True)
-            return 1
+            raise SystemExit(1)
 
         if target not in df.columns:
             click.echo(f"Error: Target column '{target}' not found in dataset", err=True)
             click.echo(f"Available columns: {', '.join(df.columns)}", err=True)
-            return 1
+            raise SystemExit(1)
         
         # Split features and target
         X = df.drop(columns=[target])
@@ -195,7 +195,7 @@ def regress(input_file, target, test_size, output, predictions, n_jobs, random_s
             output_dir = os.path.dirname(output)
             if output_dir and not os.path.exists(output_dir):
                 click.echo(f"Error: Output directory does not exist: {output_dir}", err=True)
-                return 1
+                raise SystemExit(1)
 
             models.to_csv(output)
             click.echo(f"\nResults saved to {output}")
@@ -206,13 +206,13 @@ def regress(input_file, target, test_size, output, predictions, n_jobs, random_s
                 click.echo(f"Predictions saved to {pred_file}")
 
         return 0
-        
+
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         if verbose > 1:
             import traceback
             traceback.print_exc()
-        return 1
+        raise SystemExit(1)
 
 
 @main.command()

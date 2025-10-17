@@ -1,9 +1,13 @@
 # Lazy Predict
 
+[![CI](https://github.com/shankarpandala/lazypredict/workflows/CI/badge.svg?branch=dev)](https://github.com/shankarpandala/lazypredict/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/shankarpandala/lazypredict/branch/dev/graph/badge.svg)](https://codecov.io/gh/shankarpandala/lazypredict)
 [![image](https://img.shields.io/pypi/v/lazypredict.svg)](https://pypi.python.org/pypi/lazypredict)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![Publish](https://github.com/shankarpandala/lazypredict/actions/workflows/publish.yml/badge.svg)](https://github.com/shankarpandala/lazypredict/actions/workflows/publish.yml)
 [![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)
 [![Citations](https://img.shields.io/badge/Citations-43-blue)](https://scholar.google.com/scholar?oi=bibs&hl=en&cites=4325808232671020176,16284230108871951652&as_sdt=5)
 
@@ -14,10 +18,11 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 
 ## Features
 - Over 40 built-in machine learning models
-- Automatic model selection for classification and regression 
+- Automatic model selection for classification and regression
 - Built-in MLflow integration for experiment tracking
-- Support for Python 3.8 through 3.13
+- Support for Python 3.9 through 3.14
 - Custom metric evaluation support
+- Parallel training support for faster model comparison
 
 ## Installation
 

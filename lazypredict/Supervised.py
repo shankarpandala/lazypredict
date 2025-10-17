@@ -205,8 +205,8 @@ def get_card_split(df: pd.DataFrame, cols: pd.Index, n: int = 11) -> Tuple[pd.In
         Columns with cardinality >= n
     """
     cond = df[cols].nunique() > n
-    card_high = cols[cond]
-    card_low = cols[~cond]
+    card_high = cond[cond].index
+    card_low = cond[~cond].index
     return card_low, card_high
 
 

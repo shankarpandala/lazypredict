@@ -14,19 +14,25 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
-      - name: Install Build Tools and Git
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: publish-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            publish-pip-
+
+      - name: Install Build Tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y git
-          python -m pip install --upgrade pip
-          pip install build
+          python -m pip install --upgrade pip setuptools wheel
+          pip install build twine
 
       - name: Update Version in setup.py and __init__.py
         run: |
@@ -37,8 +43,9 @@ jobs:
       - name: Build Package
         run: python -m build
 
+      - name: Check package
+        run: twine check dist/*
+
       - name: Publish to PyPI
         if: github.event.release.prerelease == false
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: 'https://upload.pypi.org/legacy/'

@@ -1,39 +1,40 @@
-# LazyPredict Development Dependencies - Python 3.9+ (Python 3.14 Tested)
+# LazyPredict Development Dependencies - Python 3.9-3.14 Support
+# Using wider version ranges for better compatibility across Python versions
 
 # Inherit production dependencies
 -r requirements.txt
 
-# Testing Framework
-pytest>=7.4.4,<9.0.0
+# Testing Framework (wider ranges for Python 3.9-3.14)
+pytest>=7.4.0,<9.0.0
 pytest-cov>=4.1.0,<6.0.0
-pytest-xdist>=3.6.0,<4.0.0
-pytest-benchmark>=5.0.0,<6.0.0
-pytest-timeout>=2.3.0,<3.0.0
+pytest-xdist>=3.3.0,<4.0.0
+pytest-benchmark>=4.0.0,<6.0.0
+pytest-timeout>=2.1.0,<3.0.0
 
 # Code Formatting
-black>=24.0.0,<25.0.0
-isort>=5.13.0,<6.0.0
+black>=23.0.0,<25.0.0
+isort>=5.12.0,<6.0.0
 
 # Linting & Quality
-flake8>=7.0.0,<8.0.0
-pylint>=3.3.0,<4.0.0
-bandit>=1.8.0,<2.0.0
-ruff>=0.8.0,<1.0.0
+flake8>=6.0.0,<8.0.0
+pylint>=3.0.0,<4.0.0
+bandit>=1.7.0,<2.0.0
+ruff>=0.1.0,<1.0.0
 
 # Type Checking
-mypy>=1.18.0,<2.0.0
+mypy>=1.5.0,<2.0.0
 
 # Documentation
-myst-parser>=3.0.0,<4.0.0
-sphinx>=7.4.0,<8.0.0
-sphinx-rtd-theme>=3.0.0,<4.0.0
+myst-parser>=2.0.0,<4.0.0
+sphinx>=7.0.0,<8.0.0
+sphinx-rtd-theme>=2.0.0,<4.0.0
 
 # Performance Profiling
 memory-profiler>=0.61.0,<1.0.0
-line-profiler>=4.1.0,<5.0.0
-py-spy>=0.4.0,<1.0.0
+line-profiler>=4.0.0,<5.0.0
+py-spy>=0.3.0,<1.0.0
 scalene>=1.5.0,<2.0.0
 
 # Development Utilities
-ipython>=8.30.0,<9.0.0
-jupyter>=1.1.0,<2.0.0
+ipython>=8.12.0,<9.0.0
+jupyter>=1.0.0,<2.0.0

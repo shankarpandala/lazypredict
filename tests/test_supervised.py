@@ -19,9 +19,15 @@ def cleanup_mlflow():
     for item in mlflow_files:
         if os.path.exists(item):
             if os.path.isfile(item):
-                os.remove(item)
+                try:
+                    os.remove(item)
+                except (PermissionError, OSError):
+                    pass  # File might be locked on Windows
             else:
-                shutil.rmtree(item)
+                try:
+                    shutil.rmtree(item)
+                except (PermissionError, OSError):
+                    pass  # Directory might be locked on Windows
     
     # Run test
     yield
@@ -46,7 +52,7 @@ def test_lazy_classifier_fit():
     X = data.data
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=123)
-    clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
+    clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None, predictions=True)
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
     assert isinstance(models, pd.DataFrame)
     assert isinstance(predictions, pd.DataFrame)
@@ -62,7 +68,7 @@ def test_lazy_classifier_custom_metric():
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=123)
     clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=custom_accuracy)
-    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    models = clf.fit(X_train, X_test, y_train, y_test)
     assert "custom_accuracy" in models.columns
 
 def test_lazy_classifier_mlflow_integration():
@@ -73,7 +79,7 @@ def test_lazy_classifier_mlflow_integration():
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=123)
     clf = LazyClassifier(verbose=0, ignore_warnings=True)
-    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    models = clf.fit(X_train, X_test, y_train, y_test)
     
     # Verify MLflow experiments were created
     assert os.path.exists("mlflow.db")
@@ -91,7 +97,7 @@ def test_lazy_classifier_categorical_features():
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=123)
     clf = LazyClassifier(verbose=0, ignore_warnings=True)
-    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    models = clf.fit(X_train, X_test, y_train, y_test)
     assert isinstance(models, pd.DataFrame)
 
 def test_lazy_regressor_fit():
@@ -99,7 +105,7 @@ def test_lazy_regressor_fit():
     X = data.data
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
-    reg = LazyRegressor(verbose=0, ignore_warnings=False, custom_metric=None)
+    reg = LazyRegressor(verbose=0, ignore_warnings=False, custom_metric=None, predictions=True)
     models, predictions = reg.fit(X_train, X_test, y_train, y_test)
     assert isinstance(models, pd.DataFrame)
     assert isinstance(predictions, pd.DataFrame)
@@ -112,7 +118,7 @@ def test_lazy_regressor_custom_metric():
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
     reg = LazyRegressor(verbose=0, ignore_warnings=False, custom_metric=mean_absolute_error)
-    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+    models = reg.fit(X_train, X_test, y_train, y_test)
     assert "mean_absolute_error" in models.columns
 
 def test_lazy_regressor_mlflow_integration():
@@ -122,7 +128,7 @@ def test_lazy_regressor_mlflow_integration():
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
     reg = LazyRegressor(verbose=0, ignore_warnings=False)
-    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+    models = reg.fit(X_train, X_test, y_train, y_test)
     assert os.path.exists("mlflow.db")
 
 def test_get_card_split():
@@ -144,9 +150,9 @@ def test_lazy_classifier_specific_models():
     X = data.data
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=123)
-    clf = LazyClassifier(verbose=0, ignore_warnings=True, 
+    clf = LazyClassifier(verbose=0, ignore_warnings=True,
                         classifiers=[RandomForestClassifier, LogisticRegression])
-    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    models = clf.fit(X_train, X_test, y_train, y_test)
     assert len(models) == 2
     assert "RandomForestClassifier" in models.index
     assert "LogisticRegression" in models.index

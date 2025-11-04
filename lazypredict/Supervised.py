@@ -18,6 +18,9 @@ import sys
 from typing import Union, Optional, Tuple, Dict, List, Callable, Any
 from tqdm import tqdm
 
+# Added for sparse data handling
+from scipy.sparse import issparse
+
 # Try to use rich progress bar for better visualization
 try:
     from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeRemainingColumn, TimeElapsedColumn
@@ -384,10 +387,12 @@ class BaseLazyEstimator(ABC):
         self,
         name: str,
         model_class: type,
-        preprocessor: ColumnTransformer,
-        X_train: pd.DataFrame,
+        # MODIFIED: preprocessor can now be None
+        preprocessor: Optional[ColumnTransformer],
+        # MODIFIED: Type hints changed to allow sparse matrices
+        X_train: ArrayLike,
         y_train: ArrayLike,
-        X_test: pd.DataFrame,
+        X_test: ArrayLike,
         y_test: ArrayLike,
     ) -> Optional[Dict[str, Any]]:
         """Train a single model and return metrics."""
@@ -400,17 +405,28 @@ class BaseLazyEstimator(ABC):
                 mlflow_run = mlflow.start_run(run_name=f"{self.__class__.__name__}-{name}")
                 mlflow.log_param("model_name", name)
             
-            # Create pipeline
-            if "random_state" in model_class().get_params().keys():
-                pipe = Pipeline([
-                    ("preprocessor", preprocessor),
-                    ("model", model_class(random_state=self.random_state)),
-                ])
+
+            # Create pipeline OR use the model directly
+            # NEW: Check if a preprocessor is provided
+            if preprocessor is not None:
+                # ORIGINAL LOGIC: Build a pipeline
+                # Create pipeline
+                if "random_state" in model_class().get_params().keys():
+                    pipe = Pipeline([
+                        ("preprocessor", preprocessor),
+                        ("model", model_class(random_state=self.random_state)),
+                    ])
+                else:
+                    pipe = Pipeline([
+                        ("preprocessor", preprocessor),
+                        ("model", model_class()),
+                    ])
             else:
-                pipe = Pipeline([
-                    ("preprocessor", preprocessor),
-                    ("model", model_class()),
-                ])
+                # NEW LOGIC: Use the model as is, no pipeline needed 
+                if "random_state" in model_class().get_params().keys():
+                    pipe = model_class(random_state=self.random_state)
+                else:
+                    pipe = model_class()
             
             # Train model
             pipe.fit(X_train, y_train)
@@ -510,12 +526,20 @@ class BaseLazyEstimator(ABC):
             Predictions from all models (if predictions=True)
         """
         logger.info(f"Starting {self.__class__.__name__} fit")
+
+        # NEW: Check for sparse input at the beginning
+        if issparse(X_train):
+            # If input is sparse, we assume it's already preprocessed.
+            logger.info("Sparse matrix detected. Skipping DataFrame conversion and preprocessing.")
+            preprocessor = None
         
-        # Prepare data
-        X_train, X_test = self._prepare_data(X_train, X_test)
-        
-        # Get preprocessor
-        preprocessor = self._get_preprocessor(X_train)
+        else:
+            # Original logic for dense arrays and DataFrames
+            # Prepare data
+            X_train, X_test = self._prepare_data(X_train, X_test)
+            
+            # Get preprocessor
+            preprocessor = self._get_preprocessor(X_train)
         
         # Prepare models
         models = self._prepare_models(self._get_all_models())

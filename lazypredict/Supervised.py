@@ -531,6 +531,9 @@ class BaseLazyEstimator(ABC):
         if issparse(X_train):
             # If input is sparse, we assume it's already preprocessed.
             logger.info("Sparse matrix detected. Skipping DataFrame conversion and preprocessing.")
+            logger.info("Some models do not support sparse matrix input and will be skipped. " \
+            "Set 'ignore_warnings' to 'False' if you want to see which models were skipped")
+
             preprocessor = None
         
         else:

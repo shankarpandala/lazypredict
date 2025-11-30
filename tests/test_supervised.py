@@ -336,3 +336,84 @@ def test_lazy_regressor_predict():
     # Test error for invalid model name
     with pytest.raises(ValueError, match="Model .* not found"):
         reg.predict(X_test, model_name='InvalidModel')
+
+def test_custom_metric_with_failing_models():
+    """
+    Test that custom_metric parameter works correctly when custom_metric calculation fails for some models.
+    This addresses issue #324 where custom_metric caused "arrays must all be same length" error.
+    The original issue reported log_loss failing, which happens when metrics expect specific input formats.
+    """
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.naive_bayes import GaussianNB
+    
+    # Create a custom metric that requires specific conditions (like log_loss needing probabilities)
+    def strict_custom_metric(y_true, y_pred):
+        # This simulates metrics like log_loss that need specific formats
+        # It will fail if predictions are not in expected range
+        if np.any((y_pred < 0) | (y_pred > 1)):
+            raise ValueError("Predictions must be probabilities between 0 and 1")
+        return -np.mean(y_true * np.log(y_pred + 1e-15) + (1 - y_true) * np.log(1 - y_pred + 1e-15))
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Test with strict custom metric that will fail for some models
+    clf = LazyClassifier(
+        verbose=0,
+        ignore_warnings=True,
+        custom_metric=strict_custom_metric,
+        classifiers=[LogisticRegression, DecisionTreeClassifier, GaussianNB]
+    )
+    
+    # This should not raise "arrays must all be same length" error
+    # even if strict_custom_metric fails for some models (those returning class labels)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify the results DataFrame is created successfully
+    assert isinstance(models, pd.DataFrame)
+    assert "strict_custom_metric" in models.columns
+    
+    # The metric should fail for all models (since predict() returns class labels, not probabilities)
+    # But the DataFrame should still be created with None values
+    assert len(models) == 3  # All 3 models should be in results
+
+def test_custom_metric_with_failing_regressors():
+    """
+    Test that custom_metric parameter works correctly for regressors when custom metric calculation fails.
+    """
+    from sklearn.datasets import load_diabetes
+    from sklearn.linear_model import LinearRegression, Ridge, Lasso
+    
+    # Create a custom metric that may fail
+    def failing_custom_metric(y_true, y_pred):
+        # This will fail if predictions have too high variance
+        if np.std(y_pred) > 1000:
+            raise ValueError("Predictions have too high variance")
+        return np.mean(np.abs(y_true - y_pred))
+    
+    data = load_diabetes()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Test with custom metric
+    reg = LazyRegressor(
+        verbose=0,
+        ignore_warnings=True,
+        custom_metric=failing_custom_metric,
+        regressors=[LinearRegression, Ridge, Lasso]
+    )
+    
+    # This should not raise "arrays must all be same length" error
+    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify the results DataFrame is created successfully
+    assert isinstance(models, pd.DataFrame)
+    assert "failing_custom_metric" in models.columns
+    
+    # Verify that at least one model has a valid custom metric
+    assert any(models['failing_custom_metric'].notna())

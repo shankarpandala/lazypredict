@@ -54,6 +54,14 @@ try:
 except ImportError:
     PERPETUAL_AVAILABLE = False
 
+# Intel Extension for Scikit-learn for better performance
+try:
+    from sklearnex import patch_sklearn
+    patch_sklearn()
+    INTEL_EXTENSION_AVAILABLE = True
+except ImportError:
+    INTEL_EXTENSION_AVAILABLE = False
+
 # Import MLflow for model tracking
 try:
     import mlflow

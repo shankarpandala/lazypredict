@@ -2,12 +2,19 @@ import pytest
 import numpy as np
 import pandas as pd
 import os
-from lazypredict.Supervised import LazyClassifier, LazyRegressor, get_card_split
+from lazypredict.Supervised import LazyClassifier, LazyRegressor, get_card_split, INTEL_EXTENSION_AVAILABLE
 from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from sklearn.metrics import mean_absolute_error
 import mlflow
+
+
+def test_intel_extension_import():
+    """Test that Intel Extension for Scikit-learn is properly handled"""
+    # Should be a boolean indicating if Intel extension is available
+    assert isinstance(INTEL_EXTENSION_AVAILABLE, bool)
+    # The import should not fail even if Intel extension is not installed
 
 
 def test_lazy_classifier_boolean_features():

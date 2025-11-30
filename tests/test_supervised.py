@@ -9,6 +9,106 @@ from sklearn.utils import shuffle
 from sklearn.metrics import mean_absolute_error
 import mlflow
 
+
+def test_lazy_classifier_boolean_features():
+    """Test LazyClassifier with boolean DataFrame features"""
+    # Create dataset with boolean features
+    np.random.seed(42)
+    n_samples = 200
+    
+    # Create boolean features
+    df = pd.DataFrame({
+        'bool_feat_1': np.random.choice([True, False], n_samples),
+        'bool_feat_2': np.random.choice([True, False], n_samples),
+        'bool_feat_3': np.random.choice([True, False], n_samples),
+        'bool_feat_4': np.random.choice([True, False], n_samples),
+    })
+    
+    # Create target based on boolean features
+    y = ((df['bool_feat_1'].astype(int) + df['bool_feat_2'].astype(int)) > 1).astype(int)
+    
+    X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.3, random_state=42)
+    
+    clf = LazyClassifier(verbose=0, ignore_warnings=True)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify results
+    assert isinstance(models, pd.DataFrame)
+    assert len(models) > 0
+    assert "Balanced Accuracy" in models.columns
+    # Should have more than just DummyClassifier
+    assert len(models) > 1
+    
+
+def test_lazy_classifier_mixed_boolean_numeric():
+    """Test LazyClassifier with mixed boolean and numeric features"""
+    np.random.seed(42)
+    n_samples = 200
+    
+    df = pd.DataFrame({
+        'bool_feat_1': np.random.choice([True, False], n_samples),
+        'bool_feat_2': np.random.choice([True, False], n_samples),
+        'numeric_feat_1': np.random.randn(n_samples),
+        'numeric_feat_2': np.random.randn(n_samples),
+    })
+    
+    y = ((df['bool_feat_1'].astype(int) + (df['numeric_feat_1'] > 0).astype(int)) > 1).astype(int)
+    
+    X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.3, random_state=42)
+    
+    clf = LazyClassifier(verbose=0, ignore_warnings=True)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    
+    assert isinstance(models, pd.DataFrame)
+    assert len(models) > 1  # More than DummyClassifier
+    
+
+def test_lazy_regressor_boolean_features():
+    """Test LazyRegressor with boolean DataFrame features"""
+    np.random.seed(42)
+    n_samples = 200
+    
+    df = pd.DataFrame({
+        'bool_feat_1': np.random.choice([True, False], n_samples),
+        'bool_feat_2': np.random.choice([True, False], n_samples),
+        'bool_feat_3': np.random.choice([True, False], n_samples),
+    })
+    
+    # Create continuous target
+    y = df['bool_feat_1'].astype(int) * 2 + df['bool_feat_2'].astype(int) + np.random.randn(n_samples) * 0.1
+    
+    X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.3, random_state=42)
+    
+    reg = LazyRegressor(verbose=0, ignore_warnings=True)
+    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+    
+    assert isinstance(models, pd.DataFrame)
+    assert len(models) > 0
+    assert "R-Squared" in models.columns
+    
+
+def test_lazy_regressor_mixed_boolean_numeric():
+    """Test LazyRegressor with mixed boolean and numeric features"""
+    np.random.seed(42)
+    n_samples = 200
+    
+    df = pd.DataFrame({
+        'bool_feat_1': np.random.choice([True, False], n_samples),
+        'numeric_feat_1': np.random.randn(n_samples),
+        'numeric_feat_2': np.random.randn(n_samples),
+    })
+    
+    y = df['bool_feat_1'].astype(int) * 3 + df['numeric_feat_1'] * 2 + np.random.randn(n_samples) * 0.1
+    
+    X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.3, random_state=42)
+    
+    reg = LazyRegressor(verbose=0, ignore_warnings=True)
+    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+    
+    assert isinstance(models, pd.DataFrame)
+    assert len(models) > 0
+
+
 def test_lazy_classifier_fit():
     data = load_breast_cancer()
     X = data.data

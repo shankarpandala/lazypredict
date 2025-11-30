@@ -467,11 +467,18 @@ class LazyClassifier:
                 F1.append(f1)
                 TIME.append(time.time() - start)
                 if self.custom_metric is not None:
-                    custom_metric = self.custom_metric(y_test, y_pred)
-                    CUSTOM_METRIC.append(custom_metric)
-                    # Log custom metric to MLflow if enabled
-                    if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
-                        mlflow.log_metric(self.custom_metric.__name__, custom_metric)
+                    try:
+                        custom_metric = self.custom_metric(y_test, y_pred)
+                        CUSTOM_METRIC.append(custom_metric)
+                        # Log custom metric to MLflow if enabled
+                        if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                            mlflow.log_metric(self.custom_metric.__name__, custom_metric)
+                    except Exception as custom_exception:
+                        # If custom metric fails, append None to maintain array length
+                        CUSTOM_METRIC.append(None)
+                        if self.ignore_warnings is False:
+                            print(f"Custom metric {self.custom_metric.__name__} failed for {name}")
+                            print(custom_exception)
                 
                 if self.verbose > 0:
                     if self.custom_metric is not None:
@@ -955,11 +962,18 @@ class LazyRegressor:
                 TIME.append(time.time() - start)
 
                 if self.custom_metric:
-                    custom_metric = self.custom_metric(y_test, y_pred)
-                    CUSTOM_METRIC.append(custom_metric)
-                    # Log custom metric to MLflow if enabled
-                    if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
-                        mlflow.log_metric(self.custom_metric.__name__, custom_metric)
+                    try:
+                        custom_metric = self.custom_metric(y_test, y_pred)
+                        CUSTOM_METRIC.append(custom_metric)
+                        # Log custom metric to MLflow if enabled
+                        if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                            mlflow.log_metric(self.custom_metric.__name__, custom_metric)
+                    except Exception as custom_exception:
+                        # If custom metric fails, append None to maintain array length
+                        CUSTOM_METRIC.append(None)
+                        if self.ignore_warnings is False:
+                            print(f"Custom metric {self.custom_metric.__name__} failed for {name}")
+                            print(custom_exception)
 
                 if self.verbose > 0:
                     scores_verbose = {

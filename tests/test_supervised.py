@@ -564,3 +564,68 @@ def test_verbose_one_shows_progress():
         sys.stdout = old_stdout
     
     assert isinstance(models, pd.DataFrame)
+
+def test_perpetual_booster_classifier():
+    """
+    Test that PerpetualBooster works correctly for classification if available.
+    """
+    try:
+        from perpetual import PerpetualBooster
+        PERPETUAL_AVAILABLE = True
+    except ImportError:
+        PERPETUAL_AVAILABLE = False
+    
+    if not PERPETUAL_AVAILABLE:
+        pytest.skip("PerpetualBooster not installed")
+    
+    from sklearn.datasets import load_breast_cancer
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    clf = LazyClassifier(
+        verbose=0,
+        ignore_warnings=True,
+        classifiers=[PerpetualBooster]
+    )
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify PerpetualBooster is in results
+    assert 'PerpetualBooster' in models.index
+    assert models.loc['PerpetualBooster', 'Accuracy'] > 0.5
+    assert isinstance(models, pd.DataFrame)
+    assert isinstance(predictions, pd.DataFrame)
+
+def test_perpetual_booster_regressor():
+    """
+    Test that PerpetualBooster works correctly for regression if available.
+    """
+    try:
+        from perpetual import PerpetualBooster
+        PERPETUAL_AVAILABLE = True
+    except ImportError:
+        PERPETUAL_AVAILABLE = False
+    
+    if not PERPETUAL_AVAILABLE:
+        pytest.skip("PerpetualBooster not installed")
+    
+    from sklearn.datasets import load_diabetes
+    
+    data = load_diabetes()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    reg = LazyRegressor(
+        verbose=0,
+        ignore_warnings=True,
+        regressors=[PerpetualBooster]
+    )
+    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify PerpetualBooster is in results
+    assert 'PerpetualBooster' in models.index
+    assert isinstance(models, pd.DataFrame)
+    assert isinstance(predictions, pd.DataFrame)

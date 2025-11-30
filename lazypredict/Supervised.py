@@ -45,6 +45,13 @@ import xgboost
 # import catboost
 import lightgbm
 
+# Optional imports
+try:
+    from perpetual import PerpetualBooster
+    PERPETUAL_AVAILABLE = True
+except ImportError:
+    PERPETUAL_AVAILABLE = False
+
 # Import MLflow for model tracking
 try:
     import mlflow
@@ -122,10 +129,14 @@ REGRESSORS = [
 REGRESSORS.append(("XGBRegressor", xgboost.XGBRegressor))
 REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
 # REGRESSORS.append(('CatBoostRegressor',catboost.CatBoostRegressor))
+if PERPETUAL_AVAILABLE:
+    REGRESSORS.append(("PerpetualBooster", PerpetualBooster))
 
 CLASSIFIERS.append(("XGBClassifier", xgboost.XGBClassifier))
 CLASSIFIERS.append(("LGBMClassifier", lightgbm.LGBMClassifier))
 # CLASSIFIERS.append(('CatBoostClassifier',catboost.CatBoostClassifier))
+if PERPETUAL_AVAILABLE:
+    CLASSIFIERS.append(("PerpetualBooster", PerpetualBooster))
 
 numeric_transformer = Pipeline(
     steps=[("imputer", SimpleImputer(strategy="mean")), ("scaler", StandardScaler())]

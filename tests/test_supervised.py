@@ -488,3 +488,79 @@ def test_precision_recall_with_cv():
     # Verify CV std is non-negative
     assert models.loc['LogisticRegression', 'Precision CV Std'] >= 0
     assert models.loc['LogisticRegression', 'Recall CV Std'] >= 0
+
+def test_verbose_zero_disables_progress_bar():
+    """
+    Test that verbose=0 disables the tqdm progress bar.
+    This addresses issue #438 about verbosity control.
+    """
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.linear_model import LogisticRegression
+    import sys
+    from io import StringIO
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Capture stdout to check for progress bar output
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    
+    try:
+        clf = LazyClassifier(
+            verbose=0,
+            ignore_warnings=True,
+            classifiers=[LogisticRegression]
+        )
+        models, _ = clf.fit(X_train, X_test, y_train, y_test)
+        
+        output = sys.stdout.getvalue()
+        
+        # With verbose=0, there should be no tqdm progress bar output
+        assert 'it/s' not in output.lower()
+        assert '%|' not in output
+        
+    finally:
+        sys.stdout = old_stdout
+    
+    # Verify the model still ran successfully
+    assert isinstance(models, pd.DataFrame)
+    assert 'LogisticRegression' in models.index
+
+def test_verbose_one_shows_progress():
+    """
+    Test that verbose>0 still allows output (metrics printing).
+    """
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.linear_model import LogisticRegression
+    import sys
+    from io import StringIO
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Capture stdout
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    
+    try:
+        clf = LazyClassifier(
+            verbose=1,
+            ignore_warnings=True,
+            classifiers=[LogisticRegression]
+        )
+        models, _ = clf.fit(X_train, X_test, y_train, y_test)
+        
+        output = sys.stdout.getvalue()
+        
+        # With verbose=1, should see metric output
+        assert 'Model' in output or 'Accuracy' in output or 'LogisticRegression' in output
+        
+    finally:
+        sys.stdout = old_stdout
+    
+    assert isinstance(models, pd.DataFrame)

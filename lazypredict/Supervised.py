@@ -353,7 +353,22 @@ class LazyClassifier:
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
                 f1 = f1_score(y_test, y_pred, average="weighted")
                 try:
-                    roc_auc = roc_auc_score(y_test, y_pred)
+                    # Use predict_proba for ROC-AUC calculation instead of class labels
+                    if hasattr(pipe, "predict_proba"):
+                        y_pred_proba = pipe.predict_proba(X_test)
+                        # For binary classification, use probabilities of positive class
+                        if y_pred_proba.shape[1] == 2:
+                            roc_auc = roc_auc_score(y_test, y_pred_proba[:, 1])
+                        else:
+                            # For multiclass, use one-vs-rest with probabilities
+                            roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class='ovr', average='weighted')
+                    elif hasattr(pipe, "decision_function"):
+                        # For models without predict_proba but with decision_function
+                        y_pred_score = pipe.decision_function(X_test)
+                        roc_auc = roc_auc_score(y_test, y_pred_score)
+                    else:
+                        # Fallback to class labels if neither method is available
+                        roc_auc = roc_auc_score(y_test, y_pred)
                 except Exception as exception:
                     roc_auc = None
                     if self.ignore_warnings is False:

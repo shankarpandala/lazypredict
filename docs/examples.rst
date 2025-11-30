@@ -48,6 +48,25 @@ You can use custom metrics for model evaluation:
     clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=custom_f1)
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
+Advanced Classification Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use advanced options like categorical encoding, timeout, and cross-validation:
+
+.. code-block:: python
+
+    clf = LazyClassifier(
+        verbose=1,                          # Show progress
+        ignore_warnings=True,               # Suppress warnings
+        custom_metric=None,                 # Use default metrics
+        predictions=True,                   # Return predictions
+        classifiers='all',                  # Use all available classifiers
+        categorical_encoder='onehot',       # Encoding strategy
+        timeout=60,                         # Max time per model in seconds
+        cv=5                                # Cross-validation folds
+    )
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
 Regression Example
 ----------------
 
@@ -95,6 +114,88 @@ Lazy Predict works seamlessly with pandas DataFrames:
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     reg = LazyRegressor(verbose=0, ignore_warnings=True)
     models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+Categorical Feature Encoding
+--------------------------
+
+Lazy Predict supports multiple categorical encoding strategies:
+
+OneHot Encoding (Default)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    import pandas as pd
+    from lazypredict.Supervised import LazyClassifier
+    from sklearn.model_selection import train_test_split
+
+    # Load data with categorical features
+    df = pd.read_csv('data_with_categories.csv')
+    X = df.drop('target', axis=1)
+    y = df['target']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+    # Default onehot encoding
+    clf = LazyClassifier(categorical_encoder='onehot', verbose=0)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+Ordinal Encoding
+~~~~~~~~~~~~~~
+
+Useful for ordered categorical features or when one-hot encoding creates too many features:
+
+.. code-block:: python
+
+    clf = LazyClassifier(categorical_encoder='ordinal', verbose=0)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+Target Encoding
+~~~~~~~~~~~~~
+
+Target encoding requires the ``category-encoders`` package:
+
+.. code-block:: bash
+
+    pip install category-encoders
+
+.. code-block:: python
+
+    clf = LazyClassifier(categorical_encoder='target', verbose=0)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+Binary Encoding
+~~~~~~~~~~~~~
+
+Binary encoding is efficient for high-cardinality features:
+
+.. code-block:: python
+
+    # Requires category-encoders package
+    clf = LazyClassifier(categorical_encoder='binary', verbose=0)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+Comparing Encoders
+~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    import pandas as pd
+    
+    results = {}
+    for encoder in ['onehot', 'ordinal', 'target', 'binary']:
+        try:
+            clf = LazyClassifier(
+                categorical_encoder=encoder,
+                verbose=0,
+                ignore_warnings=True
+            )
+            models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+            results[encoder] = models.head(3)
+            print(f"\n{encoder.upper()} Encoding Results:")
+            print(models.head(3))
+        except Exception as e:
+            print(f"{encoder}: {e}")
 
 Using with MLflow
 ---------------
@@ -153,3 +254,42 @@ You can access the trained model objects:
     
     # Make predictions with specific model
     predictions = random_forest.predict(X_test)
+
+Model Timeout
+------------
+
+Set a maximum time limit for each model to prevent long-running models from blocking:
+
+.. code-block:: python
+
+    # Limit each model to 60 seconds
+    clf = LazyClassifier(timeout=60, verbose=1)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Models that exceed the timeout will be skipped
+    # Check for skipped models in the verbose output
+
+This is particularly useful when:
+
+* Working with large datasets where some models might take very long
+* Running experiments with time constraints
+* Preventing specific slow models from blocking the entire pipeline
+
+Intel Extension Acceleration
+--------------------------
+
+For improved performance on Intel CPUs, install Intel Extension for Scikit-learn:
+
+.. code-block:: bash
+
+    pip install scikit-learn-intelex
+
+Lazy Predict will automatically detect and use it for acceleration:
+
+.. code-block:: python
+
+    # No code changes needed - acceleration is automatic
+    clf = LazyClassifier(verbose=0)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # You'll see "Intel(R) Extension for Scikit-learn enabled" in verbose output

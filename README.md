@@ -15,9 +15,12 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 ## Features
 - Over 40 built-in machine learning models
 - Automatic model selection for classification and regression 
+- Multiple categorical encoding strategies (OneHot, Ordinal, Target, Binary)
 - Built-in MLflow integration for experiment tracking
 - Support for Python 3.8 through 3.13
 - Custom metric evaluation support
+- Configurable timeout and cross-validation
+- Intel Extension for Scikit-learn acceleration support
 
 ## Installation
 
@@ -55,6 +58,37 @@ models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 print(models)
 ```
+
+### Advanced Options
+
+```python
+# With categorical encoding, timeout, and cross-validation
+clf = LazyClassifier(
+    verbose=1,                          # Show progress
+    ignore_warnings=True,               # Suppress warnings
+    custom_metric=None,                 # Use default metrics
+    predictions=True,                   # Return predictions
+    classifiers='all',                  # Use all available classifiers
+    categorical_encoder='onehot',       # Encoding: 'onehot', 'ordinal', 'target', 'binary'
+    timeout=60,                         # Max time per model in seconds
+    cv=5                                # Cross-validation folds (optional)
+)
+models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+```
+
+**Parameters:**
+- `verbose` (int): 0 for silent, 1 for progress display
+- `ignore_warnings` (bool): Suppress scikit-learn warnings
+- `custom_metric` (callable): Custom evaluation metric
+- `predictions` (bool): Return prediction DataFrame
+- `classifiers` (str/list): 'all' or list of classifier names
+- `categorical_encoder` (str): Encoding strategy for categorical features
+  - `'onehot'`: One-hot encoding (default)
+  - `'ordinal'`: Ordinal encoding
+  - `'target'`: Target encoding (requires `category-encoders`)
+  - `'binary'`: Binary encoding (requires `category-encoders`)
+- `timeout` (int): Maximum seconds per model (None for no limit)
+- `cv` (int): Number of cross-validation folds (None to disable)
 
 | Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
 |:-------------------------------|-----------:|--------------------:|----------:|-----------:|-------------:|
@@ -114,6 +148,35 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 print(models)
 ```
 
+### Advanced Options
+
+```python
+# With categorical encoding and timeout
+reg = LazyRegressor(
+    verbose=1,                          # Show progress
+    ignore_warnings=True,               # Suppress warnings
+    custom_metric=None,                 # Use default metrics
+    predictions=True,                   # Return predictions
+    regressors='all',                   # Use all available regressors
+    categorical_encoder='ordinal',      # Encoding: 'onehot', 'ordinal', 'target', 'binary'
+    timeout=120                         # Max time per model in seconds
+)
+models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+```
+
+**Parameters:**
+- `verbose` (int): 0 for silent, 1 for progress display
+- `ignore_warnings` (bool): Suppress scikit-learn warnings
+- `custom_metric` (callable): Custom evaluation metric
+- `predictions` (bool): Return prediction DataFrame
+- `regressors` (str/list): 'all' or list of regressor names
+- `categorical_encoder` (str): Encoding strategy for categorical features
+  - `'onehot'`: One-hot encoding (default)
+  - `'ordinal'`: Ordinal encoding
+  - `'target'`: Target encoding (requires `category-encoders`)
+  - `'binary'`: Binary encoding (requires `category-encoders`)
+- `timeout` (int): Maximum seconds per model (None for no limit)
+
 | Model                         |   Adjusted R-Squared |   R-Squared |     RMSE |   Time Taken |
 |:------------------------------|---------------------:|------------:|---------:|-------------:|
 | ExtraTreesRegressor           |           0.378921   |  0.520076   |  54.2202 |   0.121466   |
@@ -157,6 +220,49 @@ print(models)
 | GaussianProcessRegressor      |          -0.769174   | -0.367089   |  91.5109 |   0.0770502  |
 | MLPRegressor                  |          -1.86772    | -1.21597    | 116.508  |   0.235267   |
 | KernelRidge                   |          -5.03822    | -3.6659     | 169.061  |   0.0243919  |
+
+## Categorical Encoding
+
+Lazy Predict supports multiple categorical encoding strategies:
+
+```python
+from lazypredict.Supervised import LazyClassifier
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# Example with categorical features
+df = pd.read_csv('data_with_categories.csv')
+X = df.drop('target', axis=1)
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# Try different encoders
+for encoder in ['onehot', 'ordinal', 'target', 'binary']:
+    clf = LazyClassifier(
+        categorical_encoder=encoder,
+        verbose=0,
+        ignore_warnings=True
+    )
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    print(f"\n{encoder.upper()} Encoding Results:")
+    print(models.head())
+```
+
+**Note:** Target and binary encoders require the `category-encoders` package:
+```bash
+pip install category-encoders
+```
+
+## Intel Extension Acceleration
+
+For improved performance on Intel CPUs, install Intel Extension for Scikit-learn:
+
+```bash
+pip install scikit-learn-intelex
+```
+
+Lazy Predict will automatically detect and use it for acceleration.
 
 ## MLflow Integration
 

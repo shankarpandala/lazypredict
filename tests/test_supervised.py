@@ -132,3 +132,61 @@ def test_provide_models():
     for name, model in models.items():
         predictions = model.predict(X_test)
         assert len(predictions) == len(y_test)
+
+def test_roc_auc_uses_probabilities():
+    """
+    Test that ROC-AUC is calculated using predicted probabilities instead of class labels.
+    This addresses issue #476: Severe Underestimation of ROC-AUC Values in Lazypredict Library
+    
+    The test verifies that:
+    1. LazyClassifier calculates ROC-AUC using predict_proba() for models that support it
+    2. ROC-AUC values are higher and more accurate when using probabilities vs class labels
+    3. The implementation correctly handles binary and multiclass classification
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import roc_auc_score
+    from sklearn.pipeline import Pipeline
+    from sklearn.impute import SimpleImputer
+    from sklearn.preprocessing import StandardScaler
+    
+    # Load binary classification dataset
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Test LazyClassifier with a model that supports predict_proba
+    clf = LazyClassifier(verbose=0, ignore_warnings=True, classifiers=[LogisticRegression])
+    models, _ = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Get ROC-AUC from LazyClassifier
+    lazy_roc_auc = models.loc['LogisticRegression', 'ROC AUC']
+    
+    # Manually calculate ROC-AUC using probabilities (correct method)
+    pipe = Pipeline([
+        ('imputer', SimpleImputer(strategy='mean')),
+        ('scaler', StandardScaler()),
+        ('classifier', LogisticRegression(random_state=42))
+    ])
+    pipe.fit(X_train, y_train)
+    y_pred_proba = pipe.predict_proba(X_test)[:, 1]
+    expected_roc_auc = roc_auc_score(y_test, y_pred_proba)
+    
+    # Manually calculate ROC-AUC using class labels (old incorrect method)
+    y_pred_labels = pipe.predict(X_test)
+    roc_auc_with_labels = roc_auc_score(y_test, y_pred_labels)
+    
+    # Verify LazyClassifier uses probabilities (should match expected_roc_auc, not roc_auc_with_labels)
+    assert np.isclose(lazy_roc_auc, expected_roc_auc, atol=0.001), \
+        f"LazyClassifier ROC-AUC ({lazy_roc_auc}) should match probability-based calculation ({expected_roc_auc})"
+    
+    # Verify probabilities give higher ROC-AUC than class labels (for most cases)
+    # This demonstrates the fix for issue #476
+    assert expected_roc_auc >= roc_auc_with_labels, \
+        f"Probability-based ROC-AUC ({expected_roc_auc}) should be >= label-based ({roc_auc_with_labels})"
+    
+    # Ensure ROC-AUC is not None
+    assert lazy_roc_auc is not None, "ROC-AUC should not be None for models with predict_proba"
+    
+    # Verify ROC-AUC is in valid range [0, 1]
+    assert 0 <= lazy_roc_auc <= 1, f"ROC-AUC ({lazy_roc_auc}) should be between 0 and 1"

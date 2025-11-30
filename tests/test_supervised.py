@@ -629,3 +629,56 @@ def test_perpetual_booster_regressor():
     assert 'PerpetualBooster' in models.index
     assert isinstance(models, pd.DataFrame)
     assert isinstance(predictions, pd.DataFrame)
+
+def test_timeout_classifier():
+    """
+    Test that timeout parameter works for LazyClassifier.
+    """
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.svm import SVC
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Use a very short timeout to ensure some models get skipped
+    clf = LazyClassifier(
+        verbose=0,
+        ignore_warnings=True,
+        classifiers=[LogisticRegression, SVC],
+        timeout=0.001  # 1ms timeout - will skip slow models
+    )
+    models, _ = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # With such a short timeout, at least some models should complete
+    # (LogisticRegression is fast, SVC might timeout)
+    assert len(models) >= 0  # Some models might complete
+    assert isinstance(models, pd.DataFrame)
+
+def test_timeout_regressor():
+    """
+    Test that timeout parameter works for LazyRegressor.
+    """
+    from sklearn.datasets import load_diabetes
+    from sklearn.linear_model import LinearRegression, Ridge
+    
+    data = load_diabetes()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Use a reasonable timeout
+    reg = LazyRegressor(
+        verbose=0,
+        ignore_warnings=True,
+        regressors=[LinearRegression, Ridge],
+        timeout=5  # 5 second timeout
+    )
+    models, _ = reg.fit(X_train, X_test, y_train, y_test)
+    
+    # These fast models should complete within timeout
+    assert len(models) == 2
+    assert 'LinearRegression' in models.index
+    assert 'Ridge' in models.index

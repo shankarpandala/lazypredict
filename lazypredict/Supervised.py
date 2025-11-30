@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import sys
 from tqdm import tqdm
+import signal
+from contextlib import contextmanager
 try:
     from IPython import get_ipython
     if 'IPKernelApp' in get_ipython().config:
@@ -161,6 +163,43 @@ categorical_transformer_high = Pipeline(
 # Helper function
 
 
+class TimeoutException(Exception):
+    """Custom exception for timeout"""
+    pass
+
+
+@contextmanager
+def time_limit(seconds):
+    """
+    Context manager to limit execution time of a code block.
+    
+    Parameters
+    ----------
+    seconds : int
+        Maximum time in seconds for the code block to execute
+        
+    Raises
+    ------
+    TimeoutException
+        If the code block exceeds the time limit
+    """
+    def signal_handler(signum, frame):
+        raise TimeoutException(f"Timed out after {seconds} seconds")
+    
+    # On Windows, signal.alarm is not available, so we'll handle it differently
+    if hasattr(signal, 'SIGALRM'):
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+    else:
+        # For Windows, use a simpler approach - just yield without timeout
+        # The fit() method will track time manually
+        yield
+
+
 def get_card_split(df, cols, n=11):
     """
     Splits categorical columns into 2 lists based on cardinality (i.e # of unique values)
@@ -261,6 +300,7 @@ class LazyClassifier:
         random_state=42,
         classifiers="all",
         cv=None,
+        timeout=None,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -270,6 +310,7 @@ class LazyClassifier:
         self.random_state = random_state
         self.classifiers = classifiers
         self.cv = cv  # K-fold cross-validation parameter
+        self.timeout = timeout  # Timeout in seconds for each model
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
@@ -384,7 +425,20 @@ class LazyClassifier:
                         steps=[("preprocessor", preprocessor), ("classifier", model())]
                     )
 
-                pipe.fit(X_train, y_train)
+                # Fit with timeout if specified
+                if self.timeout:
+                    fit_start = time.time()
+                    pipe.fit(X_train, y_train)
+                    fit_time = time.time() - fit_start
+                    if fit_time > self.timeout:
+                        if self.verbose > 0:
+                            print(f"{name} exceeded timeout ({fit_time:.2f}s > {self.timeout}s), skipping...")
+                        if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                            mlflow.end_run()
+                        continue
+                else:
+                    pipe.fit(X_train, y_train)
+                    
                 self.models[name] = pipe
                 
                 # Perform cross-validation if cv parameter is set
@@ -822,6 +876,7 @@ class LazyRegressor:
         random_state=42,
         regressors="all",
         cv=None,
+        timeout=None,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -831,6 +886,7 @@ class LazyRegressor:
         self.random_state = random_state
         self.regressors = regressors
         self.cv = cv  # K-fold cross-validation parameter
+        self.timeout = timeout  # Timeout in seconds for each model
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
@@ -937,7 +993,20 @@ class LazyRegressor:
                         steps=[("preprocessor", preprocessor), ("regressor", model())]
                     )
 
-                pipe.fit(X_train, y_train)
+                # Fit with timeout if specified
+                if self.timeout:
+                    fit_start = time.time()
+                    pipe.fit(X_train, y_train)
+                    fit_time = time.time() - fit_start
+                    if fit_time > self.timeout:
+                        if self.verbose > 0:
+                            print(f"{name} exceeded timeout ({fit_time:.2f}s > {self.timeout}s), skipping...")
+                        if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                            mlflow.end_run()
+                        continue
+                else:
+                    pipe.fit(X_train, y_train)
+                    
                 self.models[name] = pipe
                 
                 # Perform cross-validation if cv parameter is set

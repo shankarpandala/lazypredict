@@ -28,6 +28,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.utils import all_estimators
 from sklearn.base import RegressorMixin
 from sklearn.base import ClassifierMixin
+from sklearn.model_selection import cross_validate
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -246,6 +247,7 @@ class LazyClassifier:
         predictions=False,
         random_state=42,
         classifiers="all",
+        cv=None,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -254,11 +256,16 @@ class LazyClassifier:
         self.models = {}
         self.random_state = random_state
         self.classifiers = classifiers
+        self.cv = cv  # K-fold cross-validation parameter
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Classification algorithms to X_train and y_train, predict and score on X_test, y_test.
+        
+        If cv parameter is set during initialization, performs k-fold cross-validation on the training data
+        and reports mean and std of metrics. Otherwise, uses traditional train/test evaluation.
+        
         Parameters
         ----------
         X_train : array-like,
@@ -277,6 +284,7 @@ class LazyClassifier:
         -------
         scores : Pandas DataFrame
             Returns metrics of all the models in a Pandas DataFrame.
+            If cv is set, includes mean and std columns for each metric.
         predictions : Pandas DataFrame
             Returns predictions of all the models in a Pandas DataFrame.
         """
@@ -287,6 +295,17 @@ class LazyClassifier:
         names = []
         TIME = []
         predictions = {}
+        
+        # For cross-validation results
+        if self.cv:
+            Accuracy_CV_Mean = []
+            Accuracy_CV_Std = []
+            B_Accuracy_CV_Mean = []
+            B_Accuracy_CV_Std = []
+            ROC_AUC_CV_Mean = []
+            ROC_AUC_CV_Std = []
+            F1_CV_Mean = []
+            F1_CV_Std = []
 
         if self.custom_metric is not None:
             CUSTOM_METRIC = []
@@ -348,6 +367,54 @@ class LazyClassifier:
 
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
+                
+                # Perform cross-validation if cv parameter is set
+                if self.cv:
+                    try:
+                        # Define scoring metrics for cross-validation
+                        scoring = {
+                            'accuracy': 'accuracy',
+                            'balanced_accuracy': 'balanced_accuracy',
+                            'f1_weighted': 'f1_weighted',
+                            'roc_auc_ovr_weighted': 'roc_auc_ovr_weighted'
+                        }
+                        
+                        cv_results = cross_validate(
+                            pipe, X_train, y_train,
+                            cv=self.cv,
+                            scoring=scoring,
+                            n_jobs=-1,
+                            error_score='raise'
+                        )
+                        
+                        # Store CV means and stds
+                        Accuracy_CV_Mean.append(cv_results['test_accuracy'].mean())
+                        Accuracy_CV_Std.append(cv_results['test_accuracy'].std())
+                        B_Accuracy_CV_Mean.append(cv_results['test_balanced_accuracy'].mean())
+                        B_Accuracy_CV_Std.append(cv_results['test_balanced_accuracy'].std())
+                        F1_CV_Mean.append(cv_results['test_f1_weighted'].mean())
+                        F1_CV_Std.append(cv_results['test_f1_weighted'].std())
+                        
+                        try:
+                            ROC_AUC_CV_Mean.append(cv_results['test_roc_auc_ovr_weighted'].mean())
+                            ROC_AUC_CV_Std.append(cv_results['test_roc_auc_ovr_weighted'].std())
+                        except:
+                            ROC_AUC_CV_Mean.append(None)
+                            ROC_AUC_CV_Std.append(None)
+                    except Exception as cv_exception:
+                        if self.ignore_warnings is False:
+                            print(f"Cross-validation failed for {name}")
+                            print(cv_exception)
+                        # Add None values if CV fails
+                        Accuracy_CV_Mean.append(None)
+                        Accuracy_CV_Std.append(None)
+                        B_Accuracy_CV_Mean.append(None)
+                        B_Accuracy_CV_Std.append(None)
+                        F1_CV_Mean.append(None)
+                        F1_CV_Std.append(None)
+                        ROC_AUC_CV_Mean.append(None)
+                        ROC_AUC_CV_Std.append(None)
+                
                 y_pred = pipe.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
@@ -445,29 +512,74 @@ class LazyClassifier:
                 if self.ignore_warnings is False:
                     print(name + " model failed to execute")
                     print(exception)
-        if self.custom_metric is None:
-            scores = pd.DataFrame(
-                {
-                    "Model": names,
-                    "Accuracy": Accuracy,
-                    "Balanced Accuracy": B_Accuracy,
-                    "ROC AUC": ROC_AUC,
-                    "F1 Score": F1,
-                    "Time Taken": TIME,
-                }
-            )
+        
+        # Build results DataFrame with or without CV metrics
+        if self.cv:
+            # Include cross-validation metrics
+            if self.custom_metric is None:
+                scores = pd.DataFrame(
+                    {
+                        "Model": names,
+                        "Accuracy": Accuracy,
+                        "Balanced Accuracy": B_Accuracy,
+                        "ROC AUC": ROC_AUC,
+                        "F1 Score": F1,
+                        "Accuracy CV Mean": Accuracy_CV_Mean,
+                        "Accuracy CV Std": Accuracy_CV_Std,
+                        "Balanced Accuracy CV Mean": B_Accuracy_CV_Mean,
+                        "Balanced Accuracy CV Std": B_Accuracy_CV_Std,
+                        "ROC AUC CV Mean": ROC_AUC_CV_Mean,
+                        "ROC AUC CV Std": ROC_AUC_CV_Std,
+                        "F1 Score CV Mean": F1_CV_Mean,
+                        "F1 Score CV Std": F1_CV_Std,
+                        "Time Taken": TIME,
+                    }
+                )
+            else:
+                scores = pd.DataFrame(
+                    {
+                        "Model": names,
+                        "Accuracy": Accuracy,
+                        "Balanced Accuracy": B_Accuracy,
+                        "ROC AUC": ROC_AUC,
+                        "F1 Score": F1,
+                        self.custom_metric.__name__: CUSTOM_METRIC,
+                        "Accuracy CV Mean": Accuracy_CV_Mean,
+                        "Accuracy CV Std": Accuracy_CV_Std,
+                        "Balanced Accuracy CV Mean": B_Accuracy_CV_Mean,
+                        "Balanced Accuracy CV Std": B_Accuracy_CV_Std,
+                        "ROC AUC CV Mean": ROC_AUC_CV_Mean,
+                        "ROC AUC CV Std": ROC_AUC_CV_Std,
+                        "F1 Score CV Mean": F1_CV_Mean,
+                        "F1 Score CV Std": F1_CV_Std,
+                        "Time Taken": TIME,
+                    }
+                )
         else:
-            scores = pd.DataFrame(
-                {
-                    "Model": names,
-                    "Accuracy": Accuracy,
-                    "Balanced Accuracy": B_Accuracy,
-                    "ROC AUC": ROC_AUC,
-                    "F1 Score": F1,
-                    self.custom_metric.__name__: CUSTOM_METRIC,
-                    "Time Taken": TIME,
-                }
-            )
+            # Traditional train/test split metrics only
+            if self.custom_metric is None:
+                scores = pd.DataFrame(
+                    {
+                        "Model": names,
+                        "Accuracy": Accuracy,
+                        "Balanced Accuracy": B_Accuracy,
+                        "ROC AUC": ROC_AUC,
+                        "F1 Score": F1,
+                        "Time Taken": TIME,
+                    }
+                )
+            else:
+                scores = pd.DataFrame(
+                    {
+                        "Model": names,
+                        "Accuracy": Accuracy,
+                        "Balanced Accuracy": B_Accuracy,
+                        "ROC AUC": ROC_AUC,
+                        "F1 Score": F1,
+                        self.custom_metric.__name__: CUSTOM_METRIC,
+                        "Time Taken": TIME,
+                    }
+                )
         scores = scores.sort_values(by="Balanced Accuracy", ascending=False).set_index(
             "Model"
         )
@@ -504,6 +616,53 @@ class LazyClassifier:
             self.fit(X_train, X_test, y_train, y_test)
 
         return self.models
+
+    def predict(self, X_test, model_name=None):
+        """
+        Make predictions using fitted models.
+        
+        Parameters
+        ----------
+        X_test : array-like,
+            Test vectors for prediction, where rows is the number of samples
+            and columns is the number of features.
+        model_name : str, optional (default=None)
+            Name of specific model to use for prediction.
+            If None, returns predictions from all models.
+        
+        Returns
+        -------
+        predictions : dict or array-like
+            If model_name is None, returns a dictionary with model names as keys
+            and predictions as values.
+            If model_name is specified, returns predictions from that model only.
+        
+        Raises
+        ------
+        ValueError
+            If models haven't been fitted yet or if specified model_name doesn't exist.
+        
+        Examples
+        --------
+        >>> clf = LazyClassifier()
+        >>> clf.fit(X_train, X_test, y_train, y_test)
+        >>> # Get predictions from all models
+        >>> all_predictions = clf.predict(X_test)
+        >>> # Get predictions from specific model
+        >>> lr_predictions = clf.predict(X_test, model_name='LogisticRegression')
+        """
+        if len(self.models.keys()) == 0:
+            raise ValueError("No models have been fitted yet. Please call fit() first.")
+        
+        if model_name is not None:
+            if model_name not in self.models:
+                raise ValueError(f"Model '{model_name}' not found. Available models: {list(self.models.keys())}")
+            return self.models[model_name].predict(X_test)
+        else:
+            predictions = {}
+            for name, model in self.models.items():
+                predictions[name] = model.predict(X_test)
+            return predictions
 
 
 def adjusted_rsquared(r2, n, p):
@@ -602,6 +761,7 @@ class LazyRegressor:
         predictions=False,
         random_state=42,
         regressors="all",
+        cv=None,
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -610,11 +770,16 @@ class LazyRegressor:
         self.models = {}
         self.random_state = random_state
         self.regressors = regressors
+        self.cv = cv  # K-fold cross-validation parameter
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
     def fit(self, X_train, X_test, y_train, y_test):
         """Fit Regression algorithms to X_train and y_train, predict and score on X_test, y_test.
+        
+        If cv parameter is set during initialization, performs k-fold cross-validation on the training data
+        and reports mean and std of metrics. Otherwise, uses traditional train/test evaluation.
+        
         Parameters
         ----------
         X_train : array-like,
@@ -633,12 +798,22 @@ class LazyRegressor:
         -------
         scores : Pandas DataFrame
             Returns metrics of all the models in a Pandas DataFrame.
+            If cv is set, includes mean and std columns for each metric.
         predictions : Pandas DataFrame
             Returns predictions of all the models in a Pandas DataFrame.
         """
         R2 = []
         ADJR2 = []
         RMSE = []
+        
+        # For cross-validation results
+        if self.cv:
+            R2_CV_Mean = []
+            R2_CV_Std = []
+            ADJR2_CV_Mean = []
+            ADJR2_CV_Std = []
+            RMSE_CV_Mean = []
+            RMSE_CV_Std = []
         # WIN = []
         names = []
         TIME = []
@@ -704,6 +879,51 @@ class LazyRegressor:
 
                 pipe.fit(X_train, y_train)
                 self.models[name] = pipe
+                
+                # Perform cross-validation if cv parameter is set
+                if self.cv:
+                    try:
+                        # Define scoring metrics for cross-validation
+                        scoring = {
+                            'r2': 'r2',
+                            'neg_mean_squared_error': 'neg_mean_squared_error'
+                        }
+                        
+                        cv_results = cross_validate(
+                            pipe, X_train, y_train,
+                            cv=self.cv,
+                            scoring=scoring,
+                            n_jobs=-1,
+                            error_score='raise'
+                        )
+                        
+                        # Calculate CV metrics
+                        R2_CV_Mean.append(cv_results['test_r2'].mean())
+                        R2_CV_Std.append(cv_results['test_r2'].std())
+                        
+                        # Calculate RMSE from negative MSE
+                        rmse_cv = np.sqrt(-cv_results['test_neg_mean_squared_error'])
+                        RMSE_CV_Mean.append(rmse_cv.mean())
+                        RMSE_CV_Std.append(rmse_cv.std())
+                        
+                        # Adjusted R2 - calculate from CV results
+                        adj_r2_cv = [adjusted_rsquared(r2, X_train.shape[0], X_train.shape[1]) 
+                                     for r2 in cv_results['test_r2']]
+                        ADJR2_CV_Mean.append(np.mean(adj_r2_cv))
+                        ADJR2_CV_Std.append(np.std(adj_r2_cv))
+                        
+                    except Exception as cv_exception:
+                        if self.ignore_warnings is False:
+                            print(f"Cross-validation failed for {name}")
+                            print(cv_exception)
+                        # Add None values if CV fails
+                        R2_CV_Mean.append(None)
+                        R2_CV_Std.append(None)
+                        ADJR2_CV_Mean.append(None)
+                        ADJR2_CV_Std.append(None)
+                        RMSE_CV_Mean.append(None)
+                        RMSE_CV_Std.append(None)
+                
                 y_pred = pipe.predict(X_test)
 
                 r_squared = r2_score(y_test, y_pred)
@@ -770,13 +990,31 @@ class LazyRegressor:
                     print(name + " model failed to execute")
                     print(exception)
 
-        scores = {
-            "Model": names,
-            "Adjusted R-Squared": ADJR2,
-            "R-Squared": R2,
-            "RMSE": RMSE,
-            "Time Taken": TIME,
-        }
+        # Build results DataFrame with or without CV metrics
+        if self.cv:
+            # Include cross-validation metrics
+            scores = {
+                "Model": names,
+                "Adjusted R-Squared": ADJR2,
+                "R-Squared": R2,
+                "RMSE": RMSE,
+                "R-Squared CV Mean": R2_CV_Mean,
+                "R-Squared CV Std": R2_CV_Std,
+                "Adjusted R-Squared CV Mean": ADJR2_CV_Mean,
+                "Adjusted R-Squared CV Std": ADJR2_CV_Std,
+                "RMSE CV Mean": RMSE_CV_Mean,
+                "RMSE CV Std": RMSE_CV_Std,
+                "Time Taken": TIME,
+            }
+        else:
+            # Traditional train/test split metrics only
+            scores = {
+                "Model": names,
+                "Adjusted R-Squared": ADJR2,
+                "R-Squared": R2,
+                "RMSE": RMSE,
+                "Time Taken": TIME,
+            }
 
         if self.custom_metric:
             scores[self.custom_metric.__name__] = CUSTOM_METRIC
@@ -818,6 +1056,53 @@ class LazyRegressor:
             self.fit(X_train, X_test, y_train, y_test)
 
         return self.models
+
+    def predict(self, X_test, model_name=None):
+        """
+        Make predictions using fitted models.
+        
+        Parameters
+        ----------
+        X_test : array-like,
+            Test vectors for prediction, where rows is the number of samples
+            and columns is the number of features.
+        model_name : str, optional (default=None)
+            Name of specific model to use for prediction.
+            If None, returns predictions from all models.
+        
+        Returns
+        -------
+        predictions : dict or array-like
+            If model_name is None, returns a dictionary with model names as keys
+            and predictions as values.
+            If model_name is specified, returns predictions from that model only.
+        
+        Raises
+        ------
+        ValueError
+            If models haven't been fitted yet or if specified model_name doesn't exist.
+        
+        Examples
+        --------
+        >>> reg = LazyRegressor()
+        >>> reg.fit(X_train, X_test, y_train, y_test)
+        >>> # Get predictions from all models
+        >>> all_predictions = reg.predict(X_test)
+        >>> # Get predictions from specific model
+        >>> lr_predictions = reg.predict(X_test, model_name='LinearRegression')
+        """
+        if len(self.models.keys()) == 0:
+            raise ValueError("No models have been fitted yet. Please call fit() first.")
+        
+        if model_name is not None:
+            if model_name not in self.models:
+                raise ValueError(f"Model '{model_name}' not found. Available models: {list(self.models.keys())}")
+            return self.models[model_name].predict(X_test)
+        else:
+            predictions = {}
+            for name, model in self.models.items():
+                predictions[name] = model.predict(X_test)
+            return predictions
 
 
 Regression = LazyRegressor

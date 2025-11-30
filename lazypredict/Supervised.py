@@ -352,7 +352,7 @@ class LazyClassifier:
 
         # Use notebook tqdm if in Jupyter environment
         progress_bar = notebook_tqdm if use_notebook_tqdm else tqdm
-        for name, model in progress_bar(self.classifiers):
+        for name, model in progress_bar(self.classifiers, disable=(self.verbose == 0)):
             start = time.time()
             try:
                 # Start MLflow run for this specific model if MLflow is enabled
@@ -905,7 +905,7 @@ class LazyRegressor:
 
         # Use notebook tqdm if in Jupyter environment
         progress_bar = notebook_tqdm if use_notebook_tqdm else tqdm
-        for name, model in progress_bar(self.regressors):
+        for name, model in progress_bar(self.regressors, disable=(self.verbose == 0)):
             start = time.time()
             try:
                 # Start MLflow run for this specific model if MLflow is enabled

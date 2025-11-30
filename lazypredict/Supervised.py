@@ -26,6 +26,14 @@ import os
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, MissingIndicator
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
+
+# Optional category_encoders import with fallback
+try:
+    from category_encoders import TargetEncoder, BinaryEncoder
+    CATEGORY_ENCODERS_AVAILABLE = True
+except ImportError:
+    CATEGORY_ENCODERS_AVAILABLE = False
+    
 from sklearn.compose import ColumnTransformer
 from sklearn.utils import all_estimators
 from sklearn.base import RegressorMixin
@@ -152,6 +160,7 @@ numeric_transformer = Pipeline(
     steps=[("imputer", SimpleImputer(strategy="mean")), ("scaler", StandardScaler())]
 )
 
+# Default categorical transformers (will be overridden in fit() based on encoder choice)
 categorical_transformer_low = Pipeline(
     steps=[
         ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
@@ -162,10 +171,56 @@ categorical_transformer_low = Pipeline(
 categorical_transformer_high = Pipeline(
     steps=[
         ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
-        # 'OrdianlEncoder' Raise a ValueError when encounters an unknown value. Check https://github.com/scikit-learn/scikit-learn/pull/13423
+        # 'OrdinalEncoder' Raise a ValueError when encounters an unknown value. Check https://github.com/scikit-learn/scikit-learn/pull/13423
         ("encoding", OrdinalEncoder()),
     ]
 )
+
+
+def get_categorical_encoder(encoder_type='onehot', cardinality='low'):
+    """
+    Get categorical encoder pipeline based on encoder type and cardinality.
+    
+    Parameters
+    ----------
+    encoder_type : str, optional (default='onehot')
+        Type of encoder: 'onehot', 'ordinal', 'target', or 'binary'
+    cardinality : str, optional (default='low')
+        Cardinality level: 'low' or 'high'
+        
+    Returns
+    -------
+    Pipeline
+        Sklearn pipeline with imputer and encoder
+    """
+    imputer = SimpleImputer(strategy="constant", fill_value="missing")
+    
+    if encoder_type == 'onehot':
+        if cardinality == 'low':
+            encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        else:
+            # For high cardinality, use ordinal to avoid memory issues
+            encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+    elif encoder_type == 'ordinal':
+        encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+    elif encoder_type == 'target':
+        if not CATEGORY_ENCODERS_AVAILABLE:
+            print("Warning: category_encoders not installed. Falling back to ordinal encoding.")
+            print("Install with: pip install category_encoders")
+            encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+        else:
+            encoder = TargetEncoder(handle_unknown='value', handle_missing='value')
+    elif encoder_type == 'binary':
+        if not CATEGORY_ENCODERS_AVAILABLE:
+            print("Warning: category_encoders not installed. Falling back to onehot encoding.")
+            print("Install with: pip install category_encoders")
+            encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        else:
+            encoder = BinaryEncoder(handle_unknown='value', handle_missing='value')
+    else:
+        raise ValueError(f"Unknown encoder type: {encoder_type}. Choose from 'onehot', 'ordinal', 'target', 'binary'")
+    
+    return Pipeline(steps=[("imputer", imputer), ("encoding", encoder)])
 
 
 # Helper function
@@ -251,6 +306,16 @@ class LazyClassifier:
         When set to True, the predictions of all the models models are returned as dataframe.
     classifiers : list, optional (default="all")
         When function is provided, trains the chosen classifier(s).
+    cv : int, optional (default=None)
+        Number of folds for cross-validation. If None, uses train/test split.
+    timeout : int, optional (default=None)
+        Maximum time in seconds for each model. Models exceeding this are skipped.
+    categorical_encoder : str, optional (default='onehot')
+        Type of encoder for categorical features. Options:
+        - 'onehot': One-hot encoding (default, good for low cardinality)
+        - 'ordinal': Ordinal encoding (preserves order, memory efficient)
+        - 'target': Target encoding (requires category_encoders package)
+        - 'binary': Binary encoding (requires category_encoders package)
 
     Examples
     --------
@@ -309,6 +374,7 @@ class LazyClassifier:
         classifiers="all",
         cv=None,
         timeout=None,
+        categorical_encoder='onehot',
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -319,6 +385,7 @@ class LazyClassifier:
         self.classifiers = classifiers
         self.cv = cv  # K-fold cross-validation parameter
         self.timeout = timeout  # Timeout in seconds for each model
+        self.categorical_encoder = categorical_encoder  # Encoder type for categorical features
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
@@ -390,11 +457,15 @@ class LazyClassifier:
             X_train, categorical_features
         )
 
+        # Create categorical encoders based on user choice
+        cat_transformer_low = get_categorical_encoder(self.categorical_encoder, cardinality='low')
+        cat_transformer_high = get_categorical_encoder(self.categorical_encoder, cardinality='high')
+
         preprocessor = ColumnTransformer(
             transformers=[
                 ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
+                ("categorical_low", cat_transformer_low, categorical_low),
+                ("categorical_high", cat_transformer_high, categorical_high),
             ]
         )
 
@@ -811,6 +882,16 @@ class LazyRegressor:
         When set to True, the predictions of all the models models are returned as dataframe.
     regressors : list, optional (default="all")
         When function is provided, trains the chosen regressor(s).
+    cv : int, optional (default=None)
+        Number of folds for cross-validation. If None, uses train/test split.
+    timeout : int, optional (default=None)
+        Maximum time in seconds for each model. Models exceeding this are skipped.
+    categorical_encoder : str, optional (default='onehot')
+        Type of encoder for categorical features. Options:
+        - 'onehot': One-hot encoding (default, good for low cardinality)
+        - 'ordinal': Ordinal encoding (preserves order, memory efficient)
+        - 'target': Target encoding (requires category_encoders package)
+        - 'binary': Binary encoding (requires category_encoders package)
 
     Examples
     --------
@@ -886,6 +967,7 @@ class LazyRegressor:
         regressors="all",
         cv=None,
         timeout=None,
+        categorical_encoder='onehot',
     ):
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -896,6 +978,7 @@ class LazyRegressor:
         self.regressors = regressors
         self.cv = cv  # K-fold cross-validation parameter
         self.timeout = timeout  # Timeout in seconds for each model
+        self.categorical_encoder = categorical_encoder  # Encoder type for categorical features
         # Initialize MLflow if tracking URI is set
         self.mlflow_enabled = setup_mlflow()
 
@@ -959,11 +1042,15 @@ class LazyRegressor:
             X_train, categorical_features
         )
 
+        # Create categorical encoders based on user choice
+        cat_transformer_low = get_categorical_encoder(self.categorical_encoder, cardinality='low')
+        cat_transformer_high = get_categorical_encoder(self.categorical_encoder, cardinality='high')
+
         preprocessor = ColumnTransformer(
             transformers=[
                 ("numeric", numeric_transformer, numeric_features),
-                ("categorical_low", categorical_transformer_low, categorical_low),
-                ("categorical_high", categorical_transformer_high, categorical_high),
+                ("categorical_low", cat_transformer_low, categorical_low),
+                ("categorical_high", cat_transformer_high, categorical_high),
             ]
         )
 

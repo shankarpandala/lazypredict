@@ -34,6 +34,8 @@ from sklearn.metrics import (
     balanced_accuracy_score,
     roc_auc_score,
     f1_score,
+    precision_score,
+    recall_score,
     r2_score,
     mean_squared_error,
 )
@@ -292,6 +294,8 @@ class LazyClassifier:
         B_Accuracy = []
         ROC_AUC = []
         F1 = []
+        Precision = []
+        Recall = []
         names = []
         TIME = []
         predictions = {}
@@ -306,6 +310,10 @@ class LazyClassifier:
             ROC_AUC_CV_Std = []
             F1_CV_Mean = []
             F1_CV_Std = []
+            Precision_CV_Mean = []
+            Precision_CV_Std = []
+            Recall_CV_Mean = []
+            Recall_CV_Std = []
 
         if self.custom_metric is not None:
             CUSTOM_METRIC = []
@@ -376,6 +384,8 @@ class LazyClassifier:
                             'accuracy': 'accuracy',
                             'balanced_accuracy': 'balanced_accuracy',
                             'f1_weighted': 'f1_weighted',
+                            'precision_weighted': 'precision_weighted',
+                            'recall_weighted': 'recall_weighted',
                             'roc_auc_ovr_weighted': 'roc_auc_ovr_weighted'
                         }
                         
@@ -394,6 +404,10 @@ class LazyClassifier:
                         B_Accuracy_CV_Std.append(cv_results['test_balanced_accuracy'].std())
                         F1_CV_Mean.append(cv_results['test_f1_weighted'].mean())
                         F1_CV_Std.append(cv_results['test_f1_weighted'].std())
+                        Precision_CV_Mean.append(cv_results['test_precision_weighted'].mean())
+                        Precision_CV_Std.append(cv_results['test_precision_weighted'].std())
+                        Recall_CV_Mean.append(cv_results['test_recall_weighted'].mean())
+                        Recall_CV_Std.append(cv_results['test_recall_weighted'].std())
                         
                         try:
                             ROC_AUC_CV_Mean.append(cv_results['test_roc_auc_ovr_weighted'].mean())
@@ -412,6 +426,10 @@ class LazyClassifier:
                         B_Accuracy_CV_Std.append(None)
                         F1_CV_Mean.append(None)
                         F1_CV_Std.append(None)
+                        Precision_CV_Mean.append(None)
+                        Precision_CV_Std.append(None)
+                        Recall_CV_Mean.append(None)
+                        Recall_CV_Std.append(None)
                         ROC_AUC_CV_Mean.append(None)
                         ROC_AUC_CV_Std.append(None)
                 
@@ -419,6 +437,8 @@ class LazyClassifier:
                 accuracy = accuracy_score(y_test, y_pred, normalize=True)
                 b_accuracy = balanced_accuracy_score(y_test, y_pred)
                 f1 = f1_score(y_test, y_pred, average="weighted")
+                precision = precision_score(y_test, y_pred, average="weighted", zero_division=0)
+                recall = recall_score(y_test, y_pred, average="weighted")
                 try:
                     # Use predict_proba for ROC-AUC calculation instead of class labels
                     if hasattr(pipe, "predict_proba"):
@@ -465,6 +485,8 @@ class LazyClassifier:
                 B_Accuracy.append(b_accuracy)
                 ROC_AUC.append(roc_auc)
                 F1.append(f1)
+                Precision.append(precision)
+                Recall.append(recall)
                 TIME.append(time.time() - start)
                 if self.custom_metric is not None:
                     try:
@@ -489,6 +511,8 @@ class LazyClassifier:
                                 "Balanced Accuracy": b_accuracy,
                                 "ROC AUC": roc_auc,
                                 "F1 Score": f1,
+                                "Precision": precision,
+                                "Recall": recall,
                                 self.custom_metric.__name__: custom_metric,
                                 "Time taken": time.time() - start,
                             }
@@ -501,6 +525,8 @@ class LazyClassifier:
                                 "Balanced Accuracy": b_accuracy,
                                 "ROC AUC": roc_auc,
                                 "F1 Score": f1,
+                                "Precision": precision,
+                                "Recall": recall,
                                 "Time taken": time.time() - start,
                             }
                         )
@@ -531,6 +557,8 @@ class LazyClassifier:
                         "Balanced Accuracy": B_Accuracy,
                         "ROC AUC": ROC_AUC,
                         "F1 Score": F1,
+                        "Precision": Precision,
+                        "Recall": Recall,
                         "Accuracy CV Mean": Accuracy_CV_Mean,
                         "Accuracy CV Std": Accuracy_CV_Std,
                         "Balanced Accuracy CV Mean": B_Accuracy_CV_Mean,
@@ -539,6 +567,10 @@ class LazyClassifier:
                         "ROC AUC CV Std": ROC_AUC_CV_Std,
                         "F1 Score CV Mean": F1_CV_Mean,
                         "F1 Score CV Std": F1_CV_Std,
+                        "Precision CV Mean": Precision_CV_Mean,
+                        "Precision CV Std": Precision_CV_Std,
+                        "Recall CV Mean": Recall_CV_Mean,
+                        "Recall CV Std": Recall_CV_Std,
                         "Time Taken": TIME,
                     }
                 )
@@ -550,6 +582,8 @@ class LazyClassifier:
                         "Balanced Accuracy": B_Accuracy,
                         "ROC AUC": ROC_AUC,
                         "F1 Score": F1,
+                        "Precision": Precision,
+                        "Recall": Recall,
                         self.custom_metric.__name__: CUSTOM_METRIC,
                         "Accuracy CV Mean": Accuracy_CV_Mean,
                         "Accuracy CV Std": Accuracy_CV_Std,
@@ -559,6 +593,10 @@ class LazyClassifier:
                         "ROC AUC CV Std": ROC_AUC_CV_Std,
                         "F1 Score CV Mean": F1_CV_Mean,
                         "F1 Score CV Std": F1_CV_Std,
+                        "Precision CV Mean": Precision_CV_Mean,
+                        "Precision CV Std": Precision_CV_Std,
+                        "Recall CV Mean": Recall_CV_Mean,
+                        "Recall CV Std": Recall_CV_Std,
                         "Time Taken": TIME,
                     }
                 )
@@ -572,6 +610,8 @@ class LazyClassifier:
                         "Balanced Accuracy": B_Accuracy,
                         "ROC AUC": ROC_AUC,
                         "F1 Score": F1,
+                        "Precision": Precision,
+                        "Recall": Recall,
                         "Time Taken": TIME,
                     }
                 )
@@ -583,6 +623,8 @@ class LazyClassifier:
                         "Balanced Accuracy": B_Accuracy,
                         "ROC AUC": ROC_AUC,
                         "F1 Score": F1,
+                        "Precision": Precision,
+                        "Recall": Recall,
                         self.custom_metric.__name__: CUSTOM_METRIC,
                         "Time Taken": TIME,
                     }

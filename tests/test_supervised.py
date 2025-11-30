@@ -417,3 +417,74 @@ def test_custom_metric_with_failing_regressors():
     
     # Verify that at least one model has a valid custom metric
     assert any(models['failing_custom_metric'].notna())
+
+def test_precision_recall_metrics():
+    """
+    Test that Precision and Recall metrics are included in LazyClassifier results.
+    This addresses issue #434 requesting precision metrics for imbalanced datasets.
+    """
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.tree import DecisionTreeClassifier
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Test without CV
+    clf = LazyClassifier(
+        verbose=0,
+        ignore_warnings=True,
+        classifiers=[LogisticRegression, DecisionTreeClassifier]
+    )
+    models, _ = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify Precision and Recall columns exist
+    assert "Precision" in models.columns
+    assert "Recall" in models.columns
+    
+    # Verify values are in valid range [0, 1]
+    assert all(models['Precision'] >= 0) and all(models['Precision'] <= 1)
+    assert all(models['Recall'] >= 0) and all(models['Recall'] <= 1)
+    
+    # Verify Precision and Recall are not None
+    assert models.loc['LogisticRegression', 'Precision'] is not None
+    assert models.loc['LogisticRegression', 'Recall'] is not None
+
+def test_precision_recall_with_cv():
+    """
+    Test that Precision and Recall CV metrics are included when using cross-validation.
+    """
+    from sklearn.datasets import load_breast_cancer
+    from sklearn.linear_model import LogisticRegression
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Test with 5-fold CV
+    clf = LazyClassifier(
+        verbose=0,
+        ignore_warnings=True,
+        cv=5,
+        classifiers=[LogisticRegression]
+    )
+    models, _ = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify CV columns for Precision and Recall exist
+    assert "Precision" in models.columns
+    assert "Recall" in models.columns
+    assert "Precision CV Mean" in models.columns
+    assert "Precision CV Std" in models.columns
+    assert "Recall CV Mean" in models.columns
+    assert "Recall CV Std" in models.columns
+    
+    # Verify CV metrics are calculated
+    assert models.loc['LogisticRegression', 'Precision CV Mean'] is not None
+    assert models.loc['LogisticRegression', 'Recall CV Mean'] is not None
+    
+    # Verify CV std is non-negative
+    assert models.loc['LogisticRegression', 'Precision CV Std'] >= 0
+    assert models.loc['LogisticRegression', 'Recall CV Std'] >= 0

@@ -190,3 +190,149 @@ def test_roc_auc_uses_probabilities():
     
     # Verify ROC-AUC is in valid range [0, 1]
     assert 0 <= lazy_roc_auc <= 1, f"ROC-AUC ({lazy_roc_auc}) should be between 0 and 1"
+
+def test_lazy_classifier_kfold_cv():
+    """
+    Test K-fold cross-validation functionality for LazyClassifier.
+    Addresses issue #345: K-fold Cross-validation feature request
+    
+    Verifies that:
+    1. LazyClassifier accepts cv parameter
+    2. CV results include mean and std columns
+    3. CV metrics are calculated correctly
+    """
+    from sklearn.linear_model import LogisticRegression
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    # Test with 5-fold CV
+    clf = LazyClassifier(verbose=0, ignore_warnings=True, cv=5, classifiers=[LogisticRegression])
+    models, _ = clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify CV columns are present
+    assert "Accuracy CV Mean" in models.columns
+    assert "Accuracy CV Std" in models.columns
+    assert "Balanced Accuracy CV Mean" in models.columns
+    assert "Balanced Accuracy CV Std" in models.columns
+    assert "F1 Score CV Mean" in models.columns
+    assert "F1 Score CV Std" in models.columns
+    
+    # Verify CV metrics are calculated (not None)
+    assert models.loc['LogisticRegression', 'Accuracy CV Mean'] is not None
+    assert models.loc['LogisticRegression', 'Accuracy CV Std'] is not None
+    
+    # Verify CV std is non-negative
+    assert models.loc['LogisticRegression', 'Accuracy CV Std'] >= 0
+    assert models.loc['LogisticRegression', 'Balanced Accuracy CV Std'] >= 0
+
+def test_lazy_classifier_predict():
+    """
+    Test built-in predict function for LazyClassifier.
+    Addresses issue #345: Built-in predict function feature request
+    
+    Verifies that:
+    1. predict() returns predictions from all models
+    2. predict(model_name) returns predictions from specific model
+    3. Proper error handling for unfitted models and invalid model names
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.ensemble import RandomForestClassifier
+    
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    clf = LazyClassifier(verbose=0, ignore_warnings=True, 
+                        classifiers=[LogisticRegression, RandomForestClassifier])
+    clf.fit(X_train, X_test, y_train, y_test)
+    
+    # Test predict all models
+    all_predictions = clf.predict(X_test)
+    assert isinstance(all_predictions, dict)
+    assert 'LogisticRegression' in all_predictions
+    assert 'RandomForestClassifier' in all_predictions
+    assert len(all_predictions['LogisticRegression']) == len(X_test)
+    
+    # Test predict specific model
+    lr_predictions = clf.predict(X_test, model_name='LogisticRegression')
+    assert isinstance(lr_predictions, np.ndarray)
+    assert len(lr_predictions) == len(X_test)
+    assert np.array_equal(lr_predictions, all_predictions['LogisticRegression'])
+    
+    # Test error for unfitted model
+    clf_unfitted = LazyClassifier(verbose=0, ignore_warnings=True)
+    with pytest.raises(ValueError, match="No models have been fitted yet"):
+        clf_unfitted.predict(X_test)
+    
+    # Test error for invalid model name
+    with pytest.raises(ValueError, match="Model .* not found"):
+        clf.predict(X_test, model_name='InvalidModel')
+
+def test_lazy_regressor_kfold_cv():
+    """
+    Test K-fold cross-validation functionality for LazyRegressor.
+    """
+    from sklearn.linear_model import LinearRegression
+    
+    data = load_diabetes()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Test with 5-fold CV
+    reg = LazyRegressor(verbose=0, ignore_warnings=True, cv=5, regressors=[LinearRegression])
+    models, _ = reg.fit(X_train, X_test, y_train, y_test)
+    
+    # Verify CV columns are present
+    assert "R-Squared CV Mean" in models.columns
+    assert "R-Squared CV Std" in models.columns
+    assert "RMSE CV Mean" in models.columns
+    assert "RMSE CV Std" in models.columns
+    
+    # Verify CV metrics are calculated (not None)
+    assert models.loc['LinearRegression', 'R-Squared CV Mean'] is not None
+    assert models.loc['LinearRegression', 'RMSE CV Mean'] is not None
+    
+    # Verify CV std is non-negative
+    assert models.loc['LinearRegression', 'R-Squared CV Std'] >= 0
+    assert models.loc['LinearRegression', 'RMSE CV Std'] >= 0
+
+def test_lazy_regressor_predict():
+    """
+    Test built-in predict function for LazyRegressor.
+    """
+    from sklearn.linear_model import LinearRegression, Ridge
+    
+    data = load_diabetes()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    reg = LazyRegressor(verbose=0, ignore_warnings=True, regressors=[LinearRegression, Ridge])
+    reg.fit(X_train, X_test, y_train, y_test)
+    
+    # Test predict all models
+    all_predictions = reg.predict(X_test)
+    assert isinstance(all_predictions, dict)
+    assert 'LinearRegression' in all_predictions
+    assert 'Ridge' in all_predictions
+    assert len(all_predictions['LinearRegression']) == len(X_test)
+    
+    # Test predict specific model
+    lr_predictions = reg.predict(X_test, model_name='LinearRegression')
+    assert isinstance(lr_predictions, np.ndarray)
+    assert len(lr_predictions) == len(X_test)
+    assert np.array_equal(lr_predictions, all_predictions['LinearRegression'])
+    
+    # Test error for unfitted model
+    reg_unfitted = LazyRegressor(verbose=0, ignore_warnings=True)
+    with pytest.raises(ValueError, match="No models have been fitted yet"):
+        reg_unfitted.predict(X_test)
+    
+    # Test error for invalid model name
+    with pytest.raises(ValueError, match="Model .* not found"):
+        reg.predict(X_test, model_name='InvalidModel')

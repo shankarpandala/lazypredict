@@ -382,7 +382,10 @@ class LazyClassifier:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.classifiers = classifiers
+        if classifiers == "all":
+            self.classifiers = CLASSIFIERS
+        else:
+            self.classifiers = [(name,cls) for name, cls in CLASSIFIERS if name in classifiers]
         self.cv = cv  # K-fold cross-validation parameter
         self.timeout = timeout  # Timeout in seconds for each model
         self.categorical_encoder = categorical_encoder  # Encoder type for categorical features
@@ -975,7 +978,10 @@ class LazyRegressor:
         self.predictions = predictions
         self.models = {}
         self.random_state = random_state
-        self.regressors = regressors
+        if regressors == "all":
+            self.regressors = REGRESSORS
+        else:
+            self.regressors = [(name,cls) for name, cls in REGRESSORS if name in regressors]    
         self.cv = cv  # K-fold cross-validation parameter
         self.timeout = timeout  # Timeout in seconds for each model
         self.categorical_encoder = categorical_encoder  # Encoder type for categorical features

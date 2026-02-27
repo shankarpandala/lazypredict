@@ -300,8 +300,8 @@ class LazyClassifier:
         number for verbosity.
     ignore_warnings : bool, optional (default=True)
         When set to True, the warning related to algorigms that are not able to run are ignored.
-    custom_metric : function, optional (default=None)
-        When function is provided, models are evaluated based on the custom evaluation metric provided.
+    custom_metric : function | List[function], optional (default=None)
+        When function (or list of functions) is provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
     classifiers : list, optional (default="all")
@@ -442,8 +442,6 @@ class LazyClassifier:
             Recall_CV_Mean = []
             Recall_CV_Std = []
 
-        if self.custom_metric is not None:
-            CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -634,46 +632,40 @@ class LazyClassifier:
                 Recall.append(recall)
                 TIME.append(time.time() - start)
                 if self.custom_metric is not None:
-                    try:
-                        custom_metric = self.custom_metric(y_test, y_pred)
-                        CUSTOM_METRIC.append(custom_metric)
-                        # Log custom metric to MLflow if enabled
-                        if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
-                            mlflow.log_metric(self.custom_metric.__name__, custom_metric)
-                    except Exception as custom_exception:
-                        # If custom metric fails, append None to maintain array length
-                        CUSTOM_METRIC.append(None)
-                        if self.ignore_warnings is False:
-                            print(f"Custom metric {self.custom_metric.__name__} failed for {name}")
-                            print(custom_exception)
-                
+                    custom_metric_dict = {}
+                    if not isinstance(self.custom_metric, list):
+                        self.custom_metric = [self.custom_metric]
+                    for metric in self.custom_metric:
+                        try:
+                            custom_metric = [metric(y_test, y_pred)]
+                            # Log custom metric to MLflow if enabled
+                            if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                                mlflow.log_metric(metric.__name__, custom_metric)
+                        except Exception as custom_exception:
+                            # If custom metric fails, append None to maintain array length
+                            custom_metric = [None]
+                            if self.ignore_warnings is False:
+                                print(f"Custom metric {metric.__name__} failed for {name}")
+                                print(custom_exception)
+                        custom_metric_dict[metric.__name__] = custom_metric
+
                 if self.verbose > 0:
+                    verbose_message = {
+                        "Model": name,
+                        "Accuracy": accuracy,
+                        "Balanced Accuracy": b_accuracy,
+                        "ROC AUC": roc_auc,
+                        "F1 Score": f1,
+                        "Precision": precision,
+                        "Recall": recall,
+                    }
                     if self.custom_metric is not None:
                         print(
-                            {
-                                "Model": name,
-                                "Accuracy": accuracy,
-                                "Balanced Accuracy": b_accuracy,
-                                "ROC AUC": roc_auc,
-                                "F1 Score": f1,
-                                "Precision": precision,
-                                "Recall": recall,
-                                self.custom_metric.__name__: custom_metric,
-                                "Time taken": time.time() - start,
-                            }
+                            verbose_message | custom_metric_dict | {"Time taken": time.time() - start}
                         )
                     else:
                         print(
-                            {
-                                "Model": name,
-                                "Accuracy": accuracy,
-                                "Balanced Accuracy": b_accuracy,
-                                "ROC AUC": roc_auc,
-                                "F1 Score": f1,
-                                "Precision": precision,
-                                "Recall": recall,
-                                "Time taken": time.time() - start,
-                            }
+                            verbose_message | {"Time taken": time.time() - start}
                         )
                 if self.predictions:
                     predictions[name] = y_pred
@@ -693,87 +685,41 @@ class LazyClassifier:
         
         # Build results DataFrame with or without CV metrics
         if self.cv:
+            shared_left_dict = {
+                "Model": names,
+                "Accuracy": Accuracy,
+                "Balanced Accuracy": B_Accuracy,
+                "ROC AUC": ROC_AUC,
+                "F1 Score": F1,
+                "Precision": Precision,
+                "Recall": Recall,
+            }
+            cv_right_dict = {
+                "Accuracy CV Mean": Accuracy_CV_Mean,
+                "Accuracy CV Std": Accuracy_CV_Std,
+                "Balanced Accuracy CV Mean": B_Accuracy_CV_Mean,
+                "Balanced Accuracy CV Std": B_Accuracy_CV_Std,
+                "ROC AUC CV Mean": ROC_AUC_CV_Mean,
+                "ROC AUC CV Std": ROC_AUC_CV_Std,
+                "F1 Score CV Mean": F1_CV_Mean,
+                "F1 Score CV Std": F1_CV_Std,
+                "Precision CV Mean": Precision_CV_Mean,
+                "Precision CV Std": Precision_CV_Std,
+                "Recall CV Mean": Recall_CV_Mean,
+                "Recall CV Std": Recall_CV_Std,
+                "Time Taken": TIME,
+            }
             # Include cross-validation metrics
             if self.custom_metric is None:
-                scores = pd.DataFrame(
-                    {
-                        "Model": names,
-                        "Accuracy": Accuracy,
-                        "Balanced Accuracy": B_Accuracy,
-                        "ROC AUC": ROC_AUC,
-                        "F1 Score": F1,
-                        "Precision": Precision,
-                        "Recall": Recall,
-                        "Accuracy CV Mean": Accuracy_CV_Mean,
-                        "Accuracy CV Std": Accuracy_CV_Std,
-                        "Balanced Accuracy CV Mean": B_Accuracy_CV_Mean,
-                        "Balanced Accuracy CV Std": B_Accuracy_CV_Std,
-                        "ROC AUC CV Mean": ROC_AUC_CV_Mean,
-                        "ROC AUC CV Std": ROC_AUC_CV_Std,
-                        "F1 Score CV Mean": F1_CV_Mean,
-                        "F1 Score CV Std": F1_CV_Std,
-                        "Precision CV Mean": Precision_CV_Mean,
-                        "Precision CV Std": Precision_CV_Std,
-                        "Recall CV Mean": Recall_CV_Mean,
-                        "Recall CV Std": Recall_CV_Std,
-                        "Time Taken": TIME,
-                    }
-                )
+                scores = pd.DataFrame(shared_left_dict | cv_right_dict)
             else:
-                scores = pd.DataFrame(
-                    {
-                        "Model": names,
-                        "Accuracy": Accuracy,
-                        "Balanced Accuracy": B_Accuracy,
-                        "ROC AUC": ROC_AUC,
-                        "F1 Score": F1,
-                        "Precision": Precision,
-                        "Recall": Recall,
-                        self.custom_metric.__name__: CUSTOM_METRIC,
-                        "Accuracy CV Mean": Accuracy_CV_Mean,
-                        "Accuracy CV Std": Accuracy_CV_Std,
-                        "Balanced Accuracy CV Mean": B_Accuracy_CV_Mean,
-                        "Balanced Accuracy CV Std": B_Accuracy_CV_Std,
-                        "ROC AUC CV Mean": ROC_AUC_CV_Mean,
-                        "ROC AUC CV Std": ROC_AUC_CV_Std,
-                        "F1 Score CV Mean": F1_CV_Mean,
-                        "F1 Score CV Std": F1_CV_Std,
-                        "Precision CV Mean": Precision_CV_Mean,
-                        "Precision CV Std": Precision_CV_Std,
-                        "Recall CV Mean": Recall_CV_Mean,
-                        "Recall CV Std": Recall_CV_Std,
-                        "Time Taken": TIME,
-                    }
-                )
+                scores = pd.DataFrame(shared_left_dict | custom_metric_dict | cv_right_dict)
         else:
             # Traditional train/test split metrics only
             if self.custom_metric is None:
-                scores = pd.DataFrame(
-                    {
-                        "Model": names,
-                        "Accuracy": Accuracy,
-                        "Balanced Accuracy": B_Accuracy,
-                        "ROC AUC": ROC_AUC,
-                        "F1 Score": F1,
-                        "Precision": Precision,
-                        "Recall": Recall,
-                        "Time Taken": TIME,
-                    }
-                )
+                scores = pd.DataFrame(shared_left_dict | {"Time Taken": TIME})
             else:
-                scores = pd.DataFrame(
-                    {
-                        "Model": names,
-                        "Accuracy": Accuracy,
-                        "Balanced Accuracy": B_Accuracy,
-                        "ROC AUC": ROC_AUC,
-                        "F1 Score": F1,
-                        "Precision": Precision,
-                        "Recall": Recall,
-                        self.custom_metric.__name__: CUSTOM_METRIC,
-                        "Time Taken": TIME,
-                    }
-                )
+                scores = pd.DataFrame(shared_left_dict | custom_metric_dict |{"Time Taken": TIME})
         scores = scores.sort_values(by="Balanced Accuracy", ascending=False).set_index(
             "Model"
         )
@@ -876,8 +822,8 @@ class LazyRegressor:
         number for verbosity.
     ignore_warnings : bool, optional (default=True)
         When set to True, the warning related to algorigms that are not able to run are ignored.
-    custom_metric : function, optional (default=None)
-        When function is provided, models are evaluated based on the custom evaluation metric provided.
+    custom_metric : function | List[function], optional (default=None)
+        When function (or list of functions) is provided, models are evaluated based on the custom evaluation metric provided.
     prediction : bool, optional (default=False)
         When set to True, the predictions of all the models models are returned as dataframe.
     regressors : list, optional (default="all")
@@ -1026,9 +972,6 @@ class LazyRegressor:
         names = []
         TIME = []
         predictions = {}
-
-        if self.custom_metric:
-            CUSTOM_METRIC = []
 
         if isinstance(X_train, np.ndarray):
             X_train = pd.DataFrame(X_train)
@@ -1180,19 +1123,23 @@ class LazyRegressor:
                 RMSE.append(rmse)
                 TIME.append(time.time() - start)
 
-                if self.custom_metric:
-                    try:
-                        custom_metric = self.custom_metric(y_test, y_pred)
-                        CUSTOM_METRIC.append(custom_metric)
-                        # Log custom metric to MLflow if enabled
-                        if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
-                            mlflow.log_metric(self.custom_metric.__name__, custom_metric)
-                    except Exception as custom_exception:
-                        # If custom metric fails, append None to maintain array length
-                        CUSTOM_METRIC.append(None)
-                        if self.ignore_warnings is False:
-                            print(f"Custom metric {self.custom_metric.__name__} failed for {name}")
-                            print(custom_exception)
+                if self.custom_metric is not None:
+                    custom_metric_dict = {}
+                    if not isinstance(self.custom_metric, list):
+                        self.custom_metric = [self.custom_metric]
+                    for metric in self.custom_metric:
+                        try:
+                            custom_metric = [metric(y_test, y_pred)]
+                            # Log custom metric to MLflow if enabled
+                            if self.mlflow_enabled and MLFLOW_AVAILABLE and mlflow_active_run:
+                                mlflow.log_metric(metric.__name__, custom_metric)
+                        except Exception as custom_exception:
+                            # If custom metric fails, append None to maintain array length
+                            custom_metric = [None]
+                            if self.ignore_warnings is False:
+                                print(f"Custom metric {metric.__name__} failed for {name}")
+                                print(custom_exception)
+                        custom_metric_dict[metric.__name__] = custom_metric
 
                 if self.verbose > 0:
                     scores_verbose = {
@@ -1204,7 +1151,7 @@ class LazyRegressor:
                     }
 
                     if self.custom_metric:
-                        scores_verbose[self.custom_metric.__name__] = custom_metric
+                        scores_verbose = scores_verbose | custom_metric_dict
 
                     print(scores_verbose)
                 if self.predictions:
@@ -1250,7 +1197,7 @@ class LazyRegressor:
             }
 
         if self.custom_metric:
-            scores[self.custom_metric.__name__] = CUSTOM_METRIC
+            scores = scores | custom_metric_dict
 
         scores = pd.DataFrame(scores)
         scores = scores.sort_values(by="Adjusted R-Squared", ascending=False).set_index(

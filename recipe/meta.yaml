@@ -1,0 +1,61 @@
+{% set name = "lazypredict" %}
+{% set version = "0.2.16" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  # sha256 must be updated when a new release is published to PyPI.
+  # Run:  curl -sL https://pypi.org/pypi/lazypredict/<version>/json | python -c "import sys,json; print(json.load(sys.stdin)['urls'][1]['digests']['sha256'])"
+  # sha256: <UPDATE_ON_RELEASE>
+
+build:
+  noarch: python
+  number: 0
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  entry_points:
+    - lazypredict=lazypredict.cli:main
+
+requirements:
+  host:
+    - python >=3.9
+    - pip
+    - setuptools
+  run:
+    - python >=3.9
+    - click
+    - scikit-learn >=1.0
+    - pandas >=1.3
+    - numpy >=1.21
+    - tqdm >=4.0
+    - joblib >=1.0
+
+test:
+  imports:
+    - lazypredict
+    - lazypredict.Supervised
+  commands:
+    - pip check
+    - lazypredict --help
+  requires:
+    - pip
+
+about:
+  home: https://github.com/shankarpandala/lazypredict
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning
+  description: |
+    Lazy Predict helps build a lot of basic models without much code
+    and helps understand which models work better without any parameter tuning.
+    It provides LazyClassifier and LazyRegressor that train and evaluate
+    all applicable scikit-learn models on your dataset in a single call.
+  dev_url: https://github.com/shankarpandala/lazypredict
+  doc_url: https://lazypredict.readthedocs.io
+
+extra:
+  recipe-maintainers:
+    - shankarpandala

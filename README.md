@@ -24,10 +24,30 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 
 ## Installation
 
-To install Lazy Predict:
+### pip (PyPI)
 
 ```bash
 pip install lazypredict
+```
+
+### conda (conda-forge)
+
+```bash
+conda install -c conda-forge lazypredict
+```
+
+### Optional extras (pip only)
+
+Install with boosting libraries (XGBoost, LightGBM):
+
+```bash
+pip install lazypredict[boost]
+```
+
+Install with all optional dependencies:
+
+```bash
+pip install lazypredict[all]
 ```
 
 ## Usage

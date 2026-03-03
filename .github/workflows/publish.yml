@@ -63,3 +63,56 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  conda-forge:
+    needs: publish-pypi
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: '3.12'
+          channels: conda-forge,defaults
+          channel-priority: strict
+
+      - name: Install tools
+        run: |
+          conda install -y conda-build conda-smithy
+          pip install jinja2 requests
+
+      - name: Get PyPI package hash
+        id: hash
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"  # strip leading 'v' if present
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          SHA=$(curl -sL "https://pypi.org/pypi/lazypredict/${VERSION}/json" \
+            | python -c "import sys,json; d=json.load(sys.stdin); print([u['digests']['sha256'] for u in d['urls'] if u['packagetype']=='sdist'][0])")
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Update recipe with hash
+        run: |
+          sed -i 's/# sha256: <UPDATE_ON_RELEASE>/sha256: ${{ steps.hash.outputs.sha256 }}/' recipe/meta.yaml
+          sed -i 's/{% set version = ".*" %}/{% set version = "${{ steps.hash.outputs.version }}" %}/' recipe/meta.yaml
+          cat recipe/meta.yaml
+
+      - name: Build conda package (verify recipe)
+        run: conda build recipe/ --no-anaconda-upload
+
+      - name: Create conda-forge feedstock PR body
+        run: |
+          echo "## conda-forge feedstock submission"
+          echo ""
+          echo "The recipe at \`recipe/meta.yaml\` has been verified."
+          echo "To submit to conda-forge, copy \`recipe/meta.yaml\` to a PR at:"
+          echo "https://github.com/conda-forge/staged-recipes"
+          echo ""
+          echo "Package version: ${{ steps.hash.outputs.version }}"
+          echo "SHA256: ${{ steps.hash.outputs.sha256 }}"

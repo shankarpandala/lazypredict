@@ -1,44 +1,65 @@
-name: Publish
+name: Publish to PyPI
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 permissions:
   contents: read
-  id-token: write  # Required for OIDC
+  id-token: write  # Required for OIDC Trusted Publishers
 
 jobs:
-  deploy:
+  ci-check:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt pytest
+      - name: Run tests before publish
+        run: pytest
 
-      - name: Install Build Tools and Git
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git
-          python -m pip install --upgrade pip
-          pip install build
-
-      - name: Update Version in setup.py and __init__.py
-        run: |
-          VERSION=$(echo $GITHUB_REF | sed 's/refs\/tags\///')
-          sed -i "s/version=.*/version='$VERSION',/" setup.py
-          sed -i "s/__version__ = .*/__version__ = '$VERSION'/" lazypredict/__init__.py
-
-      - name: Build Package
+  build:
+    needs: ci-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install build twine
+      - name: Build package
         run: python -m build
-
-      - name: Publish to PyPI
-        if: github.event.release.prerelease == false
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Validate package
+        run: twine check dist/*
+      - uses: actions/upload-artifact@v4
         with:
-          repository-url: 'https://upload.pypi.org/legacy/'
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    needs: [build, publish-testpypi]
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

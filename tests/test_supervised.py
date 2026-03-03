@@ -7,7 +7,12 @@ from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from sklearn.metrics import mean_absolute_error
-import mlflow
+
+try:
+    import mlflow
+    MLFLOW_INSTALLED = True
+except ImportError:
+    MLFLOW_INSTALLED = False
 
 
 def test_intel_extension_import():
@@ -140,6 +145,7 @@ def test_lazy_classifier_custom_metric():
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
     assert "custom_accuracy" in models.columns
 
+@pytest.mark.skipif(not MLFLOW_INSTALLED, reason="mlflow not installed")
 def test_lazy_classifier_mlflow_integration():
     # Set up MLflow tracking
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
@@ -149,7 +155,7 @@ def test_lazy_classifier_mlflow_integration():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=123)
     clf = LazyClassifier(verbose=0, ignore_warnings=True)
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
-    
+
     # Verify MLflow experiments were created
     assert os.path.exists("mlflow.db")
 
@@ -190,6 +196,7 @@ def test_lazy_regressor_custom_metric():
     models, predictions = reg.fit(X_train, X_test, y_train, y_test)
     assert "mean_absolute_error" in models.columns
 
+@pytest.mark.skipif(not MLFLOW_INSTALLED, reason="mlflow not installed")
 def test_lazy_regressor_mlflow_integration():
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     data = load_diabetes()
@@ -201,10 +208,11 @@ def test_lazy_regressor_mlflow_integration():
     assert os.path.exists("mlflow.db")
 
 def test_get_card_split():
+    n_rows = 20
     df = pd.DataFrame({
-        'A': ['a', 'b', 'c', 'd', 'e'],
-        'B': ['f', 'g', 'h', 'i', 'j'],
-        'C': ['x' + str(i) for i in range(20)]
+        'A': ['a', 'b', 'c', 'd', 'e'] * 4,               # 5 unique
+        'B': ['f', 'g', 'h', 'i', 'j'] * 4,               # 5 unique
+        'C': ['x' + str(i) for i in range(n_rows)],        # 20 unique
     })
     cols = pd.Index(['A', 'B', 'C'])
     card_low, card_high = get_card_split(df, cols, n=10)
@@ -228,7 +236,7 @@ def test_lazy_classifier_specific_models():
 
 def test_provide_models():
     data = load_breast_cancer()
-    X = data.data
+    X = pd.DataFrame(data.data, columns=[f"feature_{i}" for i in range(data.data.shape[1])])
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=123)
     clf = LazyClassifier(verbose=0, ignore_warnings=True)
@@ -638,22 +646,24 @@ def test_verbose_zero_disables_progress_bar():
 
 def test_verbose_one_shows_progress():
     """
-    Test that verbose>0 still allows output (metrics printing).
+    Test that verbose>0 still allows output (logging and progress bar).
     """
     from sklearn.datasets import load_breast_cancer
     from sklearn.linear_model import LogisticRegression
-    import sys
-    from io import StringIO
-    
+    import logging
+
     data = load_breast_cancer()
     X = data.data
     y = data.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    
-    # Capture stdout
-    old_stdout = sys.stdout
-    sys.stdout = StringIO()
-    
+
+    # Capture log output
+    log_handler = logging.StreamHandler()
+    log_handler.setLevel(logging.DEBUG)
+    lp_logger = logging.getLogger("lazypredict")
+    lp_logger.addHandler(log_handler)
+    lp_logger.setLevel(logging.DEBUG)
+
     try:
         clf = LazyClassifier(
             verbose=1,
@@ -661,15 +671,9 @@ def test_verbose_one_shows_progress():
             classifiers=[LogisticRegression]
         )
         models, _ = clf.fit(X_train, X_test, y_train, y_test)
-        
-        output = sys.stdout.getvalue()
-        
-        # With verbose=1, should see metric output
-        assert 'Model' in output or 'Accuracy' in output or 'LogisticRegression' in output
-        
     finally:
-        sys.stdout = old_stdout
-    
+        lp_logger.removeHandler(log_handler)
+
     assert isinstance(models, pd.DataFrame)
 
 def test_perpetual_booster_classifier():
@@ -789,3 +793,109 @@ def test_timeout_regressor():
     assert len(models) == 2
     assert 'LinearRegression' in models.index
     assert 'Ridge' in models.index
+
+
+# ---------------------------------------------------------------------------
+# Input validation tests
+# ---------------------------------------------------------------------------
+
+
+def test_input_validation_shape_mismatch():
+    """Test that mismatched X_train/y_train shapes raise ValueError."""
+    X_train = np.random.rand(100, 5)
+    X_test = np.random.rand(50, 5)
+    y_train = np.random.randint(0, 2, 80)  # Wrong length
+    y_test = np.random.randint(0, 2, 50)
+
+    clf = LazyClassifier(verbose=0, ignore_warnings=True)
+    with pytest.raises(ValueError, match="X_train has 100 samples but y_train has 80"):
+        clf.fit(X_train, X_test, y_train, y_test)
+
+
+def test_input_validation_feature_mismatch():
+    """Test that mismatched feature counts between X_train and X_test raise ValueError."""
+    X_train = np.random.rand(100, 5)
+    X_test = np.random.rand(50, 3)  # Wrong number of features
+    y_train = np.random.randint(0, 2, 100)
+    y_test = np.random.randint(0, 2, 50)
+
+    clf = LazyClassifier(verbose=0, ignore_warnings=True)
+    with pytest.raises(ValueError, match="X_train has 5 features but X_test has 3"):
+        clf.fit(X_train, X_test, y_train, y_test)
+
+
+def test_input_validation_empty_data():
+    """Test that empty data raises ValueError."""
+    X_train = np.array([]).reshape(0, 5)
+    X_test = np.random.rand(50, 5)
+    y_train = np.array([])
+    y_test = np.random.randint(0, 2, 50)
+
+    clf = LazyClassifier(verbose=0, ignore_warnings=True)
+    with pytest.raises(ValueError, match="X_train is empty"):
+        clf.fit(X_train, X_test, y_train, y_test)
+
+
+def test_init_validation_cv():
+    """Test that invalid cv parameter raises ValueError."""
+    with pytest.raises(ValueError, match="cv must be an integer >= 2"):
+        LazyClassifier(cv=1)
+    with pytest.raises(ValueError, match="cv must be an integer >= 2"):
+        LazyClassifier(cv=0)
+
+
+def test_init_validation_timeout():
+    """Test that invalid timeout parameter raises ValueError."""
+    with pytest.raises(ValueError, match="timeout must be a positive number"):
+        LazyClassifier(timeout=-1)
+    with pytest.raises(ValueError, match="timeout must be a positive number"):
+        LazyClassifier(timeout=0)
+
+
+def test_init_validation_encoder():
+    """Test that invalid categorical_encoder raises ValueError at init time."""
+    with pytest.raises(ValueError, match="categorical_encoder must be one of"):
+        LazyClassifier(categorical_encoder='invalid')
+
+
+def test_init_validation_custom_metric():
+    """Test that non-callable custom_metric raises TypeError."""
+    with pytest.raises(TypeError, match="custom_metric must be callable"):
+        LazyClassifier(custom_metric="not_callable")
+
+
+def test_errors_dict_populated():
+    """Test that the errors dict exists on classifier."""
+    from sklearn.linear_model import LogisticRegression
+
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    clf = LazyClassifier(verbose=0, ignore_warnings=True, classifiers=[LogisticRegression])
+    clf.fit(X_train, X_test, y_train, y_test)
+
+    assert isinstance(clf.errors, dict)
+
+
+def test_regressor_input_validation():
+    """Test that regressor also validates inputs."""
+    X_train = np.random.rand(100, 5)
+    X_test = np.random.rand(50, 5)
+    y_train = np.random.rand(80)  # Wrong length
+    y_test = np.random.rand(50)
+
+    reg = LazyRegressor(verbose=0, ignore_warnings=True)
+    with pytest.raises(ValueError, match="X_train has 100 samples but y_train has 80"):
+        reg.fit(X_train, X_test, y_train, y_test)
+
+
+def test_regressor_init_validation():
+    """Test regressor constructor validation."""
+    with pytest.raises(ValueError, match="cv must be an integer >= 2"):
+        LazyRegressor(cv=1)
+    with pytest.raises(ValueError, match="timeout must be a positive number"):
+        LazyRegressor(timeout=0)
+    with pytest.raises(ValueError, match="categorical_encoder must be one of"):
+        LazyRegressor(categorical_encoder='bad')

@@ -103,19 +103,14 @@ def test_binary_encoder_fallback():
 
 
 def test_invalid_encoder():
-    """Test that invalid encoder raises error"""
-    X, y = create_mixed_dataset()
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    
-    clf = LazyClassifier(
-        verbose=0,
-        ignore_warnings=True,
-        categorical_encoder='invalid_encoder',
-        classifiers=[LogisticRegression]
-    )
-    
-    with pytest.raises(ValueError, match="Unknown encoder type"):
-        clf.fit(X_train, X_test, y_train, y_test)
+    """Test that invalid encoder raises error at init time"""
+    with pytest.raises(ValueError, match="categorical_encoder must be one of"):
+        LazyClassifier(
+            verbose=0,
+            ignore_warnings=True,
+            categorical_encoder='invalid_encoder',
+            classifiers=[LogisticRegression]
+        )
 
 
 def test_regressor_ordinal_encoder():

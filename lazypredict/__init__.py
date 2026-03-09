@@ -9,7 +9,13 @@ __version__ = '0.2.16'
 __all__ = [
     "LazyClassifier",
     "LazyRegressor",
+    "LazyEstimator",
     "Supervised",
+    "exceptions",
+    "preprocessing",
+    "metrics",
+    "config",
 ]
 
 from lazypredict.Supervised import LazyClassifier, LazyRegressor
+from lazypredict._base import LazyEstimator

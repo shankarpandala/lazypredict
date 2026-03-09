@@ -24,6 +24,19 @@ jobs:
       - name: Lint (style warnings)
         run: flake8 . --count --max-complexity=10 --max-line-length=120 --statistics
 
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt mypy
+      - name: Run mypy
+        run: mypy lazypredict/ --ignore-missing-imports
+        continue-on-error: true
+
   test-fast:
     needs: lint
     runs-on: ubuntu-latest
@@ -38,7 +51,7 @@ jobs:
           cache: 'pip'
       - run: pip install -r requirements.txt pytest pytest-cov
       - name: Run tests with coverage
-        run: pytest --cov=lazypredict --cov-report=xml -x
+        run: pytest --cov=lazypredict --cov-report=xml --cov-fail-under=60 -x
       - name: Upload coverage
         if: matrix.python-version == '3.13'
         uses: codecov/codecov-action@v4

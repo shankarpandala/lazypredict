@@ -20,7 +20,6 @@ from lazypredict.metrics import (
 from lazypredict.ts_preprocessing import (
     create_lag_features,
     detect_seasonal_period,
-    recursive_forecast,
 )
 from lazypredict.exceptions import InsufficientDataError
 

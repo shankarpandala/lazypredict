@@ -557,11 +557,11 @@ class _TorchRNNForecaster(ForecasterWrapper):
         self.random_state = random_state
 
     def fit(self, y_train, X_train=None):
-        import torch
+        import torch as _torch
         import torch.nn as nn
         from torch.utils.data import DataLoader, TensorDataset
 
-        torch.manual_seed(self.random_state)
+        _torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
 
         X_feat, y_feat = create_lag_features(
@@ -571,10 +571,10 @@ class _TorchRNNForecaster(ForecasterWrapper):
         X_scaled = self._scaler.fit_transform(X_feat)
 
         n_features = X_scaled.shape[1]
-        X_tensor = torch.tensor(
-            X_scaled.reshape(-1, 1, n_features), dtype=torch.float32
+        X_tensor = _torch.tensor(
+            X_scaled.reshape(-1, 1, n_features), dtype=_torch.float32
         )
-        y_tensor = torch.tensor(y_feat.reshape(-1, 1), dtype=torch.float32)
+        y_tensor = _torch.tensor(y_feat.reshape(-1, 1), dtype=_torch.float32)
 
         dataset = TensorDataset(X_tensor, y_tensor)
         loader = DataLoader(
@@ -589,7 +589,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
         )
         self._linear = nn.Linear(self.hidden_size, 1)
         params = list(self._rnn.parameters()) + list(self._linear.parameters())
-        optimizer = torch.optim.Adam(params, lr=self.learning_rate)
+        optimizer = _torch.optim.Adam(params, lr=self.learning_rate)
         loss_fn = nn.MSELoss()
 
         self._rnn.train()
@@ -621,7 +621,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
         self._n_features = n_features
 
     def predict(self, horizon, X_test=None):
-        import torch
+        import torch as _torch
 
         predictions: List[float] = []
         history = list(self._y_train)
@@ -632,7 +632,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
             if X_test.ndim == 1:
                 X_test = X_test.reshape(-1, 1)
 
-        with torch.no_grad():
+        with _torch.no_grad():
             for step in range(horizon):
                 features: List[float] = []
                 for lag in range(1, self.n_lags + 1):
@@ -651,8 +651,8 @@ class _TorchRNNForecaster(ForecasterWrapper):
 
                 X_step = np.array(features).reshape(1, -1)
                 X_step = self._scaler.transform(X_step)
-                X_tensor = torch.tensor(
-                    X_step.reshape(1, 1, -1), dtype=torch.float32
+                X_tensor = _torch.tensor(
+                    X_step.reshape(1, 1, -1), dtype=_torch.float32
                 )
                 output, _ = self._rnn(X_tensor)
                 pred = self._linear(output[:, -1, :]).item()
@@ -994,6 +994,120 @@ class LazyForecaster:
     # Public API                                                              #
     # --------------------------------------------------------------------- #
 
+    def _validate_fit_inputs(self, y_train, y_test, X_train, X_test):
+        """Validate and coerce fit inputs to numpy arrays."""
+        y_train = np.asarray(y_train, dtype=float)
+        y_test = np.asarray(y_test, dtype=float)
+        if len(y_train) == 0:
+            raise ValueError("y_train is empty")
+        if len(y_test) == 0:
+            raise ValueError("y_test is empty")
+        if X_train is not None:
+            X_train = np.asarray(X_train, dtype=float)
+            if X_train.ndim == 1:
+                X_train = X_train.reshape(-1, 1)
+        if X_test is not None:
+            X_test = np.asarray(X_test, dtype=float)
+            if X_test.ndim == 1:
+                X_test = X_test.reshape(-1, 1)
+        min_required = self.n_lags + max(self.n_rolling) + 1
+        if len(y_train) < min_required:
+            raise InsufficientDataError(
+                f"y_train has {len(y_train)} observations but at least "
+                f"{min_required} are required (n_lags={self.n_lags}, "
+                f"max rolling window={max(self.n_rolling)})"
+            )
+        return y_train, y_test, X_train, X_test
+
+    def _fit_single_model(
+        self, fname, wrapper, y_train, y_test, X_train, X_test,
+        horizon, seasonal_period, results, predictions_dict,
+    ):
+        """Fit, predict, and score a single forecaster model."""
+        start = time.time()
+        mlflow_active_run = None
+        try:
+            if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
+                mlflow_active_run = _mlflow.start_run(
+                    run_name=f"LazyForecaster-{fname}"
+                )
+                _mlflow.log_param("model_name", fname)
+
+            wrapper_copy = copy.deepcopy(wrapper)
+            wrapper_copy.fit(y_train, X_train)
+            fit_time = time.time() - start
+
+            if self.timeout and fit_time > self.timeout:
+                logger.info(
+                    "%s exceeded timeout (%.2fs > %ss), skipping...",
+                    fname, fit_time, self.timeout,
+                )
+                self._end_mlflow_run(mlflow_active_run)
+                return None
+
+            y_pred = wrapper_copy.predict(horizon, X_test)
+            self.models[fname] = wrapper_copy
+
+            sp = seasonal_period or 1
+            metrics = compute_forecast_metrics(
+                y_test, y_pred, y_train, seasonal_period=sp
+            )
+            metrics["name"] = fname
+            metrics["time"] = time.time() - start
+
+            if self.cv:
+                cv_metrics = self._run_ts_cv(
+                    wrapper, y_train, X_train, fname, seasonal_period
+                )
+                metrics.update(cv_metrics)
+
+            self._compute_custom_metric(metrics, y_test, y_pred, fname)
+            self._log_mlflow_metrics(mlflow_active_run, metrics)
+
+            results.append(metrics)
+            if self.verbose > 0:
+                self._log_verbose(fname, metrics)
+            if self.predictions:
+                predictions_dict[fname] = y_pred
+
+            self._end_mlflow_run(mlflow_active_run)
+            return metrics
+
+        except Exception as exc:
+            self._end_mlflow_run(mlflow_active_run)
+            self.errors[fname] = exc
+            if not self.ignore_warnings:
+                logger.warning("%s model failed: %s", fname, exc)
+            return None
+
+    def _compute_custom_metric(self, metrics, y_test, y_pred, fname):
+        """Run user-supplied custom metric if configured."""
+        if self.custom_metric is None:
+            return
+        try:
+            metrics["custom_metric"] = self.custom_metric(y_test, y_pred)
+        except Exception as custom_exc:
+            metrics["custom_metric"] = None
+            if not self.ignore_warnings:
+                logger.warning(
+                    "Custom metric failed for %s: %s", fname, custom_exc
+                )
+
+    @staticmethod
+    def _end_mlflow_run(mlflow_active_run):
+        """End an MLflow run if one is active."""
+        if mlflow_active_run and _mlflow is not None:
+            _mlflow.end_run()
+
+    @staticmethod
+    def _log_mlflow_metrics(mlflow_active_run, metrics):
+        """Log all numeric metrics to MLflow if a run is active."""
+        if not (mlflow_active_run and _mlflow is not None):
+            return
+        for key, val in metrics.items():
+            if isinstance(val, (int, float)) and val is not None:
+                _mlflow.log_metric(key, val)
+
     def fit(
         self,
         y_train: Union[pd.Series, np.ndarray],
@@ -1021,31 +1135,9 @@ class LazyForecaster:
         predictions : pd.DataFrame
             Per-model predictions (empty if ``self.predictions`` is False).
         """
-        y_train = np.asarray(y_train, dtype=float)
-        y_test = np.asarray(y_test, dtype=float)
-        if len(y_train) == 0:
-            raise ValueError("y_train is empty")
-        if len(y_test) == 0:
-            raise ValueError("y_test is empty")
-
-        if X_train is not None:
-            X_train = np.asarray(X_train, dtype=float)
-            if X_train.ndim == 1:
-                X_train = X_train.reshape(-1, 1)
-        if X_test is not None:
-            X_test = np.asarray(X_test, dtype=float)
-            if X_test.ndim == 1:
-                X_test = X_test.reshape(-1, 1)
-
-        # Validate sufficient data for lag features
-        min_required = self.n_lags + max(self.n_rolling) + 1
-        if len(y_train) < min_required:
-            raise InsufficientDataError(
-                f"y_train has {len(y_train)} observations but at least "
-                f"{min_required} are required (n_lags={self.n_lags}, "
-                f"max rolling window={max(self.n_rolling)})"
-            )
-
+        y_train, y_test, X_train, X_test = self._validate_fit_inputs(
+            y_train, y_test, X_train, X_test
+        )
         horizon = len(y_test)
 
         # Auto-detect seasonal period
@@ -1084,97 +1176,12 @@ class LazyForecaster:
         for idx, (fname, wrapper) in enumerate(
             progress_bar(all_forecasters, disable=(self.verbose == 0))
         ):
-            start = time.time()
-            mlflow_active_run = None
-            try:
-                # MLflow
-                if (
-                    self.mlflow_enabled
-                    and MLFLOW_AVAILABLE
-                    and _mlflow is not None
-                ):
-                    mlflow_active_run = _mlflow.start_run(
-                        run_name=f"LazyForecaster-{fname}"
-                    )
-                    _mlflow.log_param("model_name", fname)
-
-                # Clone to avoid state leaking between CV and final fit
-                wrapper_copy = copy.deepcopy(wrapper)
-                wrapper_copy.fit(y_train, X_train)
-                fit_time = time.time() - start
-
-                if self.timeout and fit_time > self.timeout:
-                    logger.info(
-                        "%s exceeded timeout (%.2fs > %ss), skipping...",
-                        fname,
-                        fit_time,
-                        self.timeout,
-                    )
-                    if mlflow_active_run and _mlflow is not None:
-                        _mlflow.end_run()
-                    continue
-
-                y_pred = wrapper_copy.predict(horizon, X_test)
-                self.models[fname] = wrapper_copy
-
-                # Metrics
-                sp = seasonal_period or 1
-                metrics = compute_forecast_metrics(
-                    y_test, y_pred, y_train, seasonal_period=sp
-                )
-                metrics["name"] = fname
-                metrics["time"] = time.time() - start
-
-                # Cross-validation
-                if self.cv:
-                    cv_metrics = self._run_ts_cv(
-                        wrapper, y_train, X_train, fname, seasonal_period
-                    )
-                    metrics.update(cv_metrics)
-
-                # Custom metric
-                if self.custom_metric is not None:
-                    try:
-                        metrics["custom_metric"] = self.custom_metric(
-                            y_test, y_pred
-                        )
-                    except Exception as custom_exc:
-                        metrics["custom_metric"] = None
-                        if not self.ignore_warnings:
-                            logger.warning(
-                                "Custom metric failed for %s: %s",
-                                fname,
-                                custom_exc,
-                            )
-
-                # MLflow logging
-                if mlflow_active_run and _mlflow is not None:
-                    for key, val in metrics.items():
-                        if isinstance(val, (int, float)) and val is not None:
-                            _mlflow.log_metric(key, val)
-
-                results.append(metrics)
-
-                if self.verbose > 0:
-                    self._log_verbose(fname, metrics)
-
-                if self.predictions:
-                    predictions_dict[fname] = y_pred
-
-                if mlflow_active_run and _mlflow is not None:
-                    _mlflow.end_run()
-
-                if self.progress_callback is not None:
-                    self.progress_callback(fname, idx + 1, total, metrics)
-
-            except Exception as exc:
-                if mlflow_active_run and _mlflow is not None:
-                    _mlflow.end_run()
-                self.errors[fname] = exc
-                if not self.ignore_warnings:
-                    logger.warning("%s model failed: %s", fname, exc)
-                if self.progress_callback is not None:
-                    self.progress_callback(fname, idx + 1, total, None)
+            metrics = self._fit_single_model(
+                fname, wrapper, y_train, y_test, X_train, X_test,
+                horizon, seasonal_period, results, predictions_dict,
+            )
+            if self.progress_callback is not None:
+                self.progress_callback(fname, idx + 1, total, metrics)
 
         scores = self._build_scores_dataframe(results)
 
@@ -1348,7 +1355,6 @@ class LazyForecaster:
         """
         from sklearn.model_selection import TimeSeriesSplit
 
-        cv_col_names = self._cv_column_names()
         tscv = TimeSeriesSplit(n_splits=self.cv)
         cv_scores: Dict[str, List[float]] = {
             m: [] for m in ["mae", "rmse", "mape", "smape", "mase"]

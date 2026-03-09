@@ -2,49 +2,78 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
-      - dev
+    branches: [dev, master]
   pull_request:
-    branches:
-      - master
-      - dev
-  release:
-    types:
-      - published
+    branches: [dev, master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install flake8
+      - name: Lint (syntax errors and undefined names)
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Lint (style warnings)
+        run: flake8 . --count --max-complexity=10 --max-line-length=120 --statistics
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt mypy
+      - name: Run mypy
+        run: mypy lazypredict/ --ignore-missing-imports
+        continue-on-error: true
+
+  test-fast:
+    needs: lint
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
-      fail-fast: false
-
+        python-version: ['3.10', '3.13']
     steps:
-    - name: Check out code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt pytest pytest-cov
+      - name: Run tests with coverage
+        run: pytest --cov=lazypredict --cov-report=xml --cov-fail-under=60 -x
+      - name: Upload coverage
+        if: matrix.python-version == '3.13'
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+        continue-on-error: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8
-
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10
-
-    - name: Test with pytest
-      run: |
-        python -m pip install -r requirements.txt
-        python -m pip install pytest
-        pytest || true
+  test-full:
+    if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.9', '3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt pytest
+      - name: Run tests
+        run: pytest

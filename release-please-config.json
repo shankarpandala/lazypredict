@@ -1,0 +1,14 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "lazypredict",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "extra-files": [
+        "setup.py",
+        "lazypredict/__init__.py"
+      ]
+    }
+  }
+}

@@ -14,7 +14,9 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 
 ## Features
 - Over 40 built-in machine learning models
-- Automatic model selection for classification and regression 
+- Automatic model selection for classification, regression, and **time series forecasting**
+- **20+ forecasting models**: statistical (ETS, ARIMA, Theta), ML (Random Forest, XGBoost, etc.), deep learning (LSTM, GRU), and pretrained foundation models (TimesFM)
+- Automatic seasonal period detection via ACF
 - Multiple categorical encoding strategies (OneHot, Ordinal, Target, Binary)
 - Built-in MLflow integration for experiment tracking
 - Support for Python 3.8 through 3.13
@@ -42,6 +44,14 @@ Install with boosting libraries (XGBoost, LightGBM):
 
 ```bash
 pip install lazypredict[boost]
+```
+
+Install with time series forecasting support:
+
+```bash
+pip install lazypredict[timeseries]          # statsmodels + pmdarima
+pip install lazypredict[timeseries,deeplearning]  # + LSTM/GRU via PyTorch
+pip install lazypredict[timeseries,foundation]    # + Google TimesFM (Python 3.10-3.11)
 ```
 
 Install with all optional dependencies:
@@ -240,6 +250,82 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 | GaussianProcessRegressor      |          -0.769174   | -0.367089   |  91.5109 |   0.0770502  |
 | MLPRegressor                  |          -1.86772    | -1.21597    | 116.508  |   0.235267   |
 | KernelRidge                   |          -5.03822    | -3.6659     | 169.061  |   0.0243919  |
+
+## Time Series Forecasting
+
+LazyForecaster benchmarks 20+ forecasting models on your time series in a single call:
+
+```python
+import numpy as np
+from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+# Generate sample data (or use your own)
+np.random.seed(42)
+t = np.arange(200)
+y = 10 + 0.05 * t + 3 * np.sin(2 * np.pi * t / 12) + np.random.normal(0, 1, 200)
+
+y_train, y_test = y[:180], y[180:]
+
+fcst = LazyForecaster(verbose=0, ignore_warnings=True)
+scores, predictions = fcst.fit(y_train, y_test)
+print(scores)
+```
+
+| Model                         |     MAE |    RMSE |   MAPE |   SMAPE |    MASE | R-Squared | Time Taken |
+|:------------------------------|--------:|--------:|-------:|--------:|--------:|----------:|-----------:|
+| Holt                          | 0.8532  | 1.0285  | 6.3241 | 6.1758  | 0.6993  |  0.7218   |     0.03   |
+| SARIMAX                       | 0.8791  | 1.0601  | 6.5012 | 6.3414  | 0.7205  |  0.7045   |     0.12   |
+| Ridge_TS                      | 0.9124  | 1.0843  | 6.7523 | 6.5721  | 0.7478  |  0.6912   |     0.01   |
+| ...                           |   ...   |   ...   |  ...   |   ...   |   ...   |    ...    |     ...    |
+
+### With Exogenous Variables
+
+```python
+# Optional exogenous features
+X_train = np.column_stack([np.sin(t[:180]), np.cos(t[:180])])
+X_test = np.column_stack([np.sin(t[180:]), np.cos(t[180:])])
+
+scores, predictions = fcst.fit(y_train, y_test, X_train, X_test)
+```
+
+### Advanced Options
+
+```python
+fcst = LazyForecaster(
+    verbose=1,                          # Show progress
+    ignore_warnings=True,               # Suppress model errors
+    predictions=True,                   # Return forecast values
+    seasonal_period=12,                 # Override auto-detection
+    cv=3,                               # Time series cross-validation
+    timeout=30,                         # Max seconds per model
+    sort_by="RMSE",                     # Sort metric (MAE, MAPE, SMAPE, MASE, R-Squared)
+    forecasters="all",                  # Or list: ["Holt", "AutoARIMA", "LSTM_TS"]
+    max_models=10,                      # Limit number of models
+)
+scores, predictions = fcst.fit(y_train, y_test)
+```
+
+**Parameters:**
+- `verbose` (int): 0 for silent, 1 for progress display
+- `ignore_warnings` (bool): Suppress per-model exceptions
+- `predictions` (bool): Return a second DataFrame of forecasted values
+- `seasonal_period` (int/None): Seasonal cycle length; ``None`` auto-detects via ACF
+- `cv` (int/None): Number of ``TimeSeriesSplit`` folds for cross-validation
+- `timeout` (int/float/None): Maximum training seconds per model
+- `sort_by` (str): Metric to sort by (``"RMSE"``, ``"MAE"``, ``"MAPE"``, ``"SMAPE"``, ``"MASE"``, ``"R-Squared"``)
+- `forecasters` (str/list): ``"all"`` or a list of model names
+- `n_lags` (int): Number of lag features for ML/DL models (default 10)
+- `n_rolling` (tuple): Rolling-window sizes for feature engineering (default (3, 7))
+- `max_models` (int/None): Limit total models to train
+- `custom_metric` (callable): Additional metric ``f(y_true, y_pred) -> float``
+
+**Available model categories:**
+- **Baselines:** Naive, SeasonalNaive
+- **Statistical (statsmodels):** SimpleExpSmoothing, Holt, HoltWinters_Add, HoltWinters_Mul, Theta, SARIMAX
+- **Statistical (pmdarima):** AutoARIMA
+- **ML (sklearn):** LinearRegression_TS, Ridge_TS, Lasso_TS, ElasticNet_TS, KNeighborsRegressor_TS, DecisionTreeRegressor_TS, RandomForestRegressor_TS, GradientBoostingRegressor_TS, AdaBoostRegressor_TS, ExtraTreesRegressor_TS, BaggingRegressor_TS, SVR_TS, XGBRegressor_TS, LGBMRegressor_TS
+- **Deep Learning (torch):** LSTM_TS, GRU_TS
+- **Foundation (timesfm):** TimesFM
 
 ## Categorical Encoding
 

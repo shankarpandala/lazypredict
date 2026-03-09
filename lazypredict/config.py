@@ -54,3 +54,11 @@ REMOVED_REGRESSORS: FrozenSet[str] = frozenset([
     "RegressorChain",
     "VotingRegressor",
 ])
+
+# ---------------------------------------------------------------------------
+# Time series forecasting defaults
+# ---------------------------------------------------------------------------
+DEFAULT_N_LAGS: int = 10
+DEFAULT_ROLLING_WINDOWS: Tuple[int, ...] = (3, 7)
+DEFAULT_SORT_BY_FORECASTER: str = "RMSE"
+REMOVED_FORECASTERS: FrozenSet[str] = frozenset()

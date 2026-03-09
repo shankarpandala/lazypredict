@@ -293,3 +293,117 @@ Lazy Predict will automatically detect and use it for acceleration:
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
     
     # You'll see "Intel(R) Extension for Scikit-learn enabled" in verbose output
+
+Time Series Forecasting
+-----------------------
+
+Basic Forecasting
+~~~~~~~~~~~~~~~~
+
+Benchmark 20+ forecasting models with a single call:
+
+.. code-block:: python
+
+    import numpy as np
+    from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+    # Generate sample data with trend + seasonality
+    np.random.seed(42)
+    t = np.arange(200)
+    y = 10 + 0.05 * t + 3 * np.sin(2 * np.pi * t / 12) + np.random.normal(0, 1, 200)
+
+    y_train, y_test = y[:180], y[180:]
+
+    fcst = LazyForecaster(verbose=0, ignore_warnings=True, predictions=True)
+    scores, predictions = fcst.fit(y_train, y_test)
+    print(scores)
+
+Forecasting with Seasonal Period
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default the seasonal period is auto-detected via ACF. Override it manually:
+
+.. code-block:: python
+
+    fcst = LazyForecaster(
+        seasonal_period=12,    # monthly data with yearly cycle
+        verbose=0,
+        ignore_warnings=True,
+    )
+    scores, predictions = fcst.fit(y_train, y_test)
+
+Forecasting with Exogenous Variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pass optional exogenous features to models that support them (SARIMAX, AutoARIMA, ML models):
+
+.. code-block:: python
+
+    # Create exogenous features
+    X_train = np.column_stack([np.sin(t[:180]), np.cos(t[:180])])
+    X_test  = np.column_stack([np.sin(t[180:]), np.cos(t[180:])])
+
+    fcst = LazyForecaster(verbose=0, ignore_warnings=True)
+    scores, predictions = fcst.fit(y_train, y_test, X_train, X_test)
+
+Forecasting with Cross-Validation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use expanding-window time series cross-validation:
+
+.. code-block:: python
+
+    fcst = LazyForecaster(
+        cv=5,                  # 5-fold TimeSeriesSplit
+        verbose=0,
+        ignore_warnings=True,
+    )
+    scores, predictions = fcst.fit(y_train, y_test)
+    # scores will contain CV Mean and CV Std columns for each metric
+
+Selecting Specific Forecasters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Run only a subset of models:
+
+.. code-block:: python
+
+    fcst = LazyForecaster(
+        forecasters=["Holt", "AutoARIMA", "Ridge_TS", "LSTM_TS"],
+        verbose=0,
+        ignore_warnings=True,
+    )
+    scores, predictions = fcst.fit(y_train, y_test)
+
+Custom Forecasting Metric
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add a custom metric alongside the defaults:
+
+.. code-block:: python
+
+    def median_absolute_error(y_true, y_pred):
+        return float(np.median(np.abs(y_true - y_pred)))
+
+    fcst = LazyForecaster(
+        custom_metric=median_absolute_error,
+        verbose=0,
+        ignore_warnings=True,
+    )
+    scores, predictions = fcst.fit(y_train, y_test)
+    # scores will include a 'median_absolute_error' column
+
+Saving and Loading Forecaster Models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    # Save all fitted models
+    fcst.save_models("./my_forecasters")
+
+    # Load them back
+    fcst2 = LazyForecaster()
+    fcst2.load_models("./my_forecasters")
+
+    # Use loaded models to forecast
+    new_forecasts = fcst2.predict(y_history=y_train, horizon=20)

@@ -1,0 +1,1450 @@
+"""
+Time Series Forecasting — LazyForecaster for rapid model benchmarking.
+
+Provides a LazyForecaster class that trains multiple statistical, ML, and
+deep-learning forecasting models to quickly identify which algorithms
+perform best on a given time series.
+"""
+# Author: Shankar Rao Pandala <shankar.pandala@live.com>
+
+import copy
+import logging
+import time
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import (
+    AdaBoostRegressor,
+    BaggingRegressor,
+    ExtraTreesRegressor,
+    GradientBoostingRegressor,
+    RandomForestRegressor,
+)
+from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, Ridge
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
+from tqdm import tqdm
+
+from lazypredict.config import (
+    DEFAULT_N_LAGS,
+    DEFAULT_ROLLING_WINDOWS,
+    DEFAULT_SORT_BY_FORECASTER,
+    REMOVED_FORECASTERS,
+)
+from lazypredict.exceptions import InsufficientDataError
+from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
+from lazypredict.metrics import compute_forecast_metrics
+from lazypredict.ts_preprocessing import (
+    create_lag_features,
+    detect_seasonal_period,
+    recursive_forecast,
+)
+
+logger = logging.getLogger("lazypredict")
+
+# ---------------------------------------------------------------------------
+# Detect Jupyter notebook environment for tqdm
+# ---------------------------------------------------------------------------
+try:
+    from IPython import get_ipython
+
+    if get_ipython() is not None and "IPKernelApp" in get_ipython().config:
+        from tqdm.notebook import tqdm as notebook_tqdm
+
+        _use_notebook_tqdm = True
+    else:
+        _use_notebook_tqdm = False
+except Exception:
+    _use_notebook_tqdm = False
+
+# ---------------------------------------------------------------------------
+# Optional MLflow
+# ---------------------------------------------------------------------------
+try:
+    import mlflow as _mlflow
+except ImportError:
+    _mlflow = None  # type: ignore[assignment]
+
+# ---------------------------------------------------------------------------
+# Optional dependencies — graceful degradation
+# ---------------------------------------------------------------------------
+try:
+    import statsmodels  # noqa: F401
+
+    _STATSMODELS_AVAILABLE = True
+except ImportError:
+    _STATSMODELS_AVAILABLE = False
+
+try:
+    import pmdarima  # noqa: F401
+
+    _PMDARIMA_AVAILABLE = True
+except ImportError:
+    _PMDARIMA_AVAILABLE = False
+
+try:
+    import torch  # noqa: F401
+
+    _TORCH_AVAILABLE = True
+except ImportError:
+    _TORCH_AVAILABLE = False
+
+try:
+    import xgboost  # noqa: F401
+
+    _XGBOOST_AVAILABLE = True
+except ImportError:
+    _XGBOOST_AVAILABLE = False
+
+try:
+    import lightgbm  # noqa: F401
+
+    _LIGHTGBM_AVAILABLE = True
+except ImportError:
+    _LIGHTGBM_AVAILABLE = False
+
+try:
+    import timesfm  # noqa: F401
+
+    _TIMESFM_AVAILABLE = True
+except ImportError:
+    _TIMESFM_AVAILABLE = False
+
+
+# ============================================================================
+# Forecaster Wrapper Interface
+# ============================================================================
+
+
+class ForecasterWrapper(ABC):
+    """Abstract base class providing a uniform interface for all forecasting models.
+
+    Every forecaster wrapper must implement :meth:`fit`, :meth:`predict`, and
+    the :attr:`name` property so that :class:`LazyForecaster` can train and
+    evaluate them interchangeably.
+    """
+
+    @abstractmethod
+    def fit(
+        self, y_train: np.ndarray, X_train: Optional[np.ndarray] = None
+    ) -> None:
+        """Fit the forecaster on training data.
+
+        Parameters
+        ----------
+        y_train : np.ndarray
+            1-D array of training observations in chronological order.
+        X_train : np.ndarray or None, optional
+            Exogenous feature matrix of shape ``(len(y_train), n_features)``.
+        """
+
+    @abstractmethod
+    def predict(
+        self, horizon: int, X_test: Optional[np.ndarray] = None
+    ) -> np.ndarray:
+        """Forecast ``horizon`` steps into the future.
+
+        Parameters
+        ----------
+        horizon : int
+            Number of future time steps to forecast.
+        X_test : np.ndarray or None, optional
+            Exogenous features for the forecast period, shape
+            ``(horizon, n_features)``.
+
+        Returns
+        -------
+        np.ndarray
+            1-D array of length ``horizon`` with point forecasts.
+        """
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Human-readable model name used as index in result tables."""
+
+
+# ============================================================================
+# Statistical Model Wrappers (always available)
+# ============================================================================
+
+
+class NaiveForecaster(ForecasterWrapper):
+    """Naive baseline that predicts the last observed value for all future steps.
+
+    This is the simplest possible forecaster and serves as a lower-bound
+    benchmark.  Exogenous features are ignored.
+    """
+
+    def fit(self, y_train, X_train=None):
+        self._last_value = y_train[-1]
+
+    def predict(self, horizon, X_test=None):
+        return np.full(horizon, self._last_value)
+
+    @property
+    def name(self):
+        return "Naive"
+
+
+class SeasonalNaiveForecaster(ForecasterWrapper):
+    """Seasonal naive baseline that repeats the last complete seasonal cycle.
+
+    Parameters
+    ----------
+    seasonal_period : int, optional (default=1)
+        Length of one seasonal cycle.  When set to 1 this behaves identically
+        to :class:`NaiveForecaster`.
+    """
+
+    def __init__(self, seasonal_period: int = 1):
+        self.seasonal_period = max(seasonal_period, 1)
+
+    def fit(self, y_train, X_train=None):
+        sp = min(self.seasonal_period, len(y_train))
+        self._last_season = y_train[-sp:]
+
+    def predict(self, horizon, X_test=None):
+        repeats = (horizon // len(self._last_season)) + 1
+        return np.tile(self._last_season, repeats)[:horizon]
+
+    @property
+    def name(self):
+        return "SeasonalNaive"
+
+
+# ============================================================================
+# Statistical Model Wrappers (require statsmodels)
+# ============================================================================
+
+
+class SimpleExpSmoothingForecaster(ForecasterWrapper):
+    """Simple Exponential Smoothing (no trend, no seasonality).
+
+    Uses ``statsmodels.tsa.holtwinters.SimpleExpSmoothing`` with optimised
+    smoothing parameters.  Suitable for series without trend or seasonality.
+    Requires ``statsmodels``.
+    """
+
+    def fit(self, y_train, X_train=None):
+        from statsmodels.tsa.holtwinters import SimpleExpSmoothing
+
+        self._model = SimpleExpSmoothing(y_train, initialization_method="estimated").fit(
+            optimized=True
+        )
+
+    def predict(self, horizon, X_test=None):
+        return np.asarray(self._model.forecast(horizon), dtype=float)
+
+    @property
+    def name(self):
+        return "SimpleExpSmoothing"
+
+
+class HoltForecaster(ForecasterWrapper):
+    """Holt's linear trend method (double exponential smoothing).
+
+    Captures level and trend components but ignores seasonality.
+    Requires ``statsmodels``.
+    """
+
+    def fit(self, y_train, X_train=None):
+        from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+        self._model = ExponentialSmoothing(
+            y_train,
+            trend="add",
+            seasonal=None,
+            initialization_method="estimated",
+        ).fit(optimized=True)
+
+    def predict(self, horizon, X_test=None):
+        return np.asarray(self._model.forecast(horizon), dtype=float)
+
+    @property
+    def name(self):
+        return "Holt"
+
+
+class HoltWintersForecaster(ForecasterWrapper):
+    """Holt-Winters triple exponential smoothing with additive or multiplicative seasonality.
+
+    Parameters
+    ----------
+    seasonal : str, optional (default="add")
+        Type of seasonal component: ``"add"`` or ``"mul"``.
+    seasonal_periods : int or None, optional (default=None)
+        Number of observations per seasonal cycle (e.g. 12 for monthly data
+        with yearly seasonality).  Must be >= 2.
+    label_suffix : str, optional (default="")
+        Suffix appended to the model name for display.
+
+    Requires ``statsmodels``.
+    """
+
+    def __init__(
+        self,
+        seasonal: str = "add",
+        seasonal_periods: Optional[int] = None,
+        label_suffix: str = "",
+    ):
+        self.seasonal = seasonal
+        self.seasonal_periods = seasonal_periods
+        self._label_suffix = label_suffix
+
+    def fit(self, y_train, X_train=None):
+        from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+        sp = self.seasonal_periods
+        if sp is None or sp < 2:
+            sp = 2  # minimum for seasonal models
+        if len(y_train) < 2 * sp:
+            raise ValueError(
+                f"Need at least 2 * seasonal_periods ({2 * sp}) observations, "
+                f"got {len(y_train)}"
+            )
+        self._model = ExponentialSmoothing(
+            y_train,
+            trend="add",
+            seasonal=self.seasonal,
+            seasonal_periods=sp,
+            initialization_method="estimated",
+        ).fit(optimized=True)
+
+    def predict(self, horizon, X_test=None):
+        return np.asarray(self._model.forecast(horizon), dtype=float)
+
+    @property
+    def name(self):
+        return f"HoltWinters_{self.seasonal.capitalize()}{self._label_suffix}"
+
+
+class ThetaForecaster(ForecasterWrapper):
+    """Theta method from ``statsmodels``.
+
+    The Theta method decomposes the series using a modified theta-line
+    and produces forecasts by extrapolating with simple exponential smoothing.
+
+    Parameters
+    ----------
+    seasonal_period : int or None, optional (default=None)
+        Seasonal period passed to ``ThetaModel``.  ``None`` defaults to 1
+        (no seasonality).
+
+    Requires ``statsmodels``.
+    """
+
+    def __init__(self, seasonal_period: Optional[int] = None):
+        self.seasonal_period = seasonal_period
+
+    def fit(self, y_train, X_train=None):
+        from statsmodels.tsa.forecasting.theta import ThetaModel
+
+        period = self.seasonal_period or 1
+        self._model = ThetaModel(y_train, period=period).fit()
+
+    def predict(self, horizon, X_test=None):
+        return np.asarray(self._model.forecast(horizon), dtype=float)
+
+    @property
+    def name(self):
+        return "Theta"
+
+
+class SARIMAXForecaster(ForecasterWrapper):
+    """Seasonal ARIMA with eXogenous regressors (SARIMAX).
+
+    Uses a default order of ``(1,1,1)`` with seasonal order
+    ``(1,1,1,sp)`` when a seasonal period is detected.  Supports
+    exogenous features via ``X_train`` / ``X_test``.
+
+    Parameters
+    ----------
+    seasonal_period : int or None, optional (default=None)
+        Seasonal period.  When <= 1 the seasonal component is disabled.
+
+    Requires ``statsmodels``.
+    """
+
+    def __init__(self, seasonal_period: Optional[int] = None):
+        self.seasonal_period = seasonal_period
+
+    def fit(self, y_train, X_train=None):
+        from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+        sp = self.seasonal_period or 1
+        seasonal_order = (1, 1, 1, sp) if sp > 1 else (0, 0, 0, 0)
+        self._model = SARIMAX(
+            y_train,
+            exog=X_train,
+            order=(1, 1, 1),
+            seasonal_order=seasonal_order,
+            enforce_stationarity=False,
+            enforce_invertibility=False,
+        ).fit(disp=False)
+
+    def predict(self, horizon, X_test=None):
+        return np.asarray(
+            self._model.forecast(steps=horizon, exog=X_test), dtype=float
+        )
+
+    @property
+    def name(self):
+        return "SARIMAX"
+
+
+# ============================================================================
+# Statistical Model Wrappers (require pmdarima)
+# ============================================================================
+
+
+class AutoARIMAForecaster(ForecasterWrapper):
+    """Auto-ARIMA via ``pmdarima`` with automatic (p, d, q) parameter tuning.
+
+    Performs a stepwise search over ARIMA orders to minimise information
+    criteria.  Supports exogenous features.
+
+    Requires ``pmdarima``.
+    """
+
+    def fit(self, y_train, X_train=None):
+        from pmdarima import auto_arima
+
+        self._model = auto_arima(
+            y_train,
+            exogenous=X_train,
+            suppress_warnings=True,
+            error_action="ignore",
+            stepwise=True,
+        )
+
+    def predict(self, horizon, X_test=None):
+        return np.asarray(
+            self._model.predict(n_periods=horizon, exogenous=X_test), dtype=float
+        )
+
+    @property
+    def name(self):
+        return "AutoARIMA"
+
+
+# ============================================================================
+# ML Model Wrapper (sklearn regressors with lag features)
+# ============================================================================
+
+
+class MLForecaster(ForecasterWrapper):
+    """Wraps any scikit-learn regressor for time series by engineering lag and rolling features.
+
+    The training series is transformed into a tabular supervised-learning
+    problem using :func:`~lazypredict.ts_preprocessing.create_lag_features`.
+    Multi-step forecasts are produced via recursive (autoregressive)
+    prediction with :func:`~lazypredict.ts_preprocessing.recursive_forecast`.
+
+    Parameters
+    ----------
+    estimator_class : type
+        An sklearn-compatible regressor class (not an instance).
+    model_name : str
+        Display name used in result tables.
+    n_lags : int, optional (default=10)
+        Number of lag features to create.
+    n_rolling : tuple of int, optional (default=(3, 7))
+        Window sizes for rolling mean/std features.
+    random_state : int, optional (default=42)
+        Seed passed to the estimator if it accepts ``random_state``.
+    """
+
+    def __init__(
+        self,
+        estimator_class,
+        model_name: str,
+        n_lags: int = 10,
+        n_rolling: Tuple[int, ...] = (3, 7),
+        random_state: int = 42,
+    ):
+        self.estimator_class = estimator_class
+        self._model_name = model_name
+        self.n_lags = n_lags
+        self.n_rolling = n_rolling
+        self.random_state = random_state
+
+    def fit(self, y_train, X_train=None):
+        X_feat, y_feat = create_lag_features(
+            y_train, self.n_lags, self.n_rolling, X_exog=X_train
+        )
+        params: dict = {}
+        try:
+            if "random_state" in self.estimator_class().get_params():
+                params["random_state"] = self.random_state
+        except Exception:
+            pass
+        self._estimator = self.estimator_class(**params)
+        self._scaler = StandardScaler()
+        X_scaled = self._scaler.fit_transform(X_feat)
+        self._estimator.fit(X_scaled, y_feat)
+        self._y_train = y_train
+
+    def predict(self, horizon, X_test=None):
+        return recursive_forecast(
+            self._estimator,
+            self._scaler,
+            self._y_train,
+            horizon,
+            self.n_lags,
+            self.n_rolling,
+            X_exog=X_test,
+        )
+
+    @property
+    def name(self):
+        return self._model_name
+
+
+# ============================================================================
+# Deep Learning Wrappers (require torch)
+# ============================================================================
+
+
+class _TorchRNNForecaster(ForecasterWrapper):
+    """Base class for single-layer LSTM / GRU forecasters using PyTorch.
+
+    Subclasses only need to set ``_rnn_type`` to ``"LSTM"`` or ``"GRU"``.
+    Training uses early stopping with a patience of 5 epochs.
+
+    Parameters
+    ----------
+    n_lags : int, optional (default=10)
+        Number of lag features.
+    n_rolling : tuple of int, optional (default=(3, 7))
+        Rolling-window sizes for mean/std features.
+    hidden_size : int, optional (default=64)
+        Number of hidden units in the RNN layer.
+    n_epochs : int, optional (default=50)
+        Maximum training epochs.
+    batch_size : int, optional (default=32)
+        Mini-batch size for training.
+    learning_rate : float, optional (default=1e-3)
+        Adam optimiser learning rate.
+    random_state : int, optional (default=42)
+        Seed for reproducibility.
+
+    Requires ``torch``.
+    """
+
+    _rnn_type: str = "LSTM"
+
+    def __init__(
+        self,
+        n_lags: int = 10,
+        n_rolling: Tuple[int, ...] = (3, 7),
+        hidden_size: int = 64,
+        n_epochs: int = 50,
+        batch_size: int = 32,
+        learning_rate: float = 1e-3,
+        random_state: int = 42,
+    ):
+        self.n_lags = n_lags
+        self.n_rolling = n_rolling
+        self.hidden_size = hidden_size
+        self.n_epochs = n_epochs
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.random_state = random_state
+
+    def fit(self, y_train, X_train=None):
+        import torch
+        import torch.nn as nn
+        from torch.utils.data import DataLoader, TensorDataset
+
+        torch.manual_seed(self.random_state)
+        np.random.seed(self.random_state)
+
+        X_feat, y_feat = create_lag_features(
+            y_train, self.n_lags, self.n_rolling, X_exog=X_train
+        )
+        self._scaler = StandardScaler()
+        X_scaled = self._scaler.fit_transform(X_feat)
+
+        n_features = X_scaled.shape[1]
+        X_tensor = torch.tensor(
+            X_scaled.reshape(-1, 1, n_features), dtype=torch.float32
+        )
+        y_tensor = torch.tensor(y_feat.reshape(-1, 1), dtype=torch.float32)
+
+        dataset = TensorDataset(X_tensor, y_tensor)
+        loader = DataLoader(
+            dataset, batch_size=self.batch_size, shuffle=False
+        )
+
+        # Build model
+        rnn_class = nn.LSTM if self._rnn_type == "LSTM" else nn.GRU
+        self._rnn = rnn_class(
+            input_size=n_features, hidden_size=self.hidden_size,
+            num_layers=1, batch_first=True,
+        )
+        self._linear = nn.Linear(self.hidden_size, 1)
+        params = list(self._rnn.parameters()) + list(self._linear.parameters())
+        optimizer = torch.optim.Adam(params, lr=self.learning_rate)
+        loss_fn = nn.MSELoss()
+
+        self._rnn.train()
+        self._linear.train()
+        best_loss = float("inf")
+        patience_counter = 0
+        for epoch in range(self.n_epochs):
+            epoch_loss = 0.0
+            for X_batch, y_batch in loader:
+                output, _ = self._rnn(X_batch)
+                pred = self._linear(output[:, -1, :])
+                loss = loss_fn(pred, y_batch)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                epoch_loss += loss.item()
+            avg_loss = epoch_loss / max(len(loader), 1)
+            if avg_loss < best_loss - 1e-6:
+                best_loss = avg_loss
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= 5:
+                    break
+
+        self._rnn.eval()
+        self._linear.eval()
+        self._y_train = y_train
+        self._n_features = n_features
+
+    def predict(self, horizon, X_test=None):
+        import torch
+
+        predictions: List[float] = []
+        history = list(self._y_train)
+        n_rolling = self.n_rolling
+
+        if X_test is not None:
+            X_test = np.asarray(X_test)
+            if X_test.ndim == 1:
+                X_test = X_test.reshape(-1, 1)
+
+        with torch.no_grad():
+            for step in range(horizon):
+                features: List[float] = []
+                for lag in range(1, self.n_lags + 1):
+                    features.append(history[-lag])
+                for window in n_rolling:
+                    recent = history[-window:]
+                    features.append(float(np.mean(recent)))
+                    features.append(
+                        float(np.std(recent)) if len(recent) > 1 else 0.0
+                    )
+                features.append(
+                    history[-1] - history[-2] if len(history) >= 2 else 0.0
+                )
+                if X_test is not None and step < len(X_test):
+                    features.extend(X_test[step].tolist())
+
+                X_step = np.array(features).reshape(1, -1)
+                X_step = self._scaler.transform(X_step)
+                X_tensor = torch.tensor(
+                    X_step.reshape(1, 1, -1), dtype=torch.float32
+                )
+                output, _ = self._rnn(X_tensor)
+                pred = self._linear(output[:, -1, :]).item()
+                predictions.append(pred)
+                history.append(pred)
+
+        return np.array(predictions)
+
+    @property
+    def name(self):
+        return f"{self._rnn_type}_TS"
+
+
+class LSTMForecaster(_TorchRNNForecaster):
+    """Single-layer LSTM forecaster.
+
+    See :class:`_TorchRNNForecaster` for parameter details.
+    Requires ``torch``.
+    """
+
+    _rnn_type = "LSTM"
+
+
+class GRUForecaster(_TorchRNNForecaster):
+    """Single-layer GRU forecaster.
+
+    See :class:`_TorchRNNForecaster` for parameter details.
+    Requires ``torch``.
+    """
+
+    _rnn_type = "GRU"
+
+
+# ============================================================================
+# Pretrained Foundation Model Wrapper (require timesfm)
+# ============================================================================
+
+
+class TimesFMForecaster(ForecasterWrapper):
+    """Google TimesFM 2.5 zero-shot pretrained foundation model for forecasting.
+
+    TimesFM is a 200M-parameter transformer pre-trained on a large corpus of
+    real and synthetic time series.  It performs zero-shot inference—no task-
+    specific training is needed.  Exogenous features are **not** supported and
+    will be silently ignored.
+
+    Requires ``timesfm`` and ``torch`` (Python 3.10-3.11 only).
+    """
+
+    def fit(self, y_train, X_train=None):
+        import torch as _torch
+        import timesfm as _timesfm
+
+        _torch.set_float32_matmul_precision("high")
+        self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+            "google/timesfm-2.5-200m-pytorch"
+        )
+        self._model.compile(
+            _timesfm.ForecastConfig(
+                max_context=min(len(y_train), 16000),
+                max_horizon=256,
+                normalize_inputs=True,
+                use_continuous_quantile_head=True,
+            )
+        )
+        self._y_train = np.asarray(y_train, dtype=float)
+        if X_train is not None:
+            logger.info(
+                "TimesFM does not support exogenous variables; ignoring X_train"
+            )
+
+    def predict(self, horizon, X_test=None):
+        point_forecast, _ = self._model.forecast(
+            horizon=horizon, inputs=[self._y_train]
+        )
+        return np.asarray(point_forecast[0][:horizon], dtype=float)
+
+    @property
+    def name(self):
+        return "TimesFM"
+
+
+# ============================================================================
+# Model Registry
+# ============================================================================
+
+
+def _build_forecaster_list(
+    n_lags: int,
+    n_rolling: Tuple[int, ...],
+    random_state: int,
+    seasonal_period: Optional[int],
+) -> List[Tuple[str, ForecasterWrapper]]:
+    """Build the default list of all available forecasters.
+
+    Parameters
+    ----------
+    n_lags : int
+        Number of lag features for ML / DL models.
+    n_rolling : tuple of int
+        Rolling-window sizes for ML / DL feature engineering.
+    random_state : int
+        Seed for reproducible ML / DL models.
+    seasonal_period : int or None
+        Detected or user-specified seasonal period.
+
+    Returns
+    -------
+    list of (str, ForecasterWrapper)
+        Tuples of ``(model_name, wrapper_instance)``.
+    """
+    forecasters: List[Tuple[str, ForecasterWrapper]] = []
+
+    # -- Baselines (always available) -----------------------------------------
+    forecasters.append(("Naive", NaiveForecaster()))
+    sp = seasonal_period or 1
+    forecasters.append(("SeasonalNaive", SeasonalNaiveForecaster(seasonal_period=sp)))
+
+    # -- statsmodels ----------------------------------------------------------
+    if _STATSMODELS_AVAILABLE:
+        forecasters.append(("SimpleExpSmoothing", SimpleExpSmoothingForecaster()))
+        forecasters.append(("Holt", HoltForecaster()))
+        if seasonal_period and seasonal_period >= 2:
+            forecasters.append((
+                "HoltWinters_Add",
+                HoltWintersForecaster(
+                    seasonal="add", seasonal_periods=seasonal_period
+                ),
+            ))
+            forecasters.append((
+                "HoltWinters_Mul",
+                HoltWintersForecaster(
+                    seasonal="mul", seasonal_periods=seasonal_period
+                ),
+            ))
+        forecasters.append(("Theta", ThetaForecaster(seasonal_period=seasonal_period)))
+        forecasters.append((
+            "SARIMAX",
+            SARIMAXForecaster(seasonal_period=seasonal_period),
+        ))
+    else:
+        logger.info(
+            "statsmodels not installed — ETS/Theta/SARIMAX models unavailable. "
+            "Install with: pip install statsmodels"
+        )
+
+    # -- pmdarima -------------------------------------------------------------
+    if _PMDARIMA_AVAILABLE:
+        forecasters.append(("AutoARIMA", AutoARIMAForecaster()))
+    else:
+        logger.info(
+            "pmdarima not installed — AutoARIMA unavailable. "
+            "Install with: pip install pmdarima"
+        )
+
+    # -- ML models (always available via sklearn) -----------------------------
+    ml_models: List[Tuple[str, Any]] = [
+        ("LinearRegression_TS", LinearRegression),
+        ("Ridge_TS", Ridge),
+        ("Lasso_TS", Lasso),
+        ("ElasticNet_TS", ElasticNet),
+        ("KNeighborsRegressor_TS", KNeighborsRegressor),
+        ("DecisionTreeRegressor_TS", DecisionTreeRegressor),
+        ("RandomForestRegressor_TS", RandomForestRegressor),
+        ("GradientBoostingRegressor_TS", GradientBoostingRegressor),
+        ("AdaBoostRegressor_TS", AdaBoostRegressor),
+        ("ExtraTreesRegressor_TS", ExtraTreesRegressor),
+        ("BaggingRegressor_TS", BaggingRegressor),
+        ("SVR_TS", SVR),
+    ]
+    if _XGBOOST_AVAILABLE:
+        ml_models.append(("XGBRegressor_TS", xgboost.XGBRegressor))
+    if _LIGHTGBM_AVAILABLE:
+        ml_models.append(("LGBMRegressor_TS", lightgbm.LGBMRegressor))
+
+    for ml_name, ml_class in ml_models:
+        forecasters.append((
+            ml_name,
+            MLForecaster(
+                estimator_class=ml_class,
+                model_name=ml_name,
+                n_lags=n_lags,
+                n_rolling=n_rolling,
+                random_state=random_state,
+            ),
+        ))
+
+    # -- Deep learning (requires torch) ---------------------------------------
+    if _TORCH_AVAILABLE:
+        forecasters.append((
+            "LSTM_TS",
+            LSTMForecaster(
+                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state
+            ),
+        ))
+        forecasters.append((
+            "GRU_TS",
+            GRUForecaster(
+                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state
+            ),
+        ))
+    else:
+        logger.info(
+            "torch not installed — LSTM/GRU models unavailable. "
+            "Install with: pip install torch"
+        )
+
+    # -- Pretrained foundation models (requires timesfm) ----------------------
+    if _TIMESFM_AVAILABLE:
+        forecasters.append(("TimesFM", TimesFMForecaster()))
+    else:
+        logger.info(
+            "timesfm not installed — TimesFM model unavailable. "
+            "Install with: pip install timesfm[torch]"
+        )
+
+    # Filter out removed forecasters
+    forecasters = [
+        (n, w) for n, w in forecasters if n not in REMOVED_FORECASTERS
+    ]
+
+    return forecasters
+
+
+# ============================================================================
+# LazyForecaster
+# ============================================================================
+
+
+class LazyForecaster:
+    """Fit multiple time series forecasting models and benchmark them.
+
+    Runs statistical, machine-learning, deep-learning, and pretrained
+    foundation models on a time series and returns a ranked DataFrame of
+    metrics so you can quickly see which approach works best.
+
+    Parameters
+    ----------
+    verbose : int, optional (default=0)
+        Controls progress-bar visibility and per-model metric logging.
+    ignore_warnings : bool, optional (default=True)
+        When True, model-level exceptions are silently stored in
+        ``self.errors`` and the loop continues.
+    custom_metric : callable or None, optional (default=None)
+        Additional metric function ``f(y_true, y_pred) -> float``.
+    predictions : bool, optional (default=False)
+        When True, ``fit()`` returns a second DataFrame of predictions.
+    random_state : int, optional (default=42)
+        Seed for ML and deep-learning models.
+    forecasters : str or list, optional (default="all")
+        ``"all"`` to run every available model, or a list of model names
+        (strings) to select a subset.
+    cv : int or None, optional (default=None)
+        Number of ``TimeSeriesSplit`` folds for cross-validation.
+    timeout : int, float, or None, optional (default=None)
+        Maximum training time in seconds per model.
+    n_lags : int, optional (default=10)
+        Number of lag features for ML/DL models.
+    n_rolling : tuple of int, optional (default=(3, 7))
+        Rolling-window sizes for feature engineering.
+    seasonal_period : int or None, optional (default=None)
+        Seasonal period.  ``None`` triggers auto-detection via ACF.
+    sort_by : str, optional (default="RMSE")
+        Metric column to sort results by.
+    n_jobs : int, optional (default=-1)
+        Parallel jobs for cross-validation.
+    max_models : int or None, optional (default=None)
+        Limit the number of models to train.
+    progress_callback : callable or None, optional (default=None)
+        Called after each model as ``f(name, current, total, metrics)``.
+
+    Attributes
+    ----------
+    models : dict
+        Fitted ``ForecasterWrapper`` objects keyed by model name.
+    errors : dict
+        Exceptions from models that failed, keyed by model name.
+    """
+
+    def __init__(
+        self,
+        verbose: int = 0,
+        ignore_warnings: bool = True,
+        custom_metric: Optional[Callable] = None,
+        predictions: bool = False,
+        random_state: int = 42,
+        forecasters: Union[str, List[str]] = "all",
+        cv: Optional[int] = None,
+        timeout: Optional[Union[int, float]] = None,
+        n_lags: int = DEFAULT_N_LAGS,
+        n_rolling: Tuple[int, ...] = DEFAULT_ROLLING_WINDOWS,
+        seasonal_period: Optional[int] = None,
+        sort_by: str = DEFAULT_SORT_BY_FORECASTER,
+        n_jobs: int = -1,
+        max_models: Optional[int] = None,
+        progress_callback: Optional[Callable] = None,
+    ):
+        # Validate
+        if cv is not None and (not isinstance(cv, int) or cv < 2):
+            raise ValueError(f"cv must be an integer >= 2, got {cv!r}")
+        if timeout is not None and (
+            not isinstance(timeout, (int, float)) or timeout <= 0
+        ):
+            raise ValueError(
+                f"timeout must be a positive number, got {timeout!r}"
+            )
+        if custom_metric is not None and not callable(custom_metric):
+            raise TypeError(
+                f"custom_metric must be callable, got {type(custom_metric)}"
+            )
+        if max_models is not None and (
+            not isinstance(max_models, int) or max_models < 1
+        ):
+            raise ValueError(
+                f"max_models must be a positive integer, got {max_models!r}"
+            )
+
+        self.verbose = verbose
+        self.ignore_warnings = ignore_warnings
+        self.custom_metric = custom_metric
+        self.predictions = predictions
+        self.random_state = random_state
+        self.forecasters = forecasters
+        self.cv = cv
+        self.timeout = timeout
+        self.n_lags = n_lags
+        self.n_rolling = n_rolling
+        self.seasonal_period = seasonal_period
+        self.sort_by = sort_by
+        self.n_jobs = n_jobs
+        self.max_models = max_models
+        self.progress_callback = progress_callback
+
+        self.models: Dict[str, ForecasterWrapper] = {}
+        self.errors: Dict[str, Exception] = {}
+        self.mlflow_enabled = setup_mlflow()
+
+    # --------------------------------------------------------------------- #
+    # Public API                                                              #
+    # --------------------------------------------------------------------- #
+
+    def fit(
+        self,
+        y_train: Union[pd.Series, np.ndarray],
+        y_test: Union[pd.Series, np.ndarray],
+        X_train: Optional[Union[pd.DataFrame, np.ndarray]] = None,
+        X_test: Optional[Union[pd.DataFrame, np.ndarray]] = None,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Fit forecasting models and evaluate on test data.
+
+        Parameters
+        ----------
+        y_train : array-like
+            Training time series (chronological order).
+        y_test : array-like
+            Held-out future values to forecast against.
+        X_train : array-like or None
+            Exogenous features for the training period.
+        X_test : array-like or None
+            Exogenous features for the forecast period.
+
+        Returns
+        -------
+        scores : pd.DataFrame
+            Metric table for every model, sorted by ``sort_by``.
+        predictions : pd.DataFrame
+            Per-model predictions (empty if ``self.predictions`` is False).
+        """
+        y_train = np.asarray(y_train, dtype=float)
+        y_test = np.asarray(y_test, dtype=float)
+        if len(y_train) == 0:
+            raise ValueError("y_train is empty")
+        if len(y_test) == 0:
+            raise ValueError("y_test is empty")
+
+        if X_train is not None:
+            X_train = np.asarray(X_train, dtype=float)
+            if X_train.ndim == 1:
+                X_train = X_train.reshape(-1, 1)
+        if X_test is not None:
+            X_test = np.asarray(X_test, dtype=float)
+            if X_test.ndim == 1:
+                X_test = X_test.reshape(-1, 1)
+
+        # Validate sufficient data for lag features
+        min_required = self.n_lags + max(self.n_rolling) + 1
+        if len(y_train) < min_required:
+            raise InsufficientDataError(
+                f"y_train has {len(y_train)} observations but at least "
+                f"{min_required} are required (n_lags={self.n_lags}, "
+                f"max rolling window={max(self.n_rolling)})"
+            )
+
+        horizon = len(y_test)
+
+        # Auto-detect seasonal period
+        seasonal_period = self.seasonal_period
+        if seasonal_period is None:
+            seasonal_period = detect_seasonal_period(y_train)
+            if seasonal_period is not None and self.verbose > 0:
+                logger.info(
+                    "Auto-detected seasonal period: %d", seasonal_period
+                )
+
+        # Build forecaster list
+        all_forecasters = _build_forecaster_list(
+            n_lags=self.n_lags,
+            n_rolling=self.n_rolling,
+            random_state=self.random_state,
+            seasonal_period=seasonal_period,
+        )
+
+        # Filter to user-specified subset
+        if self.forecasters != "all":
+            selected_names = set(self.forecasters)
+            all_forecasters = [
+                (n, w) for n, w in all_forecasters if n in selected_names
+            ]
+
+        if self.max_models is not None:
+            all_forecasters = all_forecasters[: self.max_models]
+
+        results: List[Dict[str, Any]] = []
+        predictions_dict: Dict[str, np.ndarray] = {}
+
+        progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
+        total = len(all_forecasters)
+
+        for idx, (fname, wrapper) in enumerate(
+            progress_bar(all_forecasters, disable=(self.verbose == 0))
+        ):
+            start = time.time()
+            mlflow_active_run = None
+            try:
+                # MLflow
+                if (
+                    self.mlflow_enabled
+                    and MLFLOW_AVAILABLE
+                    and _mlflow is not None
+                ):
+                    mlflow_active_run = _mlflow.start_run(
+                        run_name=f"LazyForecaster-{fname}"
+                    )
+                    _mlflow.log_param("model_name", fname)
+
+                # Clone to avoid state leaking between CV and final fit
+                wrapper_copy = copy.deepcopy(wrapper)
+                wrapper_copy.fit(y_train, X_train)
+                fit_time = time.time() - start
+
+                if self.timeout and fit_time > self.timeout:
+                    logger.info(
+                        "%s exceeded timeout (%.2fs > %ss), skipping...",
+                        fname,
+                        fit_time,
+                        self.timeout,
+                    )
+                    if mlflow_active_run and _mlflow is not None:
+                        _mlflow.end_run()
+                    continue
+
+                y_pred = wrapper_copy.predict(horizon, X_test)
+                self.models[fname] = wrapper_copy
+
+                # Metrics
+                sp = seasonal_period or 1
+                metrics = compute_forecast_metrics(
+                    y_test, y_pred, y_train, seasonal_period=sp
+                )
+                metrics["name"] = fname
+                metrics["time"] = time.time() - start
+
+                # Cross-validation
+                if self.cv:
+                    cv_metrics = self._run_ts_cv(
+                        wrapper, y_train, X_train, fname, seasonal_period
+                    )
+                    metrics.update(cv_metrics)
+
+                # Custom metric
+                if self.custom_metric is not None:
+                    try:
+                        metrics["custom_metric"] = self.custom_metric(
+                            y_test, y_pred
+                        )
+                    except Exception as custom_exc:
+                        metrics["custom_metric"] = None
+                        if not self.ignore_warnings:
+                            logger.warning(
+                                "Custom metric failed for %s: %s",
+                                fname,
+                                custom_exc,
+                            )
+
+                # MLflow logging
+                if mlflow_active_run and _mlflow is not None:
+                    for key, val in metrics.items():
+                        if isinstance(val, (int, float)) and val is not None:
+                            _mlflow.log_metric(key, val)
+
+                results.append(metrics)
+
+                if self.verbose > 0:
+                    self._log_verbose(fname, metrics)
+
+                if self.predictions:
+                    predictions_dict[fname] = y_pred
+
+                if mlflow_active_run and _mlflow is not None:
+                    _mlflow.end_run()
+
+                if self.progress_callback is not None:
+                    self.progress_callback(fname, idx + 1, total, metrics)
+
+            except Exception as exc:
+                if mlflow_active_run and _mlflow is not None:
+                    _mlflow.end_run()
+                self.errors[fname] = exc
+                if not self.ignore_warnings:
+                    logger.warning("%s model failed: %s", fname, exc)
+                if self.progress_callback is not None:
+                    self.progress_callback(fname, idx + 1, total, None)
+
+        scores = self._build_scores_dataframe(results)
+
+        if self.predictions:
+            return scores, pd.DataFrame.from_dict(predictions_dict)
+        return scores, pd.DataFrame()
+
+    def provide_models(
+        self,
+        y_train: Union[pd.Series, np.ndarray],
+        y_test: Union[pd.Series, np.ndarray],
+        X_train: Optional[Union[pd.DataFrame, np.ndarray]] = None,
+        X_test: Optional[Union[pd.DataFrame, np.ndarray]] = None,
+    ) -> Dict[str, ForecasterWrapper]:
+        """Return all fitted forecaster wrappers.
+
+        Calls :meth:`fit` automatically if no models have been fitted yet.
+
+        Parameters
+        ----------
+        y_train : array-like
+            Training time series.
+        y_test : array-like
+            Test time series (needed only if ``fit`` has not been called).
+        X_train : array-like or None, optional
+            Exogenous features for the training period.
+        X_test : array-like or None, optional
+            Exogenous features for the forecast period.
+
+        Returns
+        -------
+        dict
+            Mapping of model name to fitted :class:`ForecasterWrapper`.
+        """
+        if len(self.models) == 0:
+            self.fit(y_train, y_test, X_train, X_test)
+        return self.models
+
+    def predict(
+        self,
+        y_history: Union[pd.Series, np.ndarray],
+        horizon: int,
+        model_name: Optional[str] = None,
+        X_test: Optional[Union[pd.DataFrame, np.ndarray]] = None,
+    ) -> Union[Dict[str, np.ndarray], np.ndarray]:
+        """Produce forecasts from previously fitted models.
+
+        Each model is re-fit on ``y_history`` before predicting so that the
+        most recent observations are used.
+
+        Parameters
+        ----------
+        y_history : array-like
+            Historical time series to condition the forecast on.
+        horizon : int
+            Number of future time steps to forecast.
+        model_name : str or None, optional
+            If given, only this model is used and a single ``np.ndarray`` is
+            returned.  Otherwise all fitted models are used and a ``dict``
+            mapping model names to arrays is returned.
+        X_test : array-like or None, optional
+            Exogenous features for the forecast period.
+
+        Returns
+        -------
+        np.ndarray or dict
+            A single forecast array when ``model_name`` is specified, or a
+            ``{name: np.ndarray}`` dict for all models.
+
+        Raises
+        ------
+        ValueError
+            If no models have been fitted or ``model_name`` is not found.
+        """
+        if len(self.models) == 0:
+            raise ValueError(
+                "No models fitted yet. Call fit() first."
+            )
+        if model_name is not None:
+            if model_name not in self.models:
+                raise ValueError(
+                    f"Model '{model_name}' not found. "
+                    f"Available: {list(self.models.keys())}"
+                )
+            wrapper = self.models[model_name]
+            wrapper.fit(np.asarray(y_history, dtype=float))
+            return wrapper.predict(horizon, X_test)
+        result = {}
+        for name, wrapper in self.models.items():
+            wrapper.fit(np.asarray(y_history, dtype=float))
+            result[name] = wrapper.predict(horizon, X_test)
+        return result
+
+    def save_models(self, path: str) -> None:
+        """Save all fitted models to disk using ``joblib``.
+
+        Parameters
+        ----------
+        path : str
+            Directory path.  Created if it does not exist.
+
+        Raises
+        ------
+        ValueError
+            If no models have been fitted yet.
+        """
+        import os
+
+        import joblib
+
+        if len(self.models) == 0:
+            raise ValueError("No models fitted yet. Call fit() first.")
+        os.makedirs(path, exist_ok=True)
+        for name, wrapper in self.models.items():
+            filepath = os.path.join(path, f"{name}.joblib")
+            joblib.dump(wrapper, filepath)
+            logger.info("Saved %s to %s", name, filepath)
+
+    def load_models(self, path: str) -> Dict[str, ForecasterWrapper]:
+        """Load previously saved models from disk.
+
+        Parameters
+        ----------
+        path : str
+            Directory containing ``.joblib`` files written by
+            :meth:`save_models`.
+
+        Returns
+        -------
+        dict
+            Mapping of model name to :class:`ForecasterWrapper`.
+
+        Raises
+        ------
+        FileNotFoundError
+            If ``path`` does not exist.
+        """
+        import os
+
+        import joblib
+
+        if not os.path.isdir(path):
+            raise FileNotFoundError(f"Directory not found: {path}")
+        for filename in os.listdir(path):
+            if filename.endswith(".joblib"):
+                name = filename[:-7]
+                filepath = os.path.join(path, filename)
+                self.models[name] = joblib.load(filepath)
+                logger.info("Loaded %s from %s", name, filepath)
+        return self.models
+
+    # --------------------------------------------------------------------- #
+    # Internal helpers                                                        #
+    # --------------------------------------------------------------------- #
+
+    def _run_ts_cv(
+        self,
+        wrapper: ForecasterWrapper,
+        y_train: np.ndarray,
+        X_train: Optional[np.ndarray],
+        fname: str,
+        seasonal_period: Optional[int],
+    ) -> Dict[str, Optional[float]]:
+        """Run time series cross-validation with an expanding window.
+
+        Uses ``sklearn.model_selection.TimeSeriesSplit`` so that training
+        data always precedes validation data chronologically.
+
+        Returns a dict of ``{metric_name: value}`` with mean and standard
+        deviation for each fold.
+        """
+        from sklearn.model_selection import TimeSeriesSplit
+
+        cv_col_names = self._cv_column_names()
+        tscv = TimeSeriesSplit(n_splits=self.cv)
+        cv_scores: Dict[str, List[float]] = {
+            m: [] for m in ["mae", "rmse", "mape", "smape", "mase"]
+        }
+
+        for train_idx, val_idx in tscv.split(y_train):
+            y_cv_train = y_train[train_idx]
+            y_cv_val = y_train[val_idx]
+            X_cv_train = X_train[train_idx] if X_train is not None else None
+            X_cv_val = X_train[val_idx] if X_train is not None else None
+
+            try:
+                w = copy.deepcopy(wrapper)
+                w.fit(y_cv_train, X_cv_train)
+                y_cv_pred = w.predict(len(val_idx), X_cv_val)
+                sp = seasonal_period or 1
+                fold_metrics = compute_forecast_metrics(
+                    y_cv_val, y_cv_pred, y_cv_train, seasonal_period=sp
+                )
+                for metric_name in cv_scores:
+                    cv_scores[metric_name].append(fold_metrics[metric_name])
+            except Exception:
+                for metric_name in cv_scores:
+                    cv_scores[metric_name].append(np.nan)
+
+        result: Dict[str, Optional[float]] = {}
+        for metric_name, values in cv_scores.items():
+            arr = np.array(values, dtype=float)
+            label = metric_name.upper()
+            result[f"{label} CV Mean"] = (
+                float(np.nanmean(arr)) if not np.all(np.isnan(arr)) else None
+            )
+            result[f"{label} CV Std"] = (
+                float(np.nanstd(arr)) if not np.all(np.isnan(arr)) else None
+            )
+        return result
+
+    @staticmethod
+    def _cv_column_names() -> List[str]:
+        """Return the ordered list of CV column names for the scores table."""
+        return [
+            "MAE CV Mean", "MAE CV Std",
+            "RMSE CV Mean", "RMSE CV Std",
+            "MAPE CV Mean", "MAPE CV Std",
+            "SMAPE CV Mean", "SMAPE CV Std",
+            "MASE CV Mean", "MASE CV Std",
+        ]
+
+    def _build_scores_dataframe(
+        self, results: List[Dict[str, Any]]
+    ) -> pd.DataFrame:
+        """Assemble per-model metric dicts into a sorted ``DataFrame``."""
+        if not results:
+            return pd.DataFrame()
+
+        rows = []
+        for r in results:
+            row: Dict[str, Any] = {
+                "Model": r["name"],
+                "MAE": r["mae"],
+                "RMSE": r["rmse"],
+                "MAPE": r["mape"],
+                "SMAPE": r["smape"],
+                "MASE": r["mase"],
+                "R-Squared": r["r_squared"],
+            }
+            # CV columns
+            for col in self._cv_column_names():
+                if col in r:
+                    row[col] = r[col]
+            # Custom metric
+            if self.custom_metric is not None:
+                row[self.custom_metric.__name__] = r.get("custom_metric")
+            row["Time Taken"] = r["time"]
+            rows.append(row)
+
+        scores = pd.DataFrame(rows)
+
+        # Sort — lower is better for error metrics, higher for R-Squared
+        ascending = self.sort_by != "R-Squared"
+        if self.sort_by in scores.columns:
+            scores = scores.sort_values(
+                by=self.sort_by, ascending=ascending
+            )
+        scores = scores.set_index("Model")
+        return scores
+
+    @staticmethod
+    def _log_verbose(name: str, metrics: Dict[str, Any]) -> None:
+        """Log a single model's metrics to the ``lazypredict`` logger."""
+        logger.info(
+            "Model: %-35s MAE: %.4f  RMSE: %.4f  MAPE: %.2f  MASE: %.4f  Time: %.2fs",
+            name,
+            metrics.get("mae", 0),
+            metrics.get("rmse", 0),
+            metrics.get("mape", 0),
+            metrics.get("mase", 0),
+            metrics.get("time", 0),
+        )

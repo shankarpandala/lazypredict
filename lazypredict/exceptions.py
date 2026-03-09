@@ -24,3 +24,7 @@ class InvalidParameterError(LazyPredictError, ValueError):
 
 class DataValidationError(LazyPredictError, ValueError):
     """Raised when input data fails validation checks."""
+
+
+class InsufficientDataError(LazyPredictError, ValueError):
+    """Raised when the time series is too short for the requested configuration."""

@@ -6,3 +6,5 @@ joblib>=1.0
 numpy>=1.21
 xgboost>=1.5
 lightgbm>=3.0
+statsmodels>=0.13
+pmdarima>=2.0

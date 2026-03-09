@@ -28,11 +28,25 @@ extras_require = {
     "mlflow": [
         "mlflow>=2.0.0,<3.0",
     ],
+    "timeseries": [
+        "statsmodels>=0.13",
+        "pmdarima>=2.0",
+    ],
+    "deeplearning": [
+        "torch>=2.0",
+    ],
+    "foundation": [
+        "timesfm",
+    ],
     "all": [
         "xgboost>=1.5",
         "lightgbm>=3.0",
         "mlflow>=2.0.0,<3.0",
         "category_encoders>=2.0",
+        "statsmodels>=0.13",
+        "pmdarima>=2.0",
+        "torch>=2.0",
+        "timesfm",
     ],
 }
 
@@ -74,6 +88,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/shankarpandala/lazypredict",
-    version='0.2.16',
+    version='0.3.0a1',
     zip_safe=False,
 )

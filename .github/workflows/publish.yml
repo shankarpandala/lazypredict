@@ -54,7 +54,6 @@ jobs:
 
   publish-pypi:
     needs: [build, publish-testpypi]
-    if: github.event.release.prerelease == false
     runs-on: ubuntu-latest
     environment: pypi
     steps:

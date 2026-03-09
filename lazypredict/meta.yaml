@@ -1,5 +1,5 @@
 {% set name = "lazypredict" %}
-{% set version = "0.2.15" %}
+{% set version = "0.2.16" %}
 
 package:
   name: {{ name|lower }}
@@ -18,18 +18,16 @@ build:
 
 requirements:
   host:
-    - python >=3.8
-    - pytest-runner
+    - python >=3.9
     - pip
   run:
-    - python >=3.8
+    - python >=3.9
     - click
-    - scikit-learn
-    - pandas
-    - tqdm
-    - joblib
-    - lightgbm
-    - xgboost
+    - scikit-learn >=1.0
+    - pandas >=1.3
+    - tqdm >=4.0
+    - joblib >=1.0
+    - numpy >=1.21
 
 test:
   imports:

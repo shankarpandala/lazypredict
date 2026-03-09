@@ -5,7 +5,7 @@
 [![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
 [![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)
-[![Citations](https://img.shields.io/badge/Citations-37-blue)](https://scholar.google.com/scholar?oi=bibs&hl=en&cites=4325808232671020176,16284230108871951652&as_sdt=5)
+[![Citations](https://img.shields.io/badge/Citations-47-blue)](https://scholar.google.com/scholar?oi=bibs&hl=en&cites=4325808232671020176,16284230108871951652&as_sdt=5)
 
 Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning.
 
@@ -14,17 +14,50 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 
 ## Features
 - Over 40 built-in machine learning models
-- Automatic model selection for classification and regression 
+- Automatic model selection for classification, regression, and **time series forecasting**
+- **20+ forecasting models**: statistical (ETS, ARIMA, Theta), ML (Random Forest, XGBoost, etc.), deep learning (LSTM, GRU), and pretrained foundation models (TimesFM)
+- Automatic seasonal period detection via ACF
+- Multiple categorical encoding strategies (OneHot, Ordinal, Target, Binary)
 - Built-in MLflow integration for experiment tracking
 - Support for Python 3.8 through 3.13
 - Custom metric evaluation support
+- Configurable timeout and cross-validation
+- Intel Extension for Scikit-learn acceleration support
 
 ## Installation
 
-To install Lazy Predict:
+### pip (PyPI)
 
 ```bash
 pip install lazypredict
+```
+
+### conda (conda-forge)
+
+```bash
+conda install -c conda-forge lazypredict
+```
+
+### Optional extras (pip only)
+
+Install with boosting libraries (XGBoost, LightGBM):
+
+```bash
+pip install lazypredict[boost]
+```
+
+Install with time series forecasting support:
+
+```bash
+pip install lazypredict[timeseries]          # statsmodels + pmdarima
+pip install lazypredict[timeseries,deeplearning]  # + LSTM/GRU via PyTorch
+pip install lazypredict[timeseries,foundation]    # + Google TimesFM (Python 3.10-3.11)
+```
+
+Install with all optional dependencies:
+
+```bash
+pip install lazypredict[all]
 ```
 
 ## Usage
@@ -55,6 +88,37 @@ models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 print(models)
 ```
+
+### Advanced Options
+
+```python
+# With categorical encoding, timeout, and cross-validation
+clf = LazyClassifier(
+    verbose=1,                          # Show progress
+    ignore_warnings=True,               # Suppress warnings
+    custom_metric=None,                 # Use default metrics
+    predictions=True,                   # Return predictions
+    classifiers='all',                  # Use all available classifiers
+    categorical_encoder='onehot',       # Encoding: 'onehot', 'ordinal', 'target', 'binary'
+    timeout=60,                         # Max time per model in seconds
+    cv=5                                # Cross-validation folds (optional)
+)
+models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+```
+
+**Parameters:**
+- `verbose` (int): 0 for silent, 1 for progress display
+- `ignore_warnings` (bool): Suppress scikit-learn warnings
+- `custom_metric` (callable): Custom evaluation metric
+- `predictions` (bool): Return prediction DataFrame
+- `classifiers` (str/list): 'all' or list of classifier names
+- `categorical_encoder` (str): Encoding strategy for categorical features
+  - `'onehot'`: One-hot encoding (default)
+  - `'ordinal'`: Ordinal encoding
+  - `'target'`: Target encoding (requires `category-encoders`)
+  - `'binary'`: Binary encoding (requires `category-encoders`)
+- `timeout` (int): Maximum seconds per model (None for no limit)
+- `cv` (int): Number of cross-validation folds (None to disable)
 
 | Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
 |:-------------------------------|-----------:|--------------------:|----------:|-----------:|-------------:|
@@ -114,6 +178,35 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 print(models)
 ```
 
+### Advanced Options
+
+```python
+# With categorical encoding and timeout
+reg = LazyRegressor(
+    verbose=1,                          # Show progress
+    ignore_warnings=True,               # Suppress warnings
+    custom_metric=None,                 # Use default metrics
+    predictions=True,                   # Return predictions
+    regressors='all',                   # Use all available regressors
+    categorical_encoder='ordinal',      # Encoding: 'onehot', 'ordinal', 'target', 'binary'
+    timeout=120                         # Max time per model in seconds
+)
+models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+```
+
+**Parameters:**
+- `verbose` (int): 0 for silent, 1 for progress display
+- `ignore_warnings` (bool): Suppress scikit-learn warnings
+- `custom_metric` (callable): Custom evaluation metric
+- `predictions` (bool): Return prediction DataFrame
+- `regressors` (str/list): 'all' or list of regressor names
+- `categorical_encoder` (str): Encoding strategy for categorical features
+  - `'onehot'`: One-hot encoding (default)
+  - `'ordinal'`: Ordinal encoding
+  - `'target'`: Target encoding (requires `category-encoders`)
+  - `'binary'`: Binary encoding (requires `category-encoders`)
+- `timeout` (int): Maximum seconds per model (None for no limit)
+
 | Model                         |   Adjusted R-Squared |   R-Squared |     RMSE |   Time Taken |
 |:------------------------------|---------------------:|------------:|---------:|-------------:|
 | ExtraTreesRegressor           |           0.378921   |  0.520076   |  54.2202 |   0.121466   |
@@ -157,6 +250,125 @@ print(models)
 | GaussianProcessRegressor      |          -0.769174   | -0.367089   |  91.5109 |   0.0770502  |
 | MLPRegressor                  |          -1.86772    | -1.21597    | 116.508  |   0.235267   |
 | KernelRidge                   |          -5.03822    | -3.6659     | 169.061  |   0.0243919  |
+
+## Time Series Forecasting
+
+LazyForecaster benchmarks 20+ forecasting models on your time series in a single call:
+
+```python
+import numpy as np
+from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+# Generate sample data (or use your own)
+np.random.seed(42)
+t = np.arange(200)
+y = 10 + 0.05 * t + 3 * np.sin(2 * np.pi * t / 12) + np.random.normal(0, 1, 200)
+
+y_train, y_test = y[:180], y[180:]
+
+fcst = LazyForecaster(verbose=0, ignore_warnings=True)
+scores, predictions = fcst.fit(y_train, y_test)
+print(scores)
+```
+
+| Model                         |     MAE |    RMSE |   MAPE |   SMAPE |    MASE | R-Squared | Time Taken |
+|:------------------------------|--------:|--------:|-------:|--------:|--------:|----------:|-----------:|
+| Holt                          | 0.8532  | 1.0285  | 6.3241 | 6.1758  | 0.6993  |  0.7218   |     0.03   |
+| SARIMAX                       | 0.8791  | 1.0601  | 6.5012 | 6.3414  | 0.7205  |  0.7045   |     0.12   |
+| Ridge_TS                      | 0.9124  | 1.0843  | 6.7523 | 6.5721  | 0.7478  |  0.6912   |     0.01   |
+| ...                           |   ...   |   ...   |  ...   |   ...   |   ...   |    ...    |     ...    |
+
+### With Exogenous Variables
+
+```python
+# Optional exogenous features
+X_train = np.column_stack([np.sin(t[:180]), np.cos(t[:180])])
+X_test = np.column_stack([np.sin(t[180:]), np.cos(t[180:])])
+
+scores, predictions = fcst.fit(y_train, y_test, X_train, X_test)
+```
+
+### Advanced Options
+
+```python
+fcst = LazyForecaster(
+    verbose=1,                          # Show progress
+    ignore_warnings=True,               # Suppress model errors
+    predictions=True,                   # Return forecast values
+    seasonal_period=12,                 # Override auto-detection
+    cv=3,                               # Time series cross-validation
+    timeout=30,                         # Max seconds per model
+    sort_by="RMSE",                     # Sort metric (MAE, MAPE, SMAPE, MASE, R-Squared)
+    forecasters="all",                  # Or list: ["Holt", "AutoARIMA", "LSTM_TS"]
+    max_models=10,                      # Limit number of models
+)
+scores, predictions = fcst.fit(y_train, y_test)
+```
+
+**Parameters:**
+- `verbose` (int): 0 for silent, 1 for progress display
+- `ignore_warnings` (bool): Suppress per-model exceptions
+- `predictions` (bool): Return a second DataFrame of forecasted values
+- `seasonal_period` (int/None): Seasonal cycle length; ``None`` auto-detects via ACF
+- `cv` (int/None): Number of ``TimeSeriesSplit`` folds for cross-validation
+- `timeout` (int/float/None): Maximum training seconds per model
+- `sort_by` (str): Metric to sort by (``"RMSE"``, ``"MAE"``, ``"MAPE"``, ``"SMAPE"``, ``"MASE"``, ``"R-Squared"``)
+- `forecasters` (str/list): ``"all"`` or a list of model names
+- `n_lags` (int): Number of lag features for ML/DL models (default 10)
+- `n_rolling` (tuple): Rolling-window sizes for feature engineering (default (3, 7))
+- `max_models` (int/None): Limit total models to train
+- `custom_metric` (callable): Additional metric ``f(y_true, y_pred) -> float``
+
+**Available model categories:**
+- **Baselines:** Naive, SeasonalNaive
+- **Statistical (statsmodels):** SimpleExpSmoothing, Holt, HoltWinters_Add, HoltWinters_Mul, Theta, SARIMAX
+- **Statistical (pmdarima):** AutoARIMA
+- **ML (sklearn):** LinearRegression_TS, Ridge_TS, Lasso_TS, ElasticNet_TS, KNeighborsRegressor_TS, DecisionTreeRegressor_TS, RandomForestRegressor_TS, GradientBoostingRegressor_TS, AdaBoostRegressor_TS, ExtraTreesRegressor_TS, BaggingRegressor_TS, SVR_TS, XGBRegressor_TS, LGBMRegressor_TS
+- **Deep Learning (torch):** LSTM_TS, GRU_TS
+- **Foundation (timesfm):** TimesFM
+
+## Categorical Encoding
+
+Lazy Predict supports multiple categorical encoding strategies:
+
+```python
+from lazypredict.Supervised import LazyClassifier
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# Example with categorical features
+df = pd.read_csv('data_with_categories.csv')
+X = df.drop('target', axis=1)
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# Try different encoders
+for encoder in ['onehot', 'ordinal', 'target', 'binary']:
+    clf = LazyClassifier(
+        categorical_encoder=encoder,
+        verbose=0,
+        ignore_warnings=True
+    )
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    print(f"\n{encoder.upper()} Encoding Results:")
+    print(models.head())
+```
+
+**Note:** Target and binary encoders require the `category-encoders` package:
+```bash
+pip install category-encoders
+```
+
+## Intel Extension Acceleration
+
+For improved performance on Intel CPUs, install Intel Extension for Scikit-learn:
+
+```bash
+pip install scikit-learn-intelex
+```
+
+Lazy Predict will automatically detect and use it for acceleration.
 
 ## MLflow Integration
 

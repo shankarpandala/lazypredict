@@ -2,6 +2,21 @@
 title: History
 ---
 
+# 0.3.0a1 (2026-03-10)
+
+-   **New: Time Series Forecasting** — `LazyForecaster` benchmarks 26 forecasting models in one call
+-   Statistical models: Naive, SeasonalNaive, SimpleExpSmoothing, Holt, HoltWinters (additive & multiplicative), Theta, SARIMAX, AutoARIMA
+-   ML models: LinearRegression, Ridge, Lasso, ElasticNet, KNN, SVR, DecisionTree, RandomForest, GradientBoosting, AdaBoost, Bagging, ExtraTrees, XGBoost, LightGBM
+-   Deep learning models: LSTM, GRU (via PyTorch)
+-   Foundation model: Google TimesFM 2.5 (200M-parameter zero-shot pretrained transformer)
+-   Automatic seasonal period detection via autocorrelation (ACF)
+-   Exogenous variable support for SARIMAX, AutoARIMA, and ML models
+-   Cross-validation with expanding window (TimeSeriesSplit)
+-   New forecasting metrics: MAPE, SMAPE, MASE
+-   New install extras: `pip install lazypredict[timeseries]`, `[deeplearning]`, `[foundation]`
+-   Added `categorical_encoder` parameter to LazyClassifier and LazyRegressor
+-   Refactored Supervised.py with type hints, logging, and input validation
+
 # 0.2.15 (2025-04-06)
 
 -   Added MLflow integration for experiment tracking

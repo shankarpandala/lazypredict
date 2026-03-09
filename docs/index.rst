@@ -52,7 +52,10 @@ Contents
 Features
 --------
 * Over 40 built-in machine learning models
-* Automatic model selection for classification and regression
+* Automatic model selection for classification, regression, and **time series forecasting**
+* **20+ forecasting models** — statistical, ML, deep learning, and pretrained foundation models
+* Automatic seasonal period detection via autocorrelation
+* Support for univariate series with optional exogenous variables
 * Support for both numerical and categorical features
 * Easy integration with scikit-learn pipelines
 * Model performance comparison and ranking
@@ -66,6 +69,7 @@ Features
 Key Benefits
 -----------
 * Rapid model prototyping and selection
+* One-line benchmarking of forecasting models (LazyForecaster)
 * Automated experiment tracking with MLflow
 * Comprehensive model performance comparison
 * Zero-configuration model evaluation

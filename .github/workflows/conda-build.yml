@@ -1,0 +1,40 @@
+name: Conda Build
+
+on:
+  push:
+    branches: [dev, master]
+  pull_request:
+    branches: [dev, master]
+
+concurrency:
+  group: conda-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conda-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: '3.12'
+          channels: conda-forge,defaults
+          channel-priority: strict
+
+      - name: Install conda-build
+        run: conda install -y conda-build conda-verify
+
+      - name: Build conda package
+        run: conda build recipe/ --no-anaconda-upload
+
+      - name: Verify package contents
+        run: |
+          PKG=$(conda build recipe/ --output)
+          echo "Built package: $PKG"
+          conda verify "$PKG"

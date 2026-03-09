@@ -120,3 +120,45 @@ Example ::
 .. warning::
     Regression and Classification are replaced with LazyRegressor and LazyClassifier.
     Regression and Classification classes will be removed in next release
+
+========================
+Time Series Forecasting
+========================
+
+LazyForecaster benchmarks 20+ statistical, machine-learning, deep-learning,
+and pretrained foundation models on your time series with a single call.
+
+Example ::
+
+    import numpy as np
+    from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+    # Generate sample data
+    np.random.seed(42)
+    t = np.arange(200)
+    y = 10 + 0.05 * t + 3 * np.sin(2 * np.pi * t / 12) + np.random.normal(0, 1, 200)
+
+    y_train, y_test = y[:180], y[180:]
+
+    fcst = LazyForecaster(verbose=0, ignore_warnings=True)
+    scores, predictions = fcst.fit(y_train, y_test)
+    print(scores)
+
+With exogenous variables ::
+
+    X_train = np.column_stack([np.sin(t[:180]), np.cos(t[:180])])
+    X_test  = np.column_stack([np.sin(t[180:]), np.cos(t[180:])])
+
+    fcst = LazyForecaster(verbose=0, ignore_warnings=True)
+    scores, predictions = fcst.fit(y_train, y_test, X_train, X_test)
+
+With cross-validation and custom options ::
+
+    fcst = LazyForecaster(
+        verbose=1,
+        seasonal_period=12,   # override auto-detection
+        cv=3,                 # 3-fold TimeSeriesSplit CV
+        timeout=30,           # max 30 seconds per model
+        sort_by="MAE",
+    )
+    scores, predictions = fcst.fit(y_train, y_test)

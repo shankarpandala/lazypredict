@@ -1,7 +1,7 @@
 # LazyPredict Roadmap — v0.3.x and Beyond
 
 **Last Updated:** 2026-03-10
-**Current Version:** 0.3.0a3
+**Current Version:** 0.3.0a4
 
 ---
 
@@ -38,10 +38,10 @@ forecasting optimization** — while keeping the "3 lines of code" philosophy.
 | Phase | Version | Theme | Status |
 |-------|---------|-------|--------|
 | 0 | 0.3.0a3 | Core refactor, time series, GPU | Done |
-| 1 | 0.3.1 | Explainability (zero-dep) + data auto-convert | Planned |
-| 2 | 0.3.2 | SHAP explainability + supervised HPO | Planned |
-| 3 | 0.3.3 | Forecasting optimization + EBM + Dask CV | Planned |
-| 4 | 0.4.0 | Spark MLlib + FLAML backend | Planned |
+| 1 | 0.3.0a4 | Explainability (zero-dep) + data auto-convert | Done |
+| 2 | 0.3.0a4 | SHAP explainability + supervised HPO | Done |
+| 3 | 0.3.0a4 | Forecasting optimization + EBM + Dask CV | Done |
+| 4 | 0.3.0a4 | Spark MLlib + FLAML backend | Done |
 
 ---
 

@@ -97,6 +97,16 @@ try:
 except ImportError:
     PERPETUAL_AVAILABLE = False
 
+# Optional InterpretML (EBM)
+try:
+    from interpret.glassbox import (
+        ExplainableBoostingClassifier,
+        ExplainableBoostingRegressor,
+    )
+    _INTERPRET_AVAILABLE = True
+except ImportError:
+    _INTERPRET_AVAILABLE = False
+
 # Intel Extension for Scikit-learn for better performance
 try:
     from sklearnex import patch_sklearn
@@ -140,6 +150,10 @@ if _CATBOOST_AVAILABLE:
 if PERPETUAL_AVAILABLE:
     REGRESSORS.append(("PerpetualBooster", PerpetualBooster))
     CLASSIFIERS.append(("PerpetualBooster", PerpetualBooster))
+
+if _INTERPRET_AVAILABLE:
+    CLASSIFIERS.append(("ExplainableBoostingClassifier", ExplainableBoostingClassifier))
+    REGRESSORS.append(("ExplainableBoostingRegressor", ExplainableBoostingRegressor))
 
 # Backward-compatible aliases for removed_ lists
 removed_classifiers = list(_REMOVED_CLASSIFIERS)
@@ -210,10 +224,17 @@ class LazyClassifier(LazyEstimator):
     progress_callback : callable or None, optional (default=None)
         Callback ``f(model_name, current, total, metrics)`` called after each model.
     use_gpu : bool, optional (default=False)
-        When True, enables GPU acceleration for models that support it
-        (e.g., XGBoost, LightGBM, CatBoost). When cuML (RAPIDS) is installed,
-        GPU-accelerated scikit-learn equivalents are also added automatically.
-        Falls back to CPU if CUDA is unavailable.
+        When True, enables GPU acceleration.
+    tune : bool, optional (default=False)
+        When True, tunes the top-k models after initial benchmarking.
+    tune_top_k : int, optional (default=5)
+        Number of top models to tune.
+    tune_trials : int, optional (default=50)
+        Number of optimization trials per model.
+    tune_timeout : int, float, or None, optional (default=None)
+        Maximum seconds per model tuning.
+    tune_backend : str, optional (default='optuna')
+        Tuning backend: ``'optuna'``, ``'sklearn'``, or ``'flaml'``.
 
     Examples
     --------
@@ -243,6 +264,11 @@ class LazyClassifier(LazyEstimator):
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
         use_gpu: bool = False,
+        tune: bool = False,
+        tune_top_k: int = 5,
+        tune_trials: int = 50,
+        tune_timeout: Optional[Union[int, float]] = None,
+        tune_backend: str = "optuna",
     ):
         super().__init__(
             verbose=verbose,
@@ -257,6 +283,11 @@ class LazyClassifier(LazyEstimator):
             max_models=max_models,
             progress_callback=progress_callback,
             use_gpu=use_gpu,
+            tune=tune,
+            tune_top_k=tune_top_k,
+            tune_trials=tune_trials,
+            tune_timeout=tune_timeout,
+            tune_backend=tune_backend,
         )
         self.classifiers = classifiers
 
@@ -271,6 +302,9 @@ class LazyClassifier(LazyEstimator):
         except Exception as exc:
             logger.error("Invalid classifier(s): %s", exc)
             raise ValueError(f"Invalid classifier(s): {exc}") from exc
+
+    def _tune_scoring(self) -> str:
+        return "balanced_accuracy"
 
     def _cv_scoring(self) -> Optional[Dict[str, str]]:
         return {
@@ -428,8 +462,17 @@ class LazyRegressor(LazyEstimator):
     progress_callback : callable or None, optional (default=None)
         Callback ``f(model_name, current, total, metrics)`` called after each model.
     use_gpu : bool, optional (default=False)
-        When True, enables GPU acceleration for models that support it
-        (e.g., XGBoost, LightGBM). Falls back to CPU if CUDA is unavailable.
+        When True, enables GPU acceleration. Falls back to CPU if CUDA is unavailable.
+    tune : bool, optional (default=False)
+        When True, tunes the top-k models after initial benchmarking.
+    tune_top_k : int, optional (default=5)
+        Number of top models to tune.
+    tune_trials : int, optional (default=50)
+        Number of optimization trials per model.
+    tune_timeout : int, float, or None, optional (default=None)
+        Maximum seconds per model tuning.
+    tune_backend : str, optional (default='optuna')
+        Tuning backend: ``'optuna'``, ``'sklearn'``, or ``'flaml'``.
 
     Examples
     --------
@@ -462,6 +505,11 @@ class LazyRegressor(LazyEstimator):
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
         use_gpu: bool = False,
+        tune: bool = False,
+        tune_top_k: int = 5,
+        tune_trials: int = 50,
+        tune_timeout: Optional[Union[int, float]] = None,
+        tune_backend: str = "optuna",
     ):
         super().__init__(
             verbose=verbose,
@@ -476,6 +524,11 @@ class LazyRegressor(LazyEstimator):
             max_models=max_models,
             progress_callback=progress_callback,
             use_gpu=use_gpu,
+            tune=tune,
+            tune_top_k=tune_top_k,
+            tune_trials=tune_trials,
+            tune_timeout=tune_timeout,
+            tune_backend=tune_backend,
         )
         self.regressors = regressors
 
@@ -490,6 +543,9 @@ class LazyRegressor(LazyEstimator):
         except Exception as exc:
             logger.error("Invalid regressor(s): %s", exc)
             raise ValueError(f"Invalid regressor(s): {exc}") from exc
+
+    def _tune_scoring(self) -> str:
+        return "r2"
 
     def _cv_scoring(self) -> Optional[Dict[str, str]]:
         return {

@@ -2,6 +2,20 @@
 title: History
 ---
 
+# 0.3.0a4 (2026-03-10)
+
+-   Implemented explainability: `explain()` method with permutation importance and SHAP
+-   Added Optuna/sklearn/FLAML hyperparameter tuning backends (`tune=True`)
+-   Added search spaces for 30+ supervised models and 20+ forecasting models
+-   Added forecasting optimization: direct/multi-output horizon strategies, ensemble methods
+-   Added seasonal period tuning and forecast loss function selection
+-   Added EBM (ExplainableBoostingMachine) from InterpretML
+-   Added PySpark/Dask DataFrame auto-conversion
+-   Added Dask joblib backend for distributed cross-validation
+-   Added Spark MLlib integration: `LazySparkClassifier` / `LazySparkRegressor`
+-   Added FLAML as optional tuning backend
+-   New optional extras: `tune`, `explain`, `interpret`, `flaml`, `spark`
+
 # 0.3.0a3 (2026-03-10)
 
 -   Added `use_gpu` parameter to classification and regression advanced options docs

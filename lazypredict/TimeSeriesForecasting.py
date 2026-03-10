@@ -11,6 +11,7 @@ import copy
 import logging
 import os
 import time
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -495,10 +496,15 @@ class MLForecaster(ForecasterWrapper):
                 params["random_state"] = self.random_state
         except Exception:
             pass
-        # CatBoost: suppress verbose output by default
+        # Suppress verbose output for boosting libraries by default
         module = getattr(self.estimator_class, "__module__", "") or ""
         if "catboost" in module:
             params.setdefault("verbose", 0)
+        if "lightgbm" in module:
+            params.setdefault("verbose", -1)
+            params.setdefault("verbosity", -1)
+        if "xgboost" in module:
+            params.setdefault("verbosity", 0)
         self._estimator = self.estimator_class(**params)
         self._scaler = StandardScaler()
         X_scaled = self._scaler.fit_transform(X_feat)
@@ -1033,6 +1039,22 @@ class LazyForecaster:
         (e.g. TimesFM).  Use this when you are offline, behind a firewall,
         or in an air-gapped environment.  When ``None`` (default), the
         model is downloaded from Hugging Face automatically.
+    tune : bool, optional (default=False)
+        When True, tunes the top-k forecasters after initial benchmarking
+        using Optuna with temporal cross-validation.
+    tune_top_k : int, optional (default=5)
+        Number of top models to tune.
+    tune_trials : int, optional (default=30)
+        Number of Optuna trials per model.
+    tune_timeout : int, float, or None, optional (default=None)
+        Maximum seconds per model tuning.
+    tune_metric : str, optional (default='RMSE')
+        Metric to optimize: ``'RMSE'``, ``'MAE'``, ``'MAPE'``, ``'SMAPE'``, ``'MASE'``.
+    tune_seasonal : bool, optional (default=False)
+        When True, also search over seasonal_period values during tuning.
+    horizon_strategy : str, optional (default='recursive')
+        Multi-step forecast strategy for ML models:
+        ``'recursive'`` (default), ``'direct'``, or ``'multi_output'``.
 
     Attributes
     ----------
@@ -1040,6 +1062,8 @@ class LazyForecaster:
         Fitted ``ForecasterWrapper`` objects keyed by model name.
     errors : dict
         Exceptions from models that failed, keyed by model name.
+    tuned_scores_ : pd.DataFrame or None
+        Tuning results if ``tune=True`` was set.
     """
 
     def __init__(
@@ -1061,6 +1085,15 @@ class LazyForecaster:
         progress_callback: Optional[Callable] = None,
         use_gpu: bool = False,
         foundation_model_path: Optional[str] = None,
+        # Tuning parameters
+        tune: bool = False,
+        tune_top_k: int = 5,
+        tune_trials: int = 30,
+        tune_timeout: Optional[Union[int, float]] = None,
+        tune_metric: str = "RMSE",
+        tune_seasonal: bool = False,
+        # Horizon strategy
+        horizon_strategy: str = "recursive",
     ):
         # Validate
         if cv is not None and (not isinstance(cv, int) or cv < 2):
@@ -1081,6 +1114,14 @@ class LazyForecaster:
             raise ValueError(
                 f"max_models must be a positive integer, got {max_models!r}"
             )
+        if tune_metric.upper() not in {"RMSE", "MAE", "MAPE", "SMAPE", "MASE"}:
+            raise ValueError(
+                f"tune_metric must be one of RMSE, MAE, MAPE, SMAPE, MASE, got {tune_metric!r}"
+            )
+        if horizon_strategy not in ("recursive", "direct", "multi_output"):
+            raise ValueError(
+                f"horizon_strategy must be 'recursive', 'direct', or 'multi_output', got {horizon_strategy!r}"
+            )
 
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -1099,6 +1140,14 @@ class LazyForecaster:
         self.progress_callback = progress_callback
         self.use_gpu = use_gpu
         self.foundation_model_path = foundation_model_path
+        self.tune = tune
+        self.tune_top_k = tune_top_k
+        self.tune_trials = tune_trials
+        self.tune_timeout = tune_timeout
+        self.tune_metric = tune_metric
+        self.tune_seasonal = tune_seasonal
+        self.horizon_strategy = horizon_strategy
+        self.tuned_scores_: Optional[pd.DataFrame] = None
 
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
@@ -1258,6 +1307,16 @@ class LazyForecaster:
         predictions : pd.DataFrame
             Per-model predictions (empty if ``self.predictions`` is False).
         """
+        # Auto-convert PySpark/Dask inputs
+        from lazypredict.distributed import auto_convert_dataframe
+
+        y_train = auto_convert_dataframe(y_train, "y_train")
+        y_test = auto_convert_dataframe(y_test, "y_test")
+        if X_train is not None:
+            X_train = auto_convert_dataframe(X_train, "X_train")
+        if X_test is not None:
+            X_test = auto_convert_dataframe(X_test, "X_test")
+
         y_train, y_test, X_train, X_test = self._validate_fit_inputs(
             y_train, y_test, X_train, X_test
         )
@@ -1298,21 +1357,111 @@ class LazyForecaster:
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(all_forecasters)
 
-        for idx, (fname, wrapper) in enumerate(
-            progress_bar(all_forecasters, disable=(self.verbose == 0))
-        ):
-            metrics = self._fit_single_model(
-                fname, wrapper, y_train, y_test, X_train, X_test,
-                horizon, seasonal_period, results, predictions_dict,
-            )
-            if self.progress_callback is not None:
-                self.progress_callback(fname, idx + 1, total, metrics)
+        with warnings.catch_warnings():
+            if self.ignore_warnings:
+                warnings.simplefilter("ignore")
+            for idx, (fname, wrapper) in enumerate(
+                progress_bar(all_forecasters, disable=(self.verbose == 0))
+            ):
+                metrics = self._fit_single_model(
+                    fname, wrapper, y_train, y_test, X_train, X_test,
+                    horizon, seasonal_period, results, predictions_dict,
+                )
+                if self.progress_callback is not None:
+                    self.progress_callback(fname, idx + 1, total, metrics)
 
         scores = self._build_scores_dataframe(results)
+
+        # Store for tuning / ensemble access
+        self._last_y_train = y_train
+        self._last_X_train = X_train
+        self._last_seasonal_period = seasonal_period
+        self._last_all_forecasters = all_forecasters
+        self._last_predictions = predictions_dict
+
+        # Auto-tune top-k if requested
+        if self.tune and len(scores) > 0:
+            from lazypredict.ts_tuning import tune_top_k_forecasters
+
+            logger.info(
+                "Tuning top %d forecasters with Optuna (%d trials, metric=%s)...",
+                self.tune_top_k, self.tune_trials, self.tune_metric,
+            )
+            self.tuned_scores_ = tune_top_k_forecasters(
+                scores_df=scores,
+                models=self.models,
+                all_wrappers=all_forecasters,
+                y_train=y_train,
+                X_train=X_train,
+                seasonal_period=seasonal_period,
+                top_k=self.tune_top_k,
+                tune_metric=self.tune_metric,
+                cv=max(self.cv or 3, 3),
+                n_trials=self.tune_trials,
+                timeout=self.tune_timeout,
+                random_state=self.random_state,
+                tune_seasonal=self.tune_seasonal,
+            )
 
         if self.predictions:
             return scores, pd.DataFrame.from_dict(predictions_dict)
         return scores, pd.DataFrame()
+
+    def ensemble(
+        self,
+        method: str = "weighted_average",
+        y_true: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
+        """Ensemble predictions from fitted models.
+
+        Parameters
+        ----------
+        method : str, optional (default='weighted_average')
+            Ensemble method: ``'simple_average'``, ``'weighted_average'``,
+            or ``'stacking'``.
+        y_true : np.ndarray or None
+            True values (required for 'stacking' and 'weighted_average').
+
+        Returns
+        -------
+        np.ndarray
+            Ensembled predictions.
+        """
+        from lazypredict.ensemble import (
+            ensemble_simple_average,
+            ensemble_stacking,
+            ensemble_weighted_average,
+        )
+
+        if not self._last_predictions:
+            raise ValueError(
+                "No predictions available. Call fit() with predictions=True first."
+            )
+
+        preds = self._last_predictions
+
+        if method == "simple_average":
+            return ensemble_simple_average(preds)
+        elif method == "weighted_average":
+            # Use model scores (RMSE by default) as weights
+            scores = {}
+            for name in preds:
+                if name in self.models:
+                    scores[name] = 1.0  # fallback
+            # Try to get actual scores from the last fit
+            if hasattr(self, "_last_scores_dict"):
+                for name, s in self._last_scores_dict.items():
+                    if name in preds:
+                        scores[name] = s
+            return ensemble_weighted_average(preds, scores)
+        elif method == "stacking":
+            if y_true is None:
+                raise ValueError("y_true is required for stacking ensemble.")
+            return ensemble_stacking(preds, y_true)
+        else:
+            raise ValueError(
+                f"Unknown method: {method}. Use 'simple_average', 'weighted_average', or 'stacking'."
+            )
 
     def provide_models(
         self,

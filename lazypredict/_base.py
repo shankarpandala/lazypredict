@@ -2,6 +2,7 @@
 
 import logging
 import time
+import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -96,6 +97,13 @@ def _validate_fit_inputs(
         raise ValueError("X_test is empty")
 
 
+def _auto_convert_inputs(*args):
+    """Auto-convert PySpark/Dask inputs to pandas/numpy."""
+    from lazypredict.distributed import auto_convert_dataframe
+
+    return tuple(auto_convert_dataframe(a, f"arg_{i}") for i, a in enumerate(args))
+
+
 class LazyEstimator:
     """Abstract base class with shared logic for LazyClassifier and LazyRegressor.
 
@@ -117,10 +125,18 @@ class LazyEstimator:
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
         use_gpu: bool = False,
+        # Tuning parameters (Phase 2)
+        tune: bool = False,
+        tune_top_k: int = 5,
+        tune_trials: int = 50,
+        tune_timeout: Optional[Union[int, float]] = None,
+        tune_backend: str = "optuna",
     ):
         _validate_init_params(cv, timeout, categorical_encoder, custom_metric, n_jobs)
         if max_models is not None and (not isinstance(max_models, int) or max_models < 1):
             raise ValueError(f"max_models must be a positive integer, got {max_models!r}")
+        if tune_backend not in ("optuna", "sklearn", "flaml"):
+            raise ValueError(f"tune_backend must be 'optuna', 'sklearn', or 'flaml', got {tune_backend!r}")
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
         self.custom_metric = custom_metric
@@ -135,6 +151,12 @@ class LazyEstimator:
         self.max_models = max_models
         self.progress_callback = progress_callback
         self.use_gpu = use_gpu
+        self.tune = tune
+        self.tune_top_k = tune_top_k
+        self.tune_trials = tune_trials
+        self.tune_timeout = tune_timeout
+        self.tune_backend = tune_backend
+        self.tuned_scores_: Optional[Any] = None
         self.mlflow_enabled = setup_mlflow()
 
         if self.use_gpu:
@@ -199,6 +221,11 @@ class LazyEstimator:
         predictions : pandas.DataFrame
             Only returned when ``self.predictions`` is True.
         """
+        # Auto-convert PySpark/Dask DataFrames
+        X_train, X_test, y_train, y_test = _auto_convert_inputs(
+            X_train, X_test, y_train, y_test
+        )
+
         # Dataset size warnings
         if hasattr(X_train, "shape"):
             n_samples, n_features = X_train.shape
@@ -255,108 +282,227 @@ class LazyEstimator:
 
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(estimator_list)
-        for idx, (name, model) in enumerate(
-            progress_bar(estimator_list, disable=(self.verbose == 0))
-        ):
-            start = time.time()
-            mlflow_active_run = None
-            try:
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                    mlflow_active_run = _mlflow.start_run(
-                        run_name=f"{self.__class__.__name__}-{name}"
+        with warnings.catch_warnings():
+            if self.ignore_warnings:
+                warnings.simplefilter("ignore")
+            for idx, (name, model) in enumerate(
+                progress_bar(estimator_list, disable=(self.verbose == 0))
+            ):
+                start = time.time()
+                mlflow_active_run = None
+                try:
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
+                        mlflow_active_run = _mlflow.start_run(
+                            run_name=f"{self.__class__.__name__}-{name}"
+                        )
+                        _mlflow.log_param("model_name", name)
+
+                    model_kwargs = get_gpu_model_params(model, self.use_gpu)
+                    if "random_state" in model().get_params():
+                        model_kwargs["random_state"] = self.random_state
+                    # Suppress verbose output for boosting libraries by default
+                    module = getattr(model, "__module__", "") or ""
+                    if "catboost" in module:
+                        model_kwargs.setdefault("verbose", 0)
+                    if "lightgbm" in module:
+                        model_kwargs.setdefault("verbose", -1)
+                        model_kwargs.setdefault("verbosity", -1)
+                    if "xgboost" in module:
+                        model_kwargs.setdefault("verbosity", 0)
+                    pipe = Pipeline(
+                        steps=[
+                            ("preprocessor", preprocessor),
+                            (step_name, model(**model_kwargs)),
+                        ]
                     )
-                    _mlflow.log_param("model_name", name)
 
-                model_kwargs = get_gpu_model_params(model, self.use_gpu)
-                if "random_state" in model().get_params():
-                    model_kwargs["random_state"] = self.random_state
-                # CatBoost: suppress verbose output by default
-                module = getattr(model, "__module__", "") or ""
-                if "catboost" in module:
-                    model_kwargs.setdefault("verbose", 0)
-                pipe = Pipeline(
-                    steps=[
-                        ("preprocessor", preprocessor),
-                        (step_name, model(**model_kwargs)),
-                    ]
-                )
+                    pipe.fit(X_train, y_train)
+                    fit_time = time.time() - start
 
-                pipe.fit(X_train, y_train)
-                fit_time = time.time() - start
+                    if self.timeout and fit_time > self.timeout:
+                        logger.info(
+                            "%s exceeded timeout (%.2fs > %ss), skipping...",
+                            name, fit_time, self.timeout,
+                        )
+                        if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                            _mlflow.end_run()
+                        continue
 
-                if self.timeout and fit_time > self.timeout:
-                    logger.info(
-                        "%s exceeded timeout (%.2fs > %ss), skipping...",
-                        name, fit_time, self.timeout,
-                    )
+                    self.models[name] = pipe
+
+                    # Cross-validation
+                    cv_metrics: Dict[str, Optional[float]] = {}
+                    if self.cv:
+                        cv_metrics = self._run_cv(pipe, X_train, y_train, name)
+
+                    # Test-set metrics
+                    metrics = self._compute_metrics(pipe, X_test, y_test, X_train)
+                    metrics["name"] = name
+                    metrics["time"] = time.time() - start
+                    metrics.update(cv_metrics)
+
+                    # MLflow logging
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                        self._log_mlflow_metrics(metrics, pipe, X_train, name)
+
+                    # Custom metric
+                    if self.custom_metric is not None:
+                        y_pred = pipe.predict(X_test)
+                        try:
+                            custom_val = self.custom_metric(y_test, y_pred)
+                            metrics["custom_metric"] = custom_val
+                            if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                                _mlflow.log_metric(self.custom_metric.__name__, custom_val)
+                        except Exception as custom_exc:
+                            metrics["custom_metric"] = None
+                            if not self.ignore_warnings:
+                                logger.warning(
+                                    "Custom metric %s failed for %s: %s",
+                                    self.custom_metric.__name__, name, custom_exc,
+                                )
+
+                    results.append(metrics)
+
+                    if self.verbose > 0:
+                        self._log_verbose(name, metrics)
+
+                    if self.predictions:
+                        predictions_dict[name] = pipe.predict(X_test)
+
                     if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
                         _mlflow.end_run()
-                    continue
 
-                self.models[name] = pipe
+                    # Progress callback
+                    if self.progress_callback is not None:
+                        self.progress_callback(name, idx + 1, total, metrics)
 
-                # Cross-validation
-                cv_metrics: Dict[str, Optional[float]] = {}
-                if self.cv:
-                    cv_metrics = self._run_cv(pipe, X_train, y_train, name)
+                except Exception as exc:
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                        _mlflow.end_run()
+                    self.errors[name] = exc
+                    if not self.ignore_warnings:
+                        logger.warning("%s model failed to execute: %s", name, exc)
 
-                # Test-set metrics
-                metrics = self._compute_metrics(pipe, X_test, y_test, X_train)
-                metrics["name"] = name
-                metrics["time"] = time.time() - start
-                metrics.update(cv_metrics)
-
-                # MLflow logging
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                    self._log_mlflow_metrics(metrics, pipe, X_train, name)
-
-                # Custom metric
-                if self.custom_metric is not None:
-                    y_pred = pipe.predict(X_test)
-                    try:
-                        custom_val = self.custom_metric(y_test, y_pred)
-                        metrics["custom_metric"] = custom_val
-                        if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                            _mlflow.log_metric(self.custom_metric.__name__, custom_val)
-                    except Exception as custom_exc:
-                        metrics["custom_metric"] = None
-                        if not self.ignore_warnings:
-                            logger.warning(
-                                "Custom metric %s failed for %s: %s",
-                                self.custom_metric.__name__, name, custom_exc,
-                            )
-
-                results.append(metrics)
-
-                if self.verbose > 0:
-                    self._log_verbose(name, metrics)
-
-                if self.predictions:
-                    predictions_dict[name] = pipe.predict(X_test)
-
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                    _mlflow.end_run()
-
-                # Progress callback
-                if self.progress_callback is not None:
-                    self.progress_callback(name, idx + 1, total, metrics)
-
-            except Exception as exc:
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                    _mlflow.end_run()
-                self.errors[name] = exc
-                if not self.ignore_warnings:
-                    logger.warning("%s model failed to execute: %s", name, exc)
-
-                if self.progress_callback is not None:
-                    self.progress_callback(name, idx + 1, total, None)
+                    if self.progress_callback is not None:
+                        self.progress_callback(name, idx + 1, total, None)
 
         scores = self._build_scores_dataframe(results)
+
+        # Store for tuning access
+        self._last_X_train = X_train
+        self._last_y_train = y_train
+        self._last_preprocessor = preprocessor
+        self._last_estimator_list = estimator_list
+
+        # Phase 2: Auto-tune top-k if requested
+        if self.tune and len(scores) > 0:
+            self.tuned_scores_ = self._run_tuning(scores, X_train, y_train, preprocessor, estimator_list)
 
         if self.predictions:
             predictions_df = pd.DataFrame.from_dict(predictions_dict)
             return scores, predictions_df
         return scores, pd.DataFrame()
+
+    # -- Tuning integration ---------------------------------------------------
+
+    def _tune_scoring(self) -> str:
+        """Return the scoring metric string for tuning. Override in subclasses."""
+        raise NotImplementedError
+
+    def _run_tuning(
+        self,
+        scores: pd.DataFrame,
+        X_train: pd.DataFrame,
+        y_train: Any,
+        preprocessor: Any,
+        estimator_list: List,
+    ) -> pd.DataFrame:
+        """Run top-k tuning after initial fit."""
+        from lazypredict.tuning import tune_top_k
+
+        scoring = self._tune_scoring()
+        logger.info(
+            "Tuning top %d models with %s backend (%d trials each)...",
+            self.tune_top_k, self.tune_backend, self.tune_trials,
+        )
+        return tune_top_k(
+            scores_df=scores,
+            models=self.models,
+            estimator_list=estimator_list,
+            X_train=X_train,
+            y_train=y_train,
+            preprocessor=preprocessor,
+            scoring=scoring,
+            top_k=self.tune_top_k,
+            n_trials=self.tune_trials,
+            timeout=self.tune_timeout,
+            random_state=self.random_state,
+            n_jobs=self.n_jobs,
+            backend=self.tune_backend,
+            use_gpu=self.use_gpu,
+        )
+
+    # -- Explainability -------------------------------------------------------
+
+    def explain(
+        self,
+        X_test: Union[pd.DataFrame, np.ndarray],
+        y_test: Union[pd.Series, np.ndarray],
+        method: str = "permutation",
+        n_repeats: int = 10,
+        max_samples: int = 100,
+    ) -> Union[pd.DataFrame, Dict[str, np.ndarray]]:
+        """Explain model predictions with feature importance.
+
+        Parameters
+        ----------
+        X_test : array-like
+            Test feature matrix.
+        y_test : array-like
+            Test target.
+        method : str, optional (default='permutation')
+            Explanation method: 'permutation' (zero deps) or 'shap'.
+        n_repeats : int, optional (default=10)
+            Repeats for permutation importance.
+        max_samples : int, optional (default=100)
+            Max samples for SHAP explanations.
+
+        Returns
+        -------
+        pd.DataFrame or dict
+            For 'permutation': DataFrame with features as rows, models as columns.
+            For 'shap': dict mapping model name to SHAP values array.
+        """
+        if len(self.models) == 0:
+            raise ValueError("No models fitted. Call fit() first.")
+
+        X_test, y_test = _auto_convert_inputs(X_test, y_test)
+
+        if isinstance(X_test, np.ndarray):
+            cols = [f"feature_{i}" for i in range(X_test.shape[1])]
+            X_test = pd.DataFrame(X_test, columns=cols)
+
+        if method == "permutation":
+            from lazypredict.explainability import explain_permutation
+
+            return explain_permutation(
+                self.models, X_test, y_test,
+                n_repeats=n_repeats,
+                random_state=self.random_state,
+                n_jobs=self.n_jobs,
+            )
+        elif method == "shap":
+            from lazypredict.explainability import explain_shap
+
+            return explain_shap(
+                self.models, X_test,
+                step_name=self._estimator_step_name(),
+                max_samples=max_samples,
+            )
+        else:
+            raise ValueError(f"Unknown method: {method}. Use 'permutation' or 'shap'.")
+
+    # -- Cross-validation -----------------------------------------------------
 
     def _run_cv(
         self, pipe: Pipeline, X_train: pd.DataFrame, y_train: Any, name: str

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lazypredict"
-version = "0.3.0a3"
+version = "0.3.0a4"
 description = "Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning"
 readme = "README.md"
 license = {text = "MIT"}
@@ -51,6 +51,21 @@ deeplearning = [
 foundation = [
     "timesfm",
 ]
+tune = [
+    "optuna>=3.0",
+]
+explain = [
+    "shap>=0.42",
+]
+interpret = [
+    "interpret>=0.4",
+]
+flaml = [
+    "flaml>=2.0",
+]
+spark = [
+    "pyspark>=3.3",
+]
 all = [
     "xgboost>=1.5",
     "lightgbm>=3.0",
@@ -61,12 +76,16 @@ all = [
     "pmdarima>=2.0",
     "torch>=2.0",
     "timesfm",
+    "optuna>=3.0",
+    "shap>=0.42",
+    "interpret>=0.4",
 ]
 dev = [
     "pytest>=7",
     "pytest-cov>=4",
     "flake8>=6",
     "mypy>=1.0",
+    "optuna>=3.0",
 ]
 
 [project.scripts]

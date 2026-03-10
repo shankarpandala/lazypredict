@@ -4,7 +4,7 @@
 
 __author__ = """Shankar Rao Pandala"""
 __email__ = "shankar.pandala@live.com"
-__version__ = '0.3.0a3'
+__version__ = '0.3.0a4'
 
 __all__ = [
     "LazyClassifier",
@@ -17,6 +17,16 @@ __all__ = [
     "preprocessing",
     "metrics",
     "config",
+    # New modules
+    "explainability",
+    "search_spaces",
+    "ts_search_spaces",
+    "tuning",
+    "ts_tuning",
+    "ensemble",
+    "horizon",
+    "distributed",
+    "spark",
 ]
 
 from lazypredict.Supervised import LazyClassifier, LazyRegressor

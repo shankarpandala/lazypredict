@@ -24,6 +24,7 @@ extras_require = {
     "boost": [
         "xgboost>=1.5",
         "lightgbm>=3.0",
+        "catboost>=1.0",
     ],
     "mlflow": [
         "mlflow>=2.0.0,<3.0",
@@ -41,6 +42,7 @@ extras_require = {
     "all": [
         "xgboost>=1.5",
         "lightgbm>=3.0",
+        "catboost>=1.0",
         "mlflow>=2.0.0,<3.0",
         "category_encoders>=2.0",
         "statsmodels>=0.13",
@@ -88,6 +90,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/shankarpandala/lazypredict",
-    version='0.3.0a1',
+    version='0.3.0a2',
     zip_safe=False,
 )

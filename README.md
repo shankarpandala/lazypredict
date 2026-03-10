@@ -41,7 +41,7 @@ conda install -c conda-forge lazypredict
 
 ### Optional extras (pip only)
 
-Install with boosting libraries (XGBoost, LightGBM):
+Install with boosting libraries (XGBoost, LightGBM, CatBoost):
 
 ```bash
 pip install lazypredict[boost]
@@ -93,7 +93,7 @@ print(models)
 ### Advanced Options
 
 ```python
-# With categorical encoding, timeout, and cross-validation
+# With categorical encoding, timeout, cross-validation, and GPU
 clf = LazyClassifier(
     verbose=1,                          # Show progress
     ignore_warnings=True,               # Suppress warnings
@@ -102,7 +102,8 @@ clf = LazyClassifier(
     classifiers='all',                  # Use all available classifiers
     categorical_encoder='onehot',       # Encoding: 'onehot', 'ordinal', 'target', 'binary'
     timeout=60,                         # Max time per model in seconds
-    cv=5                                # Cross-validation folds (optional)
+    cv=5,                               # Cross-validation folds (optional)
+    use_gpu=True                        # Enable GPU acceleration
 )
 models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 ```
@@ -120,6 +121,7 @@ models, predictions = clf.fit(X_train, X_test, y_train, y_test)
   - `'binary'`: Binary encoding (requires `category-encoders`)
 - `timeout` (int): Maximum seconds per model (None for no limit)
 - `cv` (int): Number of cross-validation folds (None to disable)
+- `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
 
 | Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
 |:-------------------------------|-----------:|--------------------:|----------:|-----------:|-------------:|
@@ -182,7 +184,7 @@ print(models)
 ### Advanced Options
 
 ```python
-# With categorical encoding and timeout
+# With categorical encoding, timeout, and GPU
 reg = LazyRegressor(
     verbose=1,                          # Show progress
     ignore_warnings=True,               # Suppress warnings
@@ -190,7 +192,8 @@ reg = LazyRegressor(
     predictions=True,                   # Return predictions
     regressors='all',                   # Use all available regressors
     categorical_encoder='ordinal',      # Encoding: 'onehot', 'ordinal', 'target', 'binary'
-    timeout=120                         # Max time per model in seconds
+    timeout=120,                        # Max time per model in seconds
+    use_gpu=True                        # Enable GPU acceleration
 )
 models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 ```
@@ -207,6 +210,7 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
   - `'target'`: Target encoding (requires `category-encoders`)
   - `'binary'`: Binary encoding (requires `category-encoders`)
 - `timeout` (int): Maximum seconds per model (None for no limit)
+- `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
 
 | Model                         |   Adjusted R-Squared |   R-Squared |     RMSE |   Time Taken |
 |:------------------------------|---------------------:|------------:|---------:|-------------:|
@@ -302,6 +306,8 @@ fcst = LazyForecaster(
     sort_by="RMSE",                     # Sort metric (MAE, MAPE, SMAPE, MASE, R-Squared)
     forecasters="all",                  # Or list: ["Holt", "AutoARIMA", "LSTM_TS"]
     max_models=10,                      # Limit number of models
+    use_gpu=True,                       # GPU acceleration for supported models
+    foundation_model_path="/path/to/timesfm-weights",  # Local model weights (offline)
 )
 scores, predictions = fcst.fit(y_train, y_test)
 ```
@@ -319,6 +325,8 @@ scores, predictions = fcst.fit(y_train, y_test)
 - `n_rolling` (tuple): Rolling-window sizes for feature engineering (default (3, 7))
 - `max_models` (int/None): Limit total models to train
 - `custom_metric` (callable): Additional metric ``f(y_true, y_pred) -> float``
+- `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
+- `foundation_model_path` (str): Local path to pre-downloaded foundation model weights (e.g. TimesFM)
 
 **Available model categories:**
 - **Baselines:** Naive, SeasonalNaive

@@ -2,6 +2,15 @@
 title: History
 ---
 
+# 0.3.0a2 (2026-03-10)
+
+-   Added `use_gpu` parameter to classification and regression advanced options docs
+-   Added `foundation_model_path` parameter to LazyForecaster for offline/air-gapped environments
+-   Added CatBoost to `boost` install extras (`pip install lazypredict[boost]`)
+-   Updated all documentation examples to include GPU acceleration and local model weights
+-   Fixed Sphinx documentation build pipeline (RST formatting, myst_parser migration)
+-   Updated ReadTheDocs and GitHub Actions docs workflow configuration
+
 # 0.3.0a1 (2026-03-10)
 
 -   **New: Time Series Forecasting** — `LazyForecaster` benchmarks 26+ forecasting models in one call

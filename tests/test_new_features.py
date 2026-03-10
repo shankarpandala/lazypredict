@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from sklearn.datasets import load_breast_cancer, load_diabetes
-from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 

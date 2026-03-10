@@ -1,6 +1,6 @@
-import pytest
 import pandas as pd
 from lazypredict.Supervised import get_card_split
+
 
 def test_get_card_split():
     df = pd.DataFrame({

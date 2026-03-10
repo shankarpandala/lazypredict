@@ -1,4 +1,3 @@
-import pytest
 from click.testing import CliRunner
 from lazypredict import cli
 

@@ -9,7 +9,12 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
-from lazypredict.config import VALID_ENCODERS, get_gpu_model_params, is_gpu_available
+from lazypredict.config import (
+    VALID_ENCODERS,
+    get_cuml_models,
+    get_gpu_model_params,
+    is_gpu_available,
+)
 from lazypredict.exceptions import ModelFitError
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
@@ -217,6 +222,30 @@ class LazyEstimator:
         estimator_list = self._get_estimator_list()
         step_name = self._estimator_step_name()
 
+        # When GPU requested, append cuML GPU-accelerated models if available
+        if self.use_gpu:
+            cuml_models = get_cuml_models()
+            if cuml_models:
+                existing_names = {n for n, _ in estimator_list}
+                for cuml_name, cuml_cls in cuml_models.items():
+                    if cuml_name not in existing_names:
+                        # Only add if compatible with current task type
+                        try:
+                            from sklearn.base import ClassifierMixin, RegressorMixin
+                            if step_name == "classifier" and issubclass(cuml_cls, ClassifierMixin):
+                                estimator_list.append((cuml_name, cuml_cls))
+                            elif step_name == "regressor" and issubclass(cuml_cls, RegressorMixin):
+                                estimator_list.append((cuml_name, cuml_cls))
+                            elif step_name not in ("classifier", "regressor"):
+                                estimator_list.append((cuml_name, cuml_cls))
+                        except TypeError:
+                            # cuML classes may not work with issubclass
+                            estimator_list.append((cuml_name, cuml_cls))
+                logger.info(
+                    "cuML (RAPIDS) is available — added %d GPU-accelerated models.",
+                    len([n for n in cuml_models if n not in existing_names]),
+                )
+
         # Apply max_models limit
         if self.max_models is not None:
             estimator_list = estimator_list[: self.max_models]
@@ -241,6 +270,10 @@ class LazyEstimator:
                 model_kwargs = get_gpu_model_params(model, self.use_gpu)
                 if "random_state" in model().get_params():
                     model_kwargs["random_state"] = self.random_state
+                # CatBoost: suppress verbose output by default
+                module = getattr(model, "__module__", "") or ""
+                if "catboost" in module:
+                    model_kwargs.setdefault("verbose", 0)
                 pipe = Pipeline(
                     steps=[
                         ("preprocessor", preprocessor),

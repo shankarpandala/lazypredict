@@ -110,6 +110,13 @@ except ImportError:
     _LIGHTGBM_AVAILABLE = False
 
 try:
+    import catboost  # noqa: F401
+
+    _CATBOOST_AVAILABLE = True
+except ImportError:
+    _CATBOOST_AVAILABLE = False
+
+try:
     import timesfm  # noqa: F401
 
     _TIMESFM_AVAILABLE = True
@@ -487,6 +494,10 @@ class MLForecaster(ForecasterWrapper):
                 params["random_state"] = self.random_state
         except Exception:
             pass
+        # CatBoost: suppress verbose output by default
+        module = getattr(self.estimator_class, "__module__", "") or ""
+        if "catboost" in module:
+            params.setdefault("verbose", 0)
         self._estimator = self.estimator_class(**params)
         self._scaler = StandardScaler()
         X_scaled = self._scaler.fit_transform(X_feat)
@@ -718,16 +729,26 @@ class TimesFMForecaster(ForecasterWrapper):
     specific training is needed.  Exogenous features are **not** supported and
     will be silently ignored.
 
+    When ``use_gpu=True`` and CUDA is available, the model is placed on GPU
+    for faster inference.
+
     Requires ``timesfm`` and ``torch`` (Python 3.10-3.11 only).
     """
+
+    def __init__(self, use_gpu: bool = False):
+        self.use_gpu = use_gpu
 
     def fit(self, y_train, X_train=None):
         import torch as _torch
         import timesfm as _timesfm
 
         _torch.set_float32_matmul_precision("high")
+
+        # Determine device: GPU if requested and available
+        backend = "gpu" if (self.use_gpu and _torch.cuda.is_available()) else "cpu"
         self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
-            "google/timesfm-2.5-200m-pytorch"
+            "google/timesfm-2.5-200m-pytorch",
+            torch_device=_torch.device("cuda" if backend == "gpu" else "cpu"),
         )
         self._model.compile(
             _timesfm.ForecastConfig(
@@ -849,6 +870,8 @@ def _build_forecaster_list(
         ml_models.append(("XGBRegressor_TS", xgboost.XGBRegressor))
     if _LIGHTGBM_AVAILABLE:
         ml_models.append(("LGBMRegressor_TS", lightgbm.LGBMRegressor))
+    if _CATBOOST_AVAILABLE:
+        ml_models.append(("CatBoostRegressor_TS", catboost.CatBoostRegressor))
 
     for ml_name, ml_class in ml_models:
         forecasters.append((
@@ -887,7 +910,7 @@ def _build_forecaster_list(
 
     # -- Pretrained foundation models (requires timesfm) ----------------------
     if _TIMESFM_AVAILABLE:
-        forecasters.append(("TimesFM", TimesFMForecaster()))
+        forecasters.append(("TimesFM", TimesFMForecaster(use_gpu=use_gpu)))
     else:
         logger.info(
             "timesfm not installed — TimesFM model unavailable. "

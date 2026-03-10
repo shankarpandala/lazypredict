@@ -85,6 +85,13 @@ try:
 except ImportError:
     _LIGHTGBM_AVAILABLE = False
 
+# Optional catboost
+try:
+    import catboost
+    _CATBOOST_AVAILABLE = True
+except ImportError:
+    _CATBOOST_AVAILABLE = False
+
 # Optional perpetual
 try:
     from perpetual import PerpetualBooster
@@ -127,6 +134,10 @@ if _XGBOOST_AVAILABLE:
 if _LIGHTGBM_AVAILABLE:
     REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
     CLASSIFIERS.append(("LGBMClassifier", lightgbm.LGBMClassifier))
+
+if _CATBOOST_AVAILABLE:
+    REGRESSORS.append(("CatBoostRegressor", catboost.CatBoostRegressor))
+    CLASSIFIERS.append(("CatBoostClassifier", catboost.CatBoostClassifier))
 
 if PERPETUAL_AVAILABLE:
     REGRESSORS.append(("PerpetualBooster", PerpetualBooster))
@@ -202,7 +213,9 @@ class LazyClassifier(LazyEstimator):
         Callback ``f(model_name, current, total, metrics)`` called after each model.
     use_gpu : bool, optional (default=False)
         When True, enables GPU acceleration for models that support it
-        (e.g., XGBoost, LightGBM). Falls back to CPU if CUDA is unavailable.
+        (e.g., XGBoost, LightGBM, CatBoost). When cuML (RAPIDS) is installed,
+        GPU-accelerated scikit-learn equivalents are also added automatically.
+        Falls back to CPU if CUDA is unavailable.
 
     Examples
     --------

@@ -34,6 +34,8 @@ from lazypredict.config import (
     DEFAULT_ROLLING_WINDOWS,
     DEFAULT_SORT_BY_FORECASTER,
     REMOVED_FORECASTERS,
+    get_gpu_model_params,
+    is_gpu_available,
 )
 from lazypredict.exceptions import InsufficientDataError
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
@@ -466,18 +468,20 @@ class MLForecaster(ForecasterWrapper):
         n_lags: int = 10,
         n_rolling: Tuple[int, ...] = (3, 7),
         random_state: int = 42,
+        use_gpu: bool = False,
     ):
         self.estimator_class = estimator_class
         self._model_name = model_name
         self.n_lags = n_lags
         self.n_rolling = n_rolling
         self.random_state = random_state
+        self.use_gpu = use_gpu
 
     def fit(self, y_train, X_train=None):
         X_feat, y_feat = create_lag_features(
             y_train, self.n_lags, self.n_rolling, X_exog=X_train
         )
-        params: dict = {}
+        params: dict = get_gpu_model_params(self.estimator_class, self.use_gpu)
         try:
             if "random_state" in self.estimator_class().get_params():
                 params["random_state"] = self.random_state
@@ -547,6 +551,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
         batch_size: int = 32,
         learning_rate: float = 1e-3,
         random_state: int = 42,
+        use_gpu: bool = False,
     ):
         self.n_lags = n_lags
         self.n_rolling = n_rolling
@@ -555,6 +560,14 @@ class _TorchRNNForecaster(ForecasterWrapper):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.random_state = random_state
+        self.use_gpu = use_gpu
+
+    def _get_device(self):
+        """Determine the torch device to use."""
+        import torch as _torch
+        if self.use_gpu and _torch.cuda.is_available():
+            return _torch.device("cuda")
+        return _torch.device("cpu")
 
     def fit(self, y_train, X_train=None):
         import torch as _torch
@@ -563,6 +576,8 @@ class _TorchRNNForecaster(ForecasterWrapper):
 
         _torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
+
+        device = self._get_device()
 
         X_feat, y_feat = create_lag_features(
             y_train, self.n_lags, self.n_rolling, X_exog=X_train
@@ -573,8 +588,10 @@ class _TorchRNNForecaster(ForecasterWrapper):
         n_features = X_scaled.shape[1]
         X_tensor = _torch.tensor(
             X_scaled.reshape(-1, 1, n_features), dtype=_torch.float32
-        )
-        y_tensor = _torch.tensor(y_feat.reshape(-1, 1), dtype=_torch.float32)
+        ).to(device)
+        y_tensor = _torch.tensor(
+            y_feat.reshape(-1, 1), dtype=_torch.float32
+        ).to(device)
 
         dataset = TensorDataset(X_tensor, y_tensor)
         loader = DataLoader(
@@ -586,8 +603,9 @@ class _TorchRNNForecaster(ForecasterWrapper):
         self._rnn = rnn_class(
             input_size=n_features, hidden_size=self.hidden_size,
             num_layers=1, batch_first=True,
-        )
-        self._linear = nn.Linear(self.hidden_size, 1)
+        ).to(device)
+        self._linear = nn.Linear(self.hidden_size, 1).to(device)
+        self._device = device
         params = list(self._rnn.parameters()) + list(self._linear.parameters())
         optimizer = _torch.optim.Adam(params, lr=self.learning_rate)
         loss_fn = nn.MSELoss()
@@ -623,6 +641,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
     def predict(self, horizon, X_test=None):
         import torch as _torch
 
+        device = self._device
         predictions: List[float] = []
         history = list(self._y_train)
         n_rolling = self.n_rolling
@@ -653,7 +672,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
                 X_step = self._scaler.transform(X_step)
                 X_tensor = _torch.tensor(
                     X_step.reshape(1, 1, -1), dtype=_torch.float32
-                )
+                ).to(device)
                 output, _ = self._rnn(X_tensor)
                 pred = self._linear(output[:, -1, :]).item()
                 predictions.append(pred)
@@ -745,6 +764,7 @@ def _build_forecaster_list(
     n_rolling: Tuple[int, ...],
     random_state: int,
     seasonal_period: Optional[int],
+    use_gpu: bool = False,
 ) -> List[Tuple[str, ForecasterWrapper]]:
     """Build the default list of all available forecasters.
 
@@ -758,6 +778,8 @@ def _build_forecaster_list(
         Seed for reproducible ML / DL models.
     seasonal_period : int or None
         Detected or user-specified seasonal period.
+    use_gpu : bool, optional (default=False)
+        When True, enables GPU acceleration for models that support it.
 
     Returns
     -------
@@ -837,6 +859,7 @@ def _build_forecaster_list(
                 n_lags=n_lags,
                 n_rolling=n_rolling,
                 random_state=random_state,
+                use_gpu=use_gpu,
             ),
         ))
 
@@ -845,13 +868,15 @@ def _build_forecaster_list(
         forecasters.append((
             "LSTM_TS",
             LSTMForecaster(
-                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state
+                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state,
+                use_gpu=use_gpu,
             ),
         ))
         forecasters.append((
             "GRU_TS",
             GRUForecaster(
-                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state
+                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state,
+                use_gpu=use_gpu,
             ),
         ))
     else:
@@ -923,6 +948,10 @@ class LazyForecaster:
         Limit the number of models to train.
     progress_callback : callable or None, optional (default=None)
         Called after each model as ``f(name, current, total, metrics)``.
+    use_gpu : bool, optional (default=False)
+        When True, enables GPU acceleration for models that support it
+        (e.g., XGBoost, LightGBM, LSTM, GRU). Falls back to CPU if CUDA
+        is unavailable.
 
     Attributes
     ----------
@@ -949,6 +978,7 @@ class LazyForecaster:
         n_jobs: int = -1,
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
+        use_gpu: bool = False,
     ):
         # Validate
         if cv is not None and (not isinstance(cv, int) or cv < 2):
@@ -985,10 +1015,20 @@ class LazyForecaster:
         self.n_jobs = n_jobs
         self.max_models = max_models
         self.progress_callback = progress_callback
+        self.use_gpu = use_gpu
 
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
         self.mlflow_enabled = setup_mlflow()
+
+        if self.use_gpu:
+            if is_gpu_available():
+                logger.info("GPU acceleration enabled. CUDA is available.")
+            else:
+                logger.warning(
+                    "GPU requested but CUDA is not available. "
+                    "Models that require GPU will fall back to CPU."
+                )
 
     # --------------------------------------------------------------------- #
     # Public API                                                              #
@@ -1155,6 +1195,7 @@ class LazyForecaster:
             n_rolling=self.n_rolling,
             random_state=self.random_state,
             seasonal_period=seasonal_period,
+            use_gpu=self.use_gpu,
         )
 
         # Filter to user-specified subset

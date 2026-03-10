@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
-from lazypredict.config import VALID_ENCODERS
+from lazypredict.config import VALID_ENCODERS, get_gpu_model_params, is_gpu_available
 from lazypredict.exceptions import ModelFitError
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
@@ -111,6 +111,7 @@ class LazyEstimator:
         n_jobs: int = -1,
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
+        use_gpu: bool = False,
     ):
         _validate_init_params(cv, timeout, categorical_encoder, custom_metric, n_jobs)
         if max_models is not None and (not isinstance(max_models, int) or max_models < 1):
@@ -128,7 +129,17 @@ class LazyEstimator:
         self.n_jobs = n_jobs
         self.max_models = max_models
         self.progress_callback = progress_callback
+        self.use_gpu = use_gpu
         self.mlflow_enabled = setup_mlflow()
+
+        if self.use_gpu:
+            if is_gpu_available():
+                logger.info("GPU acceleration enabled. CUDA is available.")
+            else:
+                logger.warning(
+                    "GPU requested but CUDA is not available. "
+                    "Models that require GPU will fall back to CPU."
+                )
 
     # -- Abstract interface (to be overridden by subclasses) ------------------
 
@@ -227,17 +238,15 @@ class LazyEstimator:
                     )
                     _mlflow.log_param("model_name", name)
 
+                model_kwargs = get_gpu_model_params(model, self.use_gpu)
                 if "random_state" in model().get_params():
-                    pipe = Pipeline(
-                        steps=[
-                            ("preprocessor", preprocessor),
-                            (step_name, model(random_state=self.random_state)),
-                        ]
-                    )
-                else:
-                    pipe = Pipeline(
-                        steps=[("preprocessor", preprocessor), (step_name, model())]
-                    )
+                    model_kwargs["random_state"] = self.random_state
+                pipe = Pipeline(
+                    steps=[
+                        ("preprocessor", preprocessor),
+                        (step_name, model(**model_kwargs)),
+                    ]
+                )
 
                 pipe.fit(X_train, y_train)
                 fit_time = time.time() - start

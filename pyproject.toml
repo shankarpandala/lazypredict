@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lazypredict"
-version = "0.3.0a1"
+version = "0.3.0a2"
 description = "Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning"
 readme = "README.md"
 license = {text = "MIT"}
@@ -36,6 +36,7 @@ dependencies = [
 boost = [
     "xgboost>=1.5",
     "lightgbm>=3.0",
+    "catboost>=1.0",
 ]
 mlflow = [
     "mlflow>=2.0.0,<3.0",
@@ -53,6 +54,7 @@ foundation = [
 all = [
     "xgboost>=1.5",
     "lightgbm>=3.0",
+    "catboost>=1.0",
     "mlflow>=2.0.0,<3.0",
     "category_encoders>=2.0",
     "statsmodels>=0.13",

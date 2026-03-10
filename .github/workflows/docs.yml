@@ -19,8 +19,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
       - run: |
-          pip install sphinx
+          pip install -e .
           pip install -r docs/requirements.txt
+      - name: Generate API docs
+        run: sphinx-apidoc -o docs lazypredict --force
       - name: Build documentation
         run: sphinx-build docs docs/_build/html -W
       - uses: actions/upload-artifact@v4
@@ -39,8 +41,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
       - run: |
-          pip install sphinx
+          pip install -e .
           pip install -r docs/requirements.txt
+      - name: Generate API docs
+        run: sphinx-apidoc -o docs lazypredict --force
       - run: sphinx-build docs docs/_build/html
       - uses: peaceiris/actions-gh-pages@v4
         with:

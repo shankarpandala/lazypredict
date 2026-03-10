@@ -34,6 +34,8 @@ from lazypredict.config import (
     DEFAULT_ROLLING_WINDOWS,
     DEFAULT_SORT_BY_FORECASTER,
     REMOVED_FORECASTERS,
+    get_gpu_model_params,
+    is_gpu_available,
 )
 from lazypredict.exceptions import InsufficientDataError
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
@@ -106,6 +108,13 @@ try:
     _LIGHTGBM_AVAILABLE = True
 except ImportError:
     _LIGHTGBM_AVAILABLE = False
+
+try:
+    import catboost  # noqa: F401
+
+    _CATBOOST_AVAILABLE = True
+except ImportError:
+    _CATBOOST_AVAILABLE = False
 
 try:
     import timesfm  # noqa: F401
@@ -466,23 +475,29 @@ class MLForecaster(ForecasterWrapper):
         n_lags: int = 10,
         n_rolling: Tuple[int, ...] = (3, 7),
         random_state: int = 42,
+        use_gpu: bool = False,
     ):
         self.estimator_class = estimator_class
         self._model_name = model_name
         self.n_lags = n_lags
         self.n_rolling = n_rolling
         self.random_state = random_state
+        self.use_gpu = use_gpu
 
     def fit(self, y_train, X_train=None):
         X_feat, y_feat = create_lag_features(
             y_train, self.n_lags, self.n_rolling, X_exog=X_train
         )
-        params: dict = {}
+        params: dict = get_gpu_model_params(self.estimator_class, self.use_gpu)
         try:
             if "random_state" in self.estimator_class().get_params():
                 params["random_state"] = self.random_state
         except Exception:
             pass
+        # CatBoost: suppress verbose output by default
+        module = getattr(self.estimator_class, "__module__", "") or ""
+        if "catboost" in module:
+            params.setdefault("verbose", 0)
         self._estimator = self.estimator_class(**params)
         self._scaler = StandardScaler()
         X_scaled = self._scaler.fit_transform(X_feat)
@@ -547,6 +562,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
         batch_size: int = 32,
         learning_rate: float = 1e-3,
         random_state: int = 42,
+        use_gpu: bool = False,
     ):
         self.n_lags = n_lags
         self.n_rolling = n_rolling
@@ -555,6 +571,14 @@ class _TorchRNNForecaster(ForecasterWrapper):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.random_state = random_state
+        self.use_gpu = use_gpu
+
+    def _get_device(self):
+        """Determine the torch device to use."""
+        import torch as _torch
+        if self.use_gpu and _torch.cuda.is_available():
+            return _torch.device("cuda")
+        return _torch.device("cpu")
 
     def fit(self, y_train, X_train=None):
         import torch as _torch
@@ -563,6 +587,8 @@ class _TorchRNNForecaster(ForecasterWrapper):
 
         _torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
+
+        device = self._get_device()
 
         X_feat, y_feat = create_lag_features(
             y_train, self.n_lags, self.n_rolling, X_exog=X_train
@@ -573,8 +599,10 @@ class _TorchRNNForecaster(ForecasterWrapper):
         n_features = X_scaled.shape[1]
         X_tensor = _torch.tensor(
             X_scaled.reshape(-1, 1, n_features), dtype=_torch.float32
-        )
-        y_tensor = _torch.tensor(y_feat.reshape(-1, 1), dtype=_torch.float32)
+        ).to(device)
+        y_tensor = _torch.tensor(
+            y_feat.reshape(-1, 1), dtype=_torch.float32
+        ).to(device)
 
         dataset = TensorDataset(X_tensor, y_tensor)
         loader = DataLoader(
@@ -586,8 +614,9 @@ class _TorchRNNForecaster(ForecasterWrapper):
         self._rnn = rnn_class(
             input_size=n_features, hidden_size=self.hidden_size,
             num_layers=1, batch_first=True,
-        )
-        self._linear = nn.Linear(self.hidden_size, 1)
+        ).to(device)
+        self._linear = nn.Linear(self.hidden_size, 1).to(device)
+        self._device = device
         params = list(self._rnn.parameters()) + list(self._linear.parameters())
         optimizer = _torch.optim.Adam(params, lr=self.learning_rate)
         loss_fn = nn.MSELoss()
@@ -623,6 +652,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
     def predict(self, horizon, X_test=None):
         import torch as _torch
 
+        device = self._device
         predictions: List[float] = []
         history = list(self._y_train)
         n_rolling = self.n_rolling
@@ -653,7 +683,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
                 X_step = self._scaler.transform(X_step)
                 X_tensor = _torch.tensor(
                     X_step.reshape(1, 1, -1), dtype=_torch.float32
-                )
+                ).to(device)
                 output, _ = self._rnn(X_tensor)
                 pred = self._linear(output[:, -1, :]).item()
                 predictions.append(pred)
@@ -699,16 +729,40 @@ class TimesFMForecaster(ForecasterWrapper):
     specific training is needed.  Exogenous features are **not** supported and
     will be silently ignored.
 
+    When ``use_gpu=True`` and CUDA is available, the model is placed on GPU
+    for faster inference.
+
+    Parameters
+    ----------
+    use_gpu : bool, optional (default=False)
+        Place the model on a CUDA device when available.
+    model_path : str or None, optional (default=None)
+        Path to a local directory containing the pre-downloaded TimesFM
+        model weights.  When ``None`` (default), the model is downloaded
+        from Hugging Face (``google/timesfm-2.5-200m-pytorch``).
+        Use this when you are offline or behind a firewall.
+
     Requires ``timesfm`` and ``torch`` (Python 3.10-3.11 only).
     """
+
+    def __init__(self, use_gpu: bool = False, model_path: Optional[str] = None):
+        self.use_gpu = use_gpu
+        self.model_path = model_path
 
     def fit(self, y_train, X_train=None):
         import torch as _torch
         import timesfm as _timesfm
 
         _torch.set_float32_matmul_precision("high")
+
+        # Determine device: GPU if requested and available
+        backend = "gpu" if (self.use_gpu and _torch.cuda.is_available()) else "cpu"
+        device = _torch.device("cuda" if backend == "gpu" else "cpu")
+
+        repo_or_path = self.model_path or "google/timesfm-2.5-200m-pytorch"
         self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
-            "google/timesfm-2.5-200m-pytorch"
+            repo_or_path,
+            torch_device=device,
         )
         self._model.compile(
             _timesfm.ForecastConfig(
@@ -745,6 +799,8 @@ def _build_forecaster_list(
     n_rolling: Tuple[int, ...],
     random_state: int,
     seasonal_period: Optional[int],
+    use_gpu: bool = False,
+    foundation_model_path: Optional[str] = None,
 ) -> List[Tuple[str, ForecasterWrapper]]:
     """Build the default list of all available forecasters.
 
@@ -758,6 +814,11 @@ def _build_forecaster_list(
         Seed for reproducible ML / DL models.
     seasonal_period : int or None
         Detected or user-specified seasonal period.
+    use_gpu : bool, optional (default=False)
+        When True, enables GPU acceleration for models that support it.
+    foundation_model_path : str or None, optional (default=None)
+        Local path to pre-downloaded foundation model weights (e.g. TimesFM).
+        When ``None``, models are downloaded from Hugging Face.
 
     Returns
     -------
@@ -827,6 +888,8 @@ def _build_forecaster_list(
         ml_models.append(("XGBRegressor_TS", xgboost.XGBRegressor))
     if _LIGHTGBM_AVAILABLE:
         ml_models.append(("LGBMRegressor_TS", lightgbm.LGBMRegressor))
+    if _CATBOOST_AVAILABLE:
+        ml_models.append(("CatBoostRegressor_TS", catboost.CatBoostRegressor))
 
     for ml_name, ml_class in ml_models:
         forecasters.append((
@@ -837,6 +900,7 @@ def _build_forecaster_list(
                 n_lags=n_lags,
                 n_rolling=n_rolling,
                 random_state=random_state,
+                use_gpu=use_gpu,
             ),
         ))
 
@@ -845,13 +909,15 @@ def _build_forecaster_list(
         forecasters.append((
             "LSTM_TS",
             LSTMForecaster(
-                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state
+                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state,
+                use_gpu=use_gpu,
             ),
         ))
         forecasters.append((
             "GRU_TS",
             GRUForecaster(
-                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state
+                n_lags=n_lags, n_rolling=n_rolling, random_state=random_state,
+                use_gpu=use_gpu,
             ),
         ))
     else:
@@ -862,7 +928,10 @@ def _build_forecaster_list(
 
     # -- Pretrained foundation models (requires timesfm) ----------------------
     if _TIMESFM_AVAILABLE:
-        forecasters.append(("TimesFM", TimesFMForecaster()))
+        forecasters.append((
+            "TimesFM",
+            TimesFMForecaster(use_gpu=use_gpu, model_path=foundation_model_path),
+        ))
     else:
         logger.info(
             "timesfm not installed — TimesFM model unavailable. "
@@ -923,6 +992,15 @@ class LazyForecaster:
         Limit the number of models to train.
     progress_callback : callable or None, optional (default=None)
         Called after each model as ``f(name, current, total, metrics)``.
+    use_gpu : bool, optional (default=False)
+        When True, enables GPU acceleration for models that support it
+        (e.g., XGBoost, LightGBM, LSTM, GRU). Falls back to CPU if CUDA
+        is unavailable.
+    foundation_model_path : str or None, optional (default=None)
+        Local filesystem path to pre-downloaded foundation model weights
+        (e.g. TimesFM).  Use this when you are offline, behind a firewall,
+        or in an air-gapped environment.  When ``None`` (default), the
+        model is downloaded from Hugging Face automatically.
 
     Attributes
     ----------
@@ -949,6 +1027,8 @@ class LazyForecaster:
         n_jobs: int = -1,
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
+        use_gpu: bool = False,
+        foundation_model_path: Optional[str] = None,
     ):
         # Validate
         if cv is not None and (not isinstance(cv, int) or cv < 2):
@@ -985,10 +1065,21 @@ class LazyForecaster:
         self.n_jobs = n_jobs
         self.max_models = max_models
         self.progress_callback = progress_callback
+        self.use_gpu = use_gpu
+        self.foundation_model_path = foundation_model_path
 
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
         self.mlflow_enabled = setup_mlflow()
+
+        if self.use_gpu:
+            if is_gpu_available():
+                logger.info("GPU acceleration enabled. CUDA is available.")
+            else:
+                logger.warning(
+                    "GPU requested but CUDA is not available. "
+                    "Models that require GPU will fall back to CPU."
+                )
 
     # --------------------------------------------------------------------- #
     # Public API                                                              #
@@ -1155,6 +1246,8 @@ class LazyForecaster:
             n_rolling=self.n_rolling,
             random_state=self.random_state,
             seasonal_period=seasonal_period,
+            use_gpu=self.use_gpu,
+            foundation_model_path=self.foundation_model_path,
         )
 
         # Filter to user-specified subset

@@ -85,6 +85,13 @@ try:
 except ImportError:
     _LIGHTGBM_AVAILABLE = False
 
+# Optional catboost
+try:
+    import catboost
+    _CATBOOST_AVAILABLE = True
+except ImportError:
+    _CATBOOST_AVAILABLE = False
+
 # Optional perpetual
 try:
     from perpetual import PerpetualBooster
@@ -127,6 +134,10 @@ if _XGBOOST_AVAILABLE:
 if _LIGHTGBM_AVAILABLE:
     REGRESSORS.append(("LGBMRegressor", lightgbm.LGBMRegressor))
     CLASSIFIERS.append(("LGBMClassifier", lightgbm.LGBMClassifier))
+
+if _CATBOOST_AVAILABLE:
+    REGRESSORS.append(("CatBoostRegressor", catboost.CatBoostRegressor))
+    CLASSIFIERS.append(("CatBoostClassifier", catboost.CatBoostClassifier))
 
 if PERPETUAL_AVAILABLE:
     REGRESSORS.append(("PerpetualBooster", PerpetualBooster))
@@ -200,6 +211,11 @@ class LazyClassifier(LazyEstimator):
         Maximum number of models to train. None means train all.
     progress_callback : callable or None, optional (default=None)
         Callback ``f(model_name, current, total, metrics)`` called after each model.
+    use_gpu : bool, optional (default=False)
+        When True, enables GPU acceleration for models that support it
+        (e.g., XGBoost, LightGBM, CatBoost). When cuML (RAPIDS) is installed,
+        GPU-accelerated scikit-learn equivalents are also added automatically.
+        Falls back to CPU if CUDA is unavailable.
 
     Examples
     --------
@@ -228,6 +244,7 @@ class LazyClassifier(LazyEstimator):
         n_jobs: int = -1,
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
+        use_gpu: bool = False,
     ):
         super().__init__(
             verbose=verbose,
@@ -241,6 +258,7 @@ class LazyClassifier(LazyEstimator):
             n_jobs=n_jobs,
             max_models=max_models,
             progress_callback=progress_callback,
+            use_gpu=use_gpu,
         )
         self.classifiers = classifiers
 
@@ -411,6 +429,9 @@ class LazyRegressor(LazyEstimator):
         Maximum number of models to train. None means train all.
     progress_callback : callable or None, optional (default=None)
         Callback ``f(model_name, current, total, metrics)`` called after each model.
+    use_gpu : bool, optional (default=False)
+        When True, enables GPU acceleration for models that support it
+        (e.g., XGBoost, LightGBM). Falls back to CPU if CUDA is unavailable.
 
     Examples
     --------
@@ -442,6 +463,7 @@ class LazyRegressor(LazyEstimator):
         n_jobs: int = -1,
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
+        use_gpu: bool = False,
     ):
         super().__init__(
             verbose=verbose,
@@ -455,6 +477,7 @@ class LazyRegressor(LazyEstimator):
             n_jobs=n_jobs,
             max_models=max_models,
             progress_callback=progress_callback,
+            use_gpu=use_gpu,
         )
         self.regressors = regressors
 

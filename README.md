@@ -19,7 +19,8 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 - Automatic seasonal period detection via ACF
 - Multiple categorical encoding strategies (OneHot, Ordinal, Target, Binary)
 - Built-in MLflow integration for experiment tracking
-- Support for Python 3.8 through 3.13
+- **GPU acceleration**: XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM
+- Support for Python 3.9 through 3.13
 - Custom metric evaluation support
 - Configurable timeout and cross-validation
 - Intel Extension for Scikit-learn acceleration support
@@ -40,7 +41,7 @@ conda install -c conda-forge lazypredict
 
 ### Optional extras (pip only)
 
-Install with boosting libraries (XGBoost, LightGBM):
+Install with boosting libraries (XGBoost, LightGBM, CatBoost):
 
 ```bash
 pip install lazypredict[boost]
@@ -92,7 +93,7 @@ print(models)
 ### Advanced Options
 
 ```python
-# With categorical encoding, timeout, and cross-validation
+# With categorical encoding, timeout, cross-validation, and GPU
 clf = LazyClassifier(
     verbose=1,                          # Show progress
     ignore_warnings=True,               # Suppress warnings
@@ -101,7 +102,8 @@ clf = LazyClassifier(
     classifiers='all',                  # Use all available classifiers
     categorical_encoder='onehot',       # Encoding: 'onehot', 'ordinal', 'target', 'binary'
     timeout=60,                         # Max time per model in seconds
-    cv=5                                # Cross-validation folds (optional)
+    cv=5,                               # Cross-validation folds (optional)
+    use_gpu=True                        # Enable GPU acceleration
 )
 models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 ```
@@ -119,6 +121,7 @@ models, predictions = clf.fit(X_train, X_test, y_train, y_test)
   - `'binary'`: Binary encoding (requires `category-encoders`)
 - `timeout` (int): Maximum seconds per model (None for no limit)
 - `cv` (int): Number of cross-validation folds (None to disable)
+- `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
 
 | Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
 |:-------------------------------|-----------:|--------------------:|----------:|-----------:|-------------:|
@@ -181,7 +184,7 @@ print(models)
 ### Advanced Options
 
 ```python
-# With categorical encoding and timeout
+# With categorical encoding, timeout, and GPU
 reg = LazyRegressor(
     verbose=1,                          # Show progress
     ignore_warnings=True,               # Suppress warnings
@@ -189,7 +192,8 @@ reg = LazyRegressor(
     predictions=True,                   # Return predictions
     regressors='all',                   # Use all available regressors
     categorical_encoder='ordinal',      # Encoding: 'onehot', 'ordinal', 'target', 'binary'
-    timeout=120                         # Max time per model in seconds
+    timeout=120,                        # Max time per model in seconds
+    use_gpu=True                        # Enable GPU acceleration
 )
 models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 ```
@@ -206,6 +210,7 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
   - `'target'`: Target encoding (requires `category-encoders`)
   - `'binary'`: Binary encoding (requires `category-encoders`)
 - `timeout` (int): Maximum seconds per model (None for no limit)
+- `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
 
 | Model                         |   Adjusted R-Squared |   R-Squared |     RMSE |   Time Taken |
 |:------------------------------|---------------------:|------------:|---------:|-------------:|
@@ -301,6 +306,8 @@ fcst = LazyForecaster(
     sort_by="RMSE",                     # Sort metric (MAE, MAPE, SMAPE, MASE, R-Squared)
     forecasters="all",                  # Or list: ["Holt", "AutoARIMA", "LSTM_TS"]
     max_models=10,                      # Limit number of models
+    use_gpu=True,                       # GPU acceleration for supported models
+    foundation_model_path="/path/to/timesfm-weights",  # Local model weights (offline)
 )
 scores, predictions = fcst.fit(y_train, y_test)
 ```
@@ -318,14 +325,47 @@ scores, predictions = fcst.fit(y_train, y_test)
 - `n_rolling` (tuple): Rolling-window sizes for feature engineering (default (3, 7))
 - `max_models` (int/None): Limit total models to train
 - `custom_metric` (callable): Additional metric ``f(y_true, y_pred) -> float``
+- `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
+- `foundation_model_path` (str): Local path to pre-downloaded foundation model weights (e.g. TimesFM)
 
 **Available model categories:**
 - **Baselines:** Naive, SeasonalNaive
 - **Statistical (statsmodels):** SimpleExpSmoothing, Holt, HoltWinters_Add, HoltWinters_Mul, Theta, SARIMAX
 - **Statistical (pmdarima):** AutoARIMA
-- **ML (sklearn):** LinearRegression_TS, Ridge_TS, Lasso_TS, ElasticNet_TS, KNeighborsRegressor_TS, DecisionTreeRegressor_TS, RandomForestRegressor_TS, GradientBoostingRegressor_TS, AdaBoostRegressor_TS, ExtraTreesRegressor_TS, BaggingRegressor_TS, SVR_TS, XGBRegressor_TS, LGBMRegressor_TS
+- **ML (sklearn):** LinearRegression_TS, Ridge_TS, Lasso_TS, ElasticNet_TS, KNeighborsRegressor_TS, DecisionTreeRegressor_TS, RandomForestRegressor_TS, GradientBoostingRegressor_TS, AdaBoostRegressor_TS, ExtraTreesRegressor_TS, BaggingRegressor_TS, SVR_TS, XGBRegressor_TS, LGBMRegressor_TS, CatBoostRegressor_TS
 - **Deep Learning (torch):** LSTM_TS, GRU_TS
 - **Foundation (timesfm):** TimesFM
+
+## GPU Acceleration
+
+Enable GPU acceleration for supported models with `use_gpu=True`:
+
+```python
+from lazypredict.Supervised import LazyClassifier, LazyRegressor
+
+# Classification with GPU
+clf = LazyClassifier(use_gpu=True, verbose=0, ignore_warnings=True)
+models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+# Regression with GPU
+reg = LazyRegressor(use_gpu=True, verbose=0, ignore_warnings=True)
+models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+# Time Series with GPU
+from lazypredict.TimeSeriesForecasting import LazyForecaster
+fcst = LazyForecaster(use_gpu=True, verbose=0, ignore_warnings=True)
+scores, predictions = fcst.fit(y_train, y_test)
+```
+
+**Supported GPU backends:**
+- **XGBoost** — `device="cuda"`
+- **LightGBM** — `device="gpu"`
+- **CatBoost** — `task_type="GPU"`
+- **cuML (RAPIDS)** — GPU-native scikit-learn replacements (auto-discovered when installed)
+- **LSTM / GRU** — PyTorch CUDA
+- **TimesFM** — PyTorch CUDA
+
+Falls back to CPU automatically if no CUDA GPU is available.
 
 ## Categorical Encoding
 

@@ -1,0 +1,94 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if version changed
+        id: version
+        run: |
+          CURRENT=$(python -c "
+          import configparser, ast
+          try:
+              import tomllib
+          except ImportError:
+              import tomli as tomllib
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          print(data['project']['version'])
+          ")
+
+          PREVIOUS=$(git show HEAD~1:pyproject.toml | python -c "
+          import sys
+          try:
+              import tomllib
+          except ImportError:
+              import tomli as tomllib
+          data = tomllib.loads(sys.stdin.read())
+          print(data['project']['version'])
+          " 2>/dev/null || echo "")
+
+          echo "current=$CURRENT"
+          echo "previous=$PREVIOUS"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+
+          if [ "$CURRENT" != "$PREVIOUS" ] && [ -n "$CURRENT" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check if release already exists
+        if: steps.version.outputs.changed == 'true'
+        id: check_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.current }}"
+          TAG="v${VERSION}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          # Detect pre-release (PEP 440: a, b, rc, dev)
+          if echo "$VERSION" | grep -qE '(a|b|rc|dev)[0-9]'; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.changed == 'true' && steps.check_release.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.check_release.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.current }}"
+          PRERELEASE="${{ steps.check_release.outputs.prerelease }}"
+
+          ARGS=(
+            "$TAG"
+            --target "${{ github.sha }}"
+            --title "v${VERSION}"
+            --generate-notes
+          )
+
+          if [ "$PRERELEASE" = "true" ]; then
+            ARGS+=(--prerelease)
+          fi
+
+          gh release create "${ARGS[@]}"

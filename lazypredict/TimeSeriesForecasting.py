@@ -9,6 +9,7 @@ perform best on a given time series.
 
 import copy
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -760,16 +761,47 @@ class TimesFMForecaster(ForecasterWrapper):
         device = _torch.device("cuda" if backend == "gpu" else "cpu")
 
         repo_or_path = self.model_path or "google/timesfm-2.5-200m-pytorch"
-        self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
-            repo_or_path,
-            torch_device=device,
+
+        # If model_path is a local directory containing model.safetensors,
+        # load directly via checkpoint (works offline without HF Hub).
+        safetensors_file = (
+            os.path.join(repo_or_path, "model.safetensors")
+            if self.model_path and os.path.isdir(self.model_path)
+            else None
         )
+
+        if safetensors_file and os.path.isfile(safetensors_file):
+            prev_offline = os.environ.get("HF_HUB_OFFLINE")
+            os.environ["HF_HUB_OFFLINE"] = "1"
+            try:
+                self._model = _timesfm.TimesFM_2p5_200M_torch()
+                self._model.load_checkpoint(safetensors_file)
+            finally:
+                if prev_offline is None:
+                    os.environ.pop("HF_HUB_OFFLINE", None)
+                else:
+                    os.environ["HF_HUB_OFFLINE"] = prev_offline
+        else:
+            # Try loading from HF cache first, then fall back to download
+            kwargs = {"torch_device": device}
+            try:
+                self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                    repo_or_path, local_files_only=True, **kwargs,
+                )
+            except Exception:
+                self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                    repo_or_path, **kwargs,
+                )
+
         self._model.compile(
             _timesfm.ForecastConfig(
-                max_context=min(len(y_train), 16000),
+                max_context=min(len(y_train), 1024),
                 max_horizon=256,
                 normalize_inputs=True,
                 use_continuous_quantile_head=True,
+                force_flip_invariance=True,
+                infer_is_positive=True,
+                fix_quantile_crossing=True,
             )
         )
         self._y_train = np.asarray(y_train, dtype=float)

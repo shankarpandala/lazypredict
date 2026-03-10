@@ -6,20 +6,20 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Usage &mdash; Lazy Predict 0.2.16 documentation</title>
+  <title>Usage &mdash; Lazy Predict 0.3.0a2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=e2418eca"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=5fdc151f"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="next" title="lazypredict" href="modules.html" />
     <link rel="prev" title="Installation" href="installation.html" /> 
 </head>
 
@@ -48,10 +48,38 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#classification">Classification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#regression">Regression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#time-series-forecasting">Time Series Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#gpu-acceleration">GPU Acceleration</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">lazypredict</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Types of Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#tips">Tips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#deploying">Deploying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Development Lead</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html#contributors">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">0.3.0a2 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#a1-2026-03-10">0.3.0a1 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id1">0.2.15 (2025-04-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id2">0.2.11 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id3">0.2.10 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id4">0.2.8 (2021-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id5">0.2.7 (2020-07-09)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id6">0.2.6 (2020-01-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id7">0.2.5 (2020-01-20)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id8">0.2.4 (2020-01-19)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id9">0.2.3 (2019-11-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id10">0.2.2 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id11">0.2.1 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id12">0.2.0 (2019-11-17)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id13">0.1.0 (2019-11-16)</a></li>
 </ul>
 
         </div>
@@ -98,40 +126,6 @@
 <span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 <span class="n">models</span><span class="p">,</span><span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
 <span class="n">models</span>
-
-
-<span class="o">|</span> <span class="n">Model</span>                          <span class="o">|</span>   <span class="n">Accuracy</span> <span class="o">|</span>   <span class="n">Balanced</span> <span class="n">Accuracy</span> <span class="o">|</span>   <span class="n">ROC</span> <span class="n">AUC</span> <span class="o">|</span>   <span class="n">F1</span> <span class="n">Score</span> <span class="o">|</span>   <span class="n">Time</span> <span class="n">Taken</span> <span class="o">|</span>
-<span class="o">|</span><span class="p">:</span><span class="o">-------------------------------|-----------</span><span class="p">:</span><span class="o">|--------------------</span><span class="p">:</span><span class="o">|----------</span><span class="p">:</span><span class="o">|-----------</span><span class="p">:</span><span class="o">|-------------</span><span class="p">:</span><span class="o">|</span>
-<span class="o">|</span> <span class="n">LinearSVC</span>                      <span class="o">|</span>   <span class="mf">0.989474</span> <span class="o">|</span>            <span class="mf">0.987544</span> <span class="o">|</span>  <span class="mf">0.987544</span> <span class="o">|</span>   <span class="mf">0.989462</span> <span class="o">|</span>    <span class="mf">0.0150008</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">SGDClassifier</span>                  <span class="o">|</span>   <span class="mf">0.989474</span> <span class="o">|</span>            <span class="mf">0.987544</span> <span class="o">|</span>  <span class="mf">0.987544</span> <span class="o">|</span>   <span class="mf">0.989462</span> <span class="o">|</span>    <span class="mf">0.0109992</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">MLPClassifier</span>                  <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.986904</span> <span class="o">|</span>  <span class="mf">0.986904</span> <span class="o">|</span>   <span class="mf">0.985994</span> <span class="o">|</span>    <span class="mf">0.426</span>     <span class="o">|</span>
-<span class="o">|</span> <span class="n">Perceptron</span>                     <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.984797</span> <span class="o">|</span>  <span class="mf">0.984797</span> <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>    <span class="mf">0.0120046</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LogisticRegression</span>             <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.98269</span>  <span class="o">|</span>  <span class="mf">0.98269</span>  <span class="o">|</span>   <span class="mf">0.985934</span> <span class="o">|</span>    <span class="mf">0.0200036</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LogisticRegressionCV</span>           <span class="o">|</span>   <span class="mf">0.985965</span> <span class="o">|</span>            <span class="mf">0.98269</span>  <span class="o">|</span>  <span class="mf">0.98269</span>  <span class="o">|</span>   <span class="mf">0.985934</span> <span class="o">|</span>    <span class="mf">0.262997</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">SVC</span>                            <span class="o">|</span>   <span class="mf">0.982456</span> <span class="o">|</span>            <span class="mf">0.979942</span> <span class="o">|</span>  <span class="mf">0.979942</span> <span class="o">|</span>   <span class="mf">0.982437</span> <span class="o">|</span>    <span class="mf">0.0140011</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">CalibratedClassifierCV</span>         <span class="o">|</span>   <span class="mf">0.982456</span> <span class="o">|</span>            <span class="mf">0.975728</span> <span class="o">|</span>  <span class="mf">0.975728</span> <span class="o">|</span>   <span class="mf">0.982357</span> <span class="o">|</span>    <span class="mf">0.0350015</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">PassiveAggressiveClassifier</span>    <span class="o">|</span>   <span class="mf">0.975439</span> <span class="o">|</span>            <span class="mf">0.974448</span> <span class="o">|</span>  <span class="mf">0.974448</span> <span class="o">|</span>   <span class="mf">0.975464</span> <span class="o">|</span>    <span class="mf">0.0130005</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LabelPropagation</span>               <span class="o">|</span>   <span class="mf">0.975439</span> <span class="o">|</span>            <span class="mf">0.974448</span> <span class="o">|</span>  <span class="mf">0.974448</span> <span class="o">|</span>   <span class="mf">0.975464</span> <span class="o">|</span>    <span class="mf">0.0429988</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LabelSpreading</span>                 <span class="o">|</span>   <span class="mf">0.975439</span> <span class="o">|</span>            <span class="mf">0.974448</span> <span class="o">|</span>  <span class="mf">0.974448</span> <span class="o">|</span>   <span class="mf">0.975464</span> <span class="o">|</span>    <span class="mf">0.0310006</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">RandomForestClassifier</span>         <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>            <span class="mf">0.969594</span> <span class="o">|</span>  <span class="mf">0.969594</span> <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>    <span class="mf">0.033</span>     <span class="o">|</span>
-<span class="o">|</span> <span class="n">GradientBoostingClassifier</span>     <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>            <span class="mf">0.967486</span> <span class="o">|</span>  <span class="mf">0.967486</span> <span class="o">|</span>   <span class="mf">0.971869</span> <span class="o">|</span>    <span class="mf">0.166998</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">QuadraticDiscriminantAnalysis</span>  <span class="o">|</span>   <span class="mf">0.964912</span> <span class="o">|</span>            <span class="mf">0.966206</span> <span class="o">|</span>  <span class="mf">0.966206</span> <span class="o">|</span>   <span class="mf">0.965052</span> <span class="o">|</span>    <span class="mf">0.0119994</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">HistGradientBoostingClassifier</span> <span class="o">|</span>   <span class="mf">0.968421</span> <span class="o">|</span>            <span class="mf">0.964739</span> <span class="o">|</span>  <span class="mf">0.964739</span> <span class="o">|</span>   <span class="mf">0.968387</span> <span class="o">|</span>    <span class="mf">0.682003</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">RidgeClassifierCV</span>              <span class="o">|</span>   <span class="mf">0.97193</span>  <span class="o">|</span>            <span class="mf">0.963272</span> <span class="o">|</span>  <span class="mf">0.963272</span> <span class="o">|</span>   <span class="mf">0.971736</span> <span class="o">|</span>    <span class="mf">0.0130029</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">RidgeClassifier</span>                <span class="o">|</span>   <span class="mf">0.968421</span> <span class="o">|</span>            <span class="mf">0.960525</span> <span class="o">|</span>  <span class="mf">0.960525</span> <span class="o">|</span>   <span class="mf">0.968242</span> <span class="o">|</span>    <span class="mf">0.0119977</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">AdaBoostClassifier</span>             <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.959245</span> <span class="o">|</span>  <span class="mf">0.959245</span> <span class="o">|</span>   <span class="mf">0.961444</span> <span class="o">|</span>    <span class="mf">0.204998</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">ExtraTreesClassifier</span>           <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.957138</span> <span class="o">|</span>  <span class="mf">0.957138</span> <span class="o">|</span>   <span class="mf">0.961362</span> <span class="o">|</span>    <span class="mf">0.0270066</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">KNeighborsClassifier</span>           <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.95503</span>  <span class="o">|</span>  <span class="mf">0.95503</span>  <span class="o">|</span>   <span class="mf">0.961276</span> <span class="o">|</span>    <span class="mf">0.0560005</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">BaggingClassifier</span>              <span class="o">|</span>   <span class="mf">0.947368</span> <span class="o">|</span>            <span class="mf">0.954577</span> <span class="o">|</span>  <span class="mf">0.954577</span> <span class="o">|</span>   <span class="mf">0.947882</span> <span class="o">|</span>    <span class="mf">0.0559971</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">BernoulliNB</span>                    <span class="o">|</span>   <span class="mf">0.950877</span> <span class="o">|</span>            <span class="mf">0.951003</span> <span class="o">|</span>  <span class="mf">0.951003</span> <span class="o">|</span>   <span class="mf">0.951072</span> <span class="o">|</span>    <span class="mf">0.0169988</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LinearDiscriminantAnalysis</span>     <span class="o">|</span>   <span class="mf">0.961404</span> <span class="o">|</span>            <span class="mf">0.950816</span> <span class="o">|</span>  <span class="mf">0.950816</span> <span class="o">|</span>   <span class="mf">0.961089</span> <span class="o">|</span>    <span class="mf">0.0199995</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">GaussianNB</span>                     <span class="o">|</span>   <span class="mf">0.954386</span> <span class="o">|</span>            <span class="mf">0.949536</span> <span class="o">|</span>  <span class="mf">0.949536</span> <span class="o">|</span>   <span class="mf">0.954337</span> <span class="o">|</span>    <span class="mf">0.0139935</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">NuSVC</span>                          <span class="o">|</span>   <span class="mf">0.954386</span> <span class="o">|</span>            <span class="mf">0.943215</span> <span class="o">|</span>  <span class="mf">0.943215</span> <span class="o">|</span>   <span class="mf">0.954014</span> <span class="o">|</span>    <span class="mf">0.019989</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">DecisionTreeClassifier</span>         <span class="o">|</span>   <span class="mf">0.936842</span> <span class="o">|</span>            <span class="mf">0.933693</span> <span class="o">|</span>  <span class="mf">0.933693</span> <span class="o">|</span>   <span class="mf">0.936971</span> <span class="o">|</span>    <span class="mf">0.0170023</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">NearestCentroid</span>                <span class="o">|</span>   <span class="mf">0.947368</span> <span class="o">|</span>            <span class="mf">0.933506</span> <span class="o">|</span>  <span class="mf">0.933506</span> <span class="o">|</span>   <span class="mf">0.946801</span> <span class="o">|</span>    <span class="mf">0.0160074</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">ExtraTreeClassifier</span>            <span class="o">|</span>   <span class="mf">0.922807</span> <span class="o">|</span>            <span class="mf">0.912168</span> <span class="o">|</span>  <span class="mf">0.912168</span> <span class="o">|</span>   <span class="mf">0.922462</span> <span class="o">|</span>    <span class="mf">0.0109999</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">CheckingClassifier</span>             <span class="o">|</span>   <span class="mf">0.361404</span> <span class="o">|</span>            <span class="mf">0.5</span>      <span class="o">|</span>  <span class="mf">0.5</span>      <span class="o">|</span>   <span class="mf">0.191879</span> <span class="o">|</span>    <span class="mf">0.0170043</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">DummyClassifier</span>                <span class="o">|</span>   <span class="mf">0.512281</span> <span class="o">|</span>            <span class="mf">0.489598</span> <span class="o">|</span>  <span class="mf">0.489598</span> <span class="o">|</span>   <span class="mf">0.518924</span> <span class="o">|</span>    <span class="mf">0.0119965</span> <span class="o">|</span>
 </pre></div>
 </div>
 </section>
@@ -139,57 +133,17 @@
 <h1>Regression<a class="headerlink" href="#regression" title="Link to this heading"></a></h1>
 <p>Example</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyRegressor</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">datasets</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_diabetes</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">shuffle</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="n">boston</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_boston</span><span class="p">()</span>
-<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">shuffle</span><span class="p">(</span><span class="n">boston</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">boston</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+<span class="n">diabetes</span> <span class="o">=</span> <span class="n">load_diabetes</span><span class="p">()</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">shuffle</span><span class="p">(</span><span class="n">diabetes</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">diabetes</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
 <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 <span class="n">offset</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">)</span>
 <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:</span><span class="n">offset</span><span class="p">],</span> <span class="n">y</span><span class="p">[:</span><span class="n">offset</span><span class="p">]</span>
 <span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">offset</span><span class="p">:],</span> <span class="n">y</span><span class="p">[</span><span class="n">offset</span><span class="p">:]</span>
 <span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span> <span class="p">)</span>
 <span class="n">models</span><span class="p">,</span><span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
-
-
-<span class="o">|</span> <span class="n">Model</span>                         <span class="o">|</span>   <span class="n">R</span><span class="o">-</span><span class="n">Squared</span> <span class="o">|</span>     <span class="n">RMSE</span> <span class="o">|</span>   <span class="n">Time</span> <span class="n">Taken</span> <span class="o">|</span>
-<span class="o">|</span><span class="p">:</span><span class="o">------------------------------|------------</span><span class="p">:</span><span class="o">|---------</span><span class="p">:</span><span class="o">|-------------</span><span class="p">:</span><span class="o">|</span>
-<span class="o">|</span> <span class="n">SVR</span>                           <span class="o">|</span>   <span class="mf">0.877199</span>  <span class="o">|</span>  <span class="mf">2.62054</span> <span class="o">|</span>    <span class="mf">0.0330021</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">RandomForestRegressor</span>         <span class="o">|</span>   <span class="mf">0.874429</span>  <span class="o">|</span>  <span class="mf">2.64993</span> <span class="o">|</span>    <span class="mf">0.0659981</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">ExtraTreesRegressor</span>           <span class="o">|</span>   <span class="mf">0.867566</span>  <span class="o">|</span>  <span class="mf">2.72138</span> <span class="o">|</span>    <span class="mf">0.0570002</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">AdaBoostRegressor</span>             <span class="o">|</span>   <span class="mf">0.865851</span>  <span class="o">|</span>  <span class="mf">2.73895</span> <span class="o">|</span>    <span class="mf">0.144999</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">NuSVR</span>                         <span class="o">|</span>   <span class="mf">0.863712</span>  <span class="o">|</span>  <span class="mf">2.7607</span>  <span class="o">|</span>    <span class="mf">0.0340044</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">GradientBoostingRegressor</span>     <span class="o">|</span>   <span class="mf">0.858693</span>  <span class="o">|</span>  <span class="mf">2.81107</span> <span class="o">|</span>    <span class="mf">0.13</span>      <span class="o">|</span>
-<span class="o">|</span> <span class="n">KNeighborsRegressor</span>           <span class="o">|</span>   <span class="mf">0.826307</span>  <span class="o">|</span>  <span class="mf">3.1166</span>  <span class="o">|</span>    <span class="mf">0.0179954</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">HistGradientBoostingRegressor</span> <span class="o">|</span>   <span class="mf">0.810479</span>  <span class="o">|</span>  <span class="mf">3.25551</span> <span class="o">|</span>    <span class="mf">0.820995</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">BaggingRegressor</span>              <span class="o">|</span>   <span class="mf">0.800056</span>  <span class="o">|</span>  <span class="mf">3.34383</span> <span class="o">|</span>    <span class="mf">0.0579946</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">MLPRegressor</span>                  <span class="o">|</span>   <span class="mf">0.750536</span>  <span class="o">|</span>  <span class="mf">3.73503</span> <span class="o">|</span>    <span class="mf">0.725997</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">HuberRegressor</span>                <span class="o">|</span>   <span class="mf">0.736973</span>  <span class="o">|</span>  <span class="mf">3.83522</span> <span class="o">|</span>    <span class="mf">0.0370018</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LinearSVR</span>                     <span class="o">|</span>   <span class="mf">0.71914</span>   <span class="o">|</span>  <span class="mf">3.9631</span>  <span class="o">|</span>    <span class="mf">0.0179989</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">RidgeCV</span>                       <span class="o">|</span>   <span class="mf">0.718402</span>  <span class="o">|</span>  <span class="mf">3.9683</span>  <span class="o">|</span>    <span class="mf">0.018003</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">BayesianRidge</span>                 <span class="o">|</span>   <span class="mf">0.718102</span>  <span class="o">|</span>  <span class="mf">3.97041</span> <span class="o">|</span>    <span class="mf">0.0159984</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">Ridge</span>                         <span class="o">|</span>   <span class="mf">0.71765</span>   <span class="o">|</span>  <span class="mf">3.9736</span>  <span class="o">|</span>    <span class="mf">0.0149941</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LinearRegression</span>              <span class="o">|</span>   <span class="mf">0.71753</span>   <span class="o">|</span>  <span class="mf">3.97444</span> <span class="o">|</span>    <span class="mf">0.0190051</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">TransformedTargetRegressor</span>    <span class="o">|</span>   <span class="mf">0.71753</span>   <span class="o">|</span>  <span class="mf">3.97444</span> <span class="o">|</span>    <span class="mf">0.012001</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">LassoCV</span>                       <span class="o">|</span>   <span class="mf">0.717337</span>  <span class="o">|</span>  <span class="mf">3.9758</span>  <span class="o">|</span>    <span class="mf">0.0960066</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">ElasticNetCV</span>                  <span class="o">|</span>   <span class="mf">0.717104</span>  <span class="o">|</span>  <span class="mf">3.97744</span> <span class="o">|</span>    <span class="mf">0.0860076</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LassoLarsCV</span>                   <span class="o">|</span>   <span class="mf">0.717045</span>  <span class="o">|</span>  <span class="mf">3.97786</span> <span class="o">|</span>    <span class="mf">0.0490005</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LassoLarsIC</span>                   <span class="o">|</span>   <span class="mf">0.716636</span>  <span class="o">|</span>  <span class="mf">3.98073</span> <span class="o">|</span>    <span class="mf">0.0210001</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LarsCV</span>                        <span class="o">|</span>   <span class="mf">0.715031</span>  <span class="o">|</span>  <span class="mf">3.99199</span> <span class="o">|</span>    <span class="mf">0.0450008</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">Lars</span>                          <span class="o">|</span>   <span class="mf">0.715031</span>  <span class="o">|</span>  <span class="mf">3.99199</span> <span class="o">|</span>    <span class="mf">0.0269964</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">SGDRegressor</span>                  <span class="o">|</span>   <span class="mf">0.714362</span>  <span class="o">|</span>  <span class="mf">3.99667</span> <span class="o">|</span>    <span class="mf">0.0210009</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">RANSACRegressor</span>               <span class="o">|</span>   <span class="mf">0.707849</span>  <span class="o">|</span>  <span class="mf">4.04198</span> <span class="o">|</span>    <span class="mf">0.111998</span>  <span class="o">|</span>
-<span class="o">|</span> <span class="n">ElasticNet</span>                    <span class="o">|</span>   <span class="mf">0.690408</span>  <span class="o">|</span>  <span class="mf">4.16088</span> <span class="o">|</span>    <span class="mf">0.0190012</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">Lasso</span>                         <span class="o">|</span>   <span class="mf">0.662141</span>  <span class="o">|</span>  <span class="mf">4.34668</span> <span class="o">|</span>    <span class="mf">0.0180018</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">OrthogonalMatchingPursuitCV</span>   <span class="o">|</span>   <span class="mf">0.591632</span>  <span class="o">|</span>  <span class="mf">4.77877</span> <span class="o">|</span>    <span class="mf">0.0180008</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">ExtraTreeRegressor</span>            <span class="o">|</span>   <span class="mf">0.583314</span>  <span class="o">|</span>  <span class="mf">4.82719</span> <span class="o">|</span>    <span class="mf">0.0129974</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">PassiveAggressiveRegressor</span>    <span class="o">|</span>   <span class="mf">0.556668</span>  <span class="o">|</span>  <span class="mf">4.97914</span> <span class="o">|</span>    <span class="mf">0.0150032</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">GaussianProcessRegressor</span>      <span class="o">|</span>   <span class="mf">0.428298</span>  <span class="o">|</span>  <span class="mf">5.65425</span> <span class="o">|</span>    <span class="mf">0.0580051</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">OrthogonalMatchingPursuit</span>     <span class="o">|</span>   <span class="mf">0.379295</span>  <span class="o">|</span>  <span class="mf">5.89159</span> <span class="o">|</span>    <span class="mf">0.0180039</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">DecisionTreeRegressor</span>         <span class="o">|</span>   <span class="mf">0.318767</span>  <span class="o">|</span>  <span class="mf">6.17217</span> <span class="o">|</span>    <span class="mf">0.0230272</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">DummyRegressor</span>                <span class="o">|</span>  <span class="o">-</span><span class="mf">0.0215752</span> <span class="o">|</span>  <span class="mf">7.55832</span> <span class="o">|</span>    <span class="mf">0.0140116</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">LassoLars</span>                     <span class="o">|</span>  <span class="o">-</span><span class="mf">0.0215752</span> <span class="o">|</span>  <span class="mf">7.55832</span> <span class="o">|</span>    <span class="mf">0.0180008</span> <span class="o">|</span>
-<span class="o">|</span> <span class="n">KernelRidge</span>                   <span class="o">|</span>  <span class="o">-</span><span class="mf">8.24669</span>   <span class="o">|</span> <span class="mf">22.7396</span>  <span class="o">|</span>    <span class="mf">0.0309792</span> <span class="o">|</span>
 </pre></div>
 </div>
 <div class="admonition warning">
@@ -198,19 +152,83 @@
 Regression and Classification classes will be removed in next release</p>
 </div>
 </section>
+<section id="time-series-forecasting">
+<h1>Time Series Forecasting<a class="headerlink" href="#time-series-forecasting" title="Link to this heading"></a></h1>
+<p>LazyForecaster benchmarks 20+ statistical, machine-learning, deep-learning,
+and pretrained foundation models on your time series with a single call.</p>
+<p>Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.TimeSeriesForecasting</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyForecaster</span>
+
+<span class="c1"># Generate sample data</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">+</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">t</span> <span class="o">/</span> <span class="mi">12</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+<span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:</span><span class="mi">180</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">180</span><span class="p">:]</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>With exogenous variables</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">X_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">180</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">180</span><span class="p">])])</span>
+<span class="n">X_test</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">180</span><span class="p">:]),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">180</span><span class="p">:])])</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>With cross-validation and custom options</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">seasonal_period</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>   <span class="c1"># override auto-detection</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>                 <span class="c1"># 3-fold TimeSeriesSplit CV</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>           <span class="c1"># max 30 seconds per model</span>
+    <span class="n">sort_by</span><span class="o">=</span><span class="s2">&quot;MAE&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="gpu-acceleration">
+<h1>GPU Acceleration<a class="headerlink" href="#gpu-acceleration" title="Link to this heading"></a></h1>
+<p>Enable GPU acceleration for supported models with <code class="docutils literal notranslate"><span class="pre">use_gpu=True</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>GPU-accelerated models:</p>
+<ul class="simple">
+<li><p><strong>XGBoost</strong> (<code class="docutils literal notranslate"><span class="pre">device=&quot;cuda&quot;</span></code>)</p></li>
+<li><p><strong>LightGBM</strong> (<code class="docutils literal notranslate"><span class="pre">device=&quot;gpu&quot;</span></code>)</p></li>
+<li><p><strong>CatBoost</strong> (<code class="docutils literal notranslate"><span class="pre">task_type=&quot;GPU&quot;</span></code>)</p></li>
+<li><p><strong>cuML (RAPIDS)</strong> — GPU-native sklearn replacements (auto-discovered)</p></li>
+<li><p><strong>LSTM / GRU</strong> — PyTorch CUDA</p></li>
+<li><p><strong>TimesFM</strong> — PyTorch CUDA</p></li>
+</ul>
+<p>Falls back to CPU automatically if no CUDA GPU is available.</p>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="modules.html" class="btn btn-neutral float-right" title="lazypredict" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022-2025, Shankar Rao Pandala.</p>
+    <p>&#169; Copyright 2022-2026, Shankar Rao Pandala.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to Lazy Predict &mdash; Lazy Predict 0.2.16 documentation</title>
+  <title>Welcome to Lazy Predict &mdash; Lazy Predict 0.3.0a2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=e2418eca"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=5fdc151f"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -47,10 +47,38 @@
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#classification">Classification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#regression">Regression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#time-series-forecasting">Time Series Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#gpu-acceleration">GPU Acceleration</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">lazypredict</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Types of Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#tips">Tips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#deploying">Deploying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Development Lead</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html#contributors">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">0.3.0a2 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#a1-2026-03-10">0.3.0a1 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id1">0.2.15 (2025-04-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id2">0.2.11 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id3">0.2.10 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id4">0.2.8 (2021-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id5">0.2.7 (2020-07-09)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id6">0.2.6 (2020-01-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id7">0.2.5 (2020-01-20)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id8">0.2.4 (2020-01-19)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id9">0.2.3 (2019-11-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id10">0.2.2 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id11">0.2.1 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id12">0.2.0 (2019-11-17)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id13">0.1.0 (2019-11-16)</a></li>
 </ul>
 
         </div>
@@ -109,34 +137,73 @@
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#classification">Classification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#regression">Regression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#time-series-forecasting">Time Series Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#gpu-acceleration">GPU Acceleration</a></li>
 </ul>
 </div>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">lazypredict</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lazypredict.html">lazypredict package</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#classification-example">Classification Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#regression-example">Regression Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples.html#working-with-pandas-dataframes">Working with Pandas DataFrames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#categorical-feature-encoding">Categorical Feature Encoding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#using-with-mlflow">Using with MLflow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#getting-model-objects">Getting Model Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#model-timeout">Model Timeout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#gpu-acceleration">GPU Acceleration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#intel-extension-acceleration">Intel Extension Acceleration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#time-series-forecasting">Time Series Forecasting</a></li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Types of Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#tips">Tips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#deploying">Deploying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Development Lead</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html#contributors">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">0.3.0a2 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#a1-2026-03-10">0.3.0a1 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id1">0.2.15 (2025-04-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id2">0.2.11 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id3">0.2.10 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id4">0.2.8 (2021-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id5">0.2.7 (2020-07-09)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id6">0.2.6 (2020-01-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id7">0.2.5 (2020-01-20)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id8">0.2.4 (2020-01-19)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id9">0.2.3 (2019-11-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id10">0.2.2 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id11">0.2.1 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id12">0.2.0 (2019-11-17)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id13">0.1.0 (2019-11-16)</a></li>
+</ul>
 </div>
 </section>
 <section id="features">
 <h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Over 40 built-in machine learning models</p></li>
-<li><p>Automatic model selection for classification and regression</p></li>
+<li><p>Automatic model selection for classification, regression, and <strong>time series forecasting</strong></p></li>
+<li><p><strong>20+ forecasting models</strong> — statistical, ML, deep learning, and pretrained foundation models</p></li>
+<li><p><strong>GPU acceleration</strong> — XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM</p></li>
+<li><p>Automatic seasonal period detection via autocorrelation</p></li>
+<li><p>Support for univariate series with optional exogenous variables</p></li>
 <li><p>Support for both numerical and categorical features</p></li>
 <li><p>Easy integration with scikit-learn pipelines</p></li>
 <li><p>Model performance comparison and ranking</p></li>
 <li><p>Built-in MLflow integration for experiment tracking</p></li>
-<li><p>Support for Python 3.8 through 3.13</p></li>
+<li><p>Support for Python 3.9 through 3.13</p></li>
 <li><p>Minimal code required</p></li>
 <li><p>Automatic model metrics logging</p></li>
 <li><p>Custom metric evaluation support</p></li>
@@ -147,6 +214,8 @@
 <h2>Key Benefits<a class="headerlink" href="#key-benefits" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Rapid model prototyping and selection</p></li>
+<li><p>One-line benchmarking of forecasting models (LazyForecaster)</p></li>
+<li><p>GPU acceleration with automatic fallback to CPU</p></li>
 <li><p>Automated experiment tracking with MLflow</p></li>
 <li><p>Comprehensive model performance comparison</p></li>
 <li><p>Zero-configuration model evaluation</p></li>
@@ -176,7 +245,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022-2025, Shankar Rao Pandala.</p>
+    <p>&#169; Copyright 2022-2026, Shankar Rao Pandala.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -1,0 +1,722 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>lazypredict.Supervised &mdash; Lazy Predict 0.3.0a2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5fdc151f"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Lazy Predict
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html#classification">Classification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html#regression">Regression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html#time-series-forecasting">Time Series Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html#gpu-acceleration">GPU Acceleration</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">lazypredict</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Types of Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html#tips">Tips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html#deploying">Deploying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Development Lead</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html#contributors">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html">0.3.0a2 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#a1-2026-03-10">0.3.0a1 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id1">0.2.15 (2025-04-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id2">0.2.11 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id3">0.2.10 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id4">0.2.8 (2021-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id5">0.2.7 (2020-07-09)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id6">0.2.6 (2020-01-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id7">0.2.5 (2020-01-20)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id8">0.2.4 (2020-01-19)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id9">0.2.3 (2019-11-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id10">0.2.2 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id11">0.2.1 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id12">0.2.0 (2019-11-17)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../history.html#id13">0.1.0 (2019-11-16)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Lazy Predict</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">lazypredict.Supervised</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for lazypredict.Supervised</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Supervised Models — LazyClassifier and LazyRegressor for rapid model benchmarking.</span>
+
+<span class="sd">Provides LazyClassifier and LazyRegressor classes that train multiple</span>
+<span class="sd">scikit-learn models with minimal code to quickly identify which algorithms</span>
+<span class="sd">perform best on a given dataset.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1"># Author: Shankar Rao Pandala &lt;shankar.pandala@live.com&gt;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">accuracy_score</span><span class="p">,</span>
+    <span class="n">balanced_accuracy_score</span><span class="p">,</span>
+    <span class="n">f1_score</span><span class="p">,</span>
+    <span class="n">mean_squared_error</span><span class="p">,</span>
+    <span class="n">precision_score</span><span class="p">,</span>
+    <span class="n">r2_score</span><span class="p">,</span>
+    <span class="n">recall_score</span><span class="p">,</span>
+    <span class="n">roc_auc_score</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">all_estimators</span>
+
+<span class="c1"># Re-export from submodules for backward compatibility</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict._base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
+    <span class="n">LazyEstimator</span><span class="p">,</span>
+    <span class="n">_validate_fit_inputs</span><span class="p">,</span>
+    <span class="n">_validate_init_params</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">REMOVED_CLASSIFIERS</span><span class="p">,</span>
+    <span class="n">REMOVED_REGRESSORS</span><span class="p">,</span>
+    <span class="n">VALID_ENCODERS</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeoutException</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.integrations.mlflow</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
+    <span class="n">MLFLOW_AVAILABLE</span><span class="p">,</span>
+    <span class="n">is_mlflow_tracking_enabled</span><span class="p">,</span>
+    <span class="n">setup_mlflow</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">adjusted_rsquared</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
+    <span class="n">CATEGORY_ENCODERS_AVAILABLE</span><span class="p">,</span>
+    <span class="n">build_preprocessor</span><span class="p">,</span>
+    <span class="n">categorical_transformer_high</span><span class="p">,</span>
+    <span class="n">categorical_transformer_low</span><span class="p">,</span>
+    <span class="n">get_card_split</span><span class="p">,</span>
+    <span class="n">get_categorical_encoder</span><span class="p">,</span>
+    <span class="n">numeric_transformer</span><span class="p">,</span>
+    <span class="n">prepare_dataframes</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Module-level logger — users can configure via logging.getLogger(&quot;lazypredict&quot;)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;lazypredict&quot;</span><span class="p">)</span>
+
+<span class="c1"># Keep private aliases used in the module</span>
+<span class="n">_VALID_ENCODERS</span> <span class="o">=</span> <span class="n">VALID_ENCODERS</span>
+<span class="n">_REMOVED_CLASSIFIERS</span> <span class="o">=</span> <span class="n">REMOVED_CLASSIFIERS</span>
+<span class="n">_REMOVED_REGRESSORS</span> <span class="o">=</span> <span class="n">REMOVED_REGRESSORS</span>
+
+<span class="c1"># Private aliases for prepare/build used within fit()</span>
+<span class="n">_prepare_dataframes</span> <span class="o">=</span> <span class="n">prepare_dataframes</span>
+<span class="n">_build_preprocessor</span> <span class="o">=</span> <span class="n">build_preprocessor</span>
+
+<span class="c1"># Optional xgboost</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">xgboost</span>
+    <span class="n">_XGBOOST_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">_XGBOOST_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Optional lightgbm</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">lightgbm</span>
+    <span class="n">_LIGHTGBM_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">_LIGHTGBM_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Optional catboost</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">catboost</span>
+    <span class="n">_CATBOOST_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">_CATBOOST_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Optional perpetual</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">perpetual</span><span class="w"> </span><span class="kn">import</span> <span class="n">PerpetualBooster</span>
+    <span class="n">PERPETUAL_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">PERPETUAL_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Intel Extension for Scikit-learn for better performance</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">sklearnex</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch_sklearn</span>
+    <span class="n">patch_sklearn</span><span class="p">()</span>
+    <span class="n">INTEL_EXTENSION_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">INTEL_EXTENSION_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Optional MLflow</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">mlflow</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">mlflow</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: ignore[assignment]</span>
+
+<span class="c1"># Kept as module-level lists for backward compatibility but built fresh</span>
+<span class="n">CLASSIFIERS</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">est</span>
+    <span class="k">for</span> <span class="n">est</span> <span class="ow">in</span> <span class="n">all_estimators</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">est</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ClassifierMixin</span><span class="p">)</span> <span class="ow">and</span> <span class="n">est</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_REMOVED_CLASSIFIERS</span>
+<span class="p">]</span>
+
+<span class="n">REGRESSORS</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">est</span>
+    <span class="k">for</span> <span class="n">est</span> <span class="ow">in</span> <span class="n">all_estimators</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">est</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">RegressorMixin</span><span class="p">)</span> <span class="ow">and</span> <span class="n">est</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_REMOVED_REGRESSORS</span>
+<span class="p">]</span>
+
+<span class="c1"># Append optional boosting models</span>
+<span class="k">if</span> <span class="n">_XGBOOST_AVAILABLE</span><span class="p">:</span>
+    <span class="n">REGRESSORS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;XGBRegressor&quot;</span><span class="p">,</span> <span class="n">xgboost</span><span class="o">.</span><span class="n">XGBRegressor</span><span class="p">))</span>
+    <span class="n">CLASSIFIERS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;XGBClassifier&quot;</span><span class="p">,</span> <span class="n">xgboost</span><span class="o">.</span><span class="n">XGBClassifier</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">_LIGHTGBM_AVAILABLE</span><span class="p">:</span>
+    <span class="n">REGRESSORS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;LGBMRegressor&quot;</span><span class="p">,</span> <span class="n">lightgbm</span><span class="o">.</span><span class="n">LGBMRegressor</span><span class="p">))</span>
+    <span class="n">CLASSIFIERS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;LGBMClassifier&quot;</span><span class="p">,</span> <span class="n">lightgbm</span><span class="o">.</span><span class="n">LGBMClassifier</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">_CATBOOST_AVAILABLE</span><span class="p">:</span>
+    <span class="n">REGRESSORS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;CatBoostRegressor&quot;</span><span class="p">,</span> <span class="n">catboost</span><span class="o">.</span><span class="n">CatBoostRegressor</span><span class="p">))</span>
+    <span class="n">CLASSIFIERS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;CatBoostClassifier&quot;</span><span class="p">,</span> <span class="n">catboost</span><span class="o">.</span><span class="n">CatBoostClassifier</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">PERPETUAL_AVAILABLE</span><span class="p">:</span>
+    <span class="n">REGRESSORS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;PerpetualBooster&quot;</span><span class="p">,</span> <span class="n">PerpetualBooster</span><span class="p">))</span>
+    <span class="n">CLASSIFIERS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;PerpetualBooster&quot;</span><span class="p">,</span> <span class="n">PerpetualBooster</span><span class="p">))</span>
+
+<span class="c1"># Backward-compatible aliases for removed_ lists</span>
+<span class="n">removed_classifiers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_REMOVED_CLASSIFIERS</span><span class="p">)</span>
+<span class="n">removed_regressors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_REMOVED_REGRESSORS</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="time_limit">
+<a class="viewcode-back" href="../../lazypredict.html#lazypredict.Supervised.time_limit">[docs]</a>
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">time_limit</span><span class="p">(</span><span class="n">seconds</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Context manager to limit execution time of a code block.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    seconds : int</span>
+<span class="sd">        Maximum time in seconds for the code block to execute.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TimeoutException</span>
+<span class="sd">        If the code block exceeds the time limit.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">signal_handler</span><span class="p">(</span><span class="n">signum</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">TimeoutException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Timed out after </span><span class="si">{</span><span class="n">seconds</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="s2">&quot;SIGALRM&quot;</span><span class="p">):</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGALRM</span><span class="p">,</span> <span class="n">signal_handler</span><span class="p">)</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">alarm</span><span class="p">(</span><span class="n">seconds</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">signal</span><span class="o">.</span><span class="n">alarm</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">yield</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># LazyClassifier</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="LazyClassifier">
+<a class="viewcode-back" href="../../lazypredict.html#lazypredict.Supervised.LazyClassifier">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LazyClassifier</span><span class="p">(</span><span class="n">LazyEstimator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit all classification algorithms available in scikit-learn and benchmark them.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    verbose : int, optional (default=0)</span>
+<span class="sd">        Set to a positive number to enable progress bars and per-model metric output.</span>
+<span class="sd">    ignore_warnings : bool, optional (default=True)</span>
+<span class="sd">        When True, warnings and errors from individual models are suppressed.</span>
+<span class="sd">    custom_metric : callable or None, optional (default=None)</span>
+<span class="sd">        A function ``f(y_true, y_pred)`` used for additional evaluation.</span>
+<span class="sd">    predictions : bool, optional (default=False)</span>
+<span class="sd">        When True, ``fit()`` returns a tuple of (scores, predictions_dataframe).</span>
+<span class="sd">    random_state : int, optional (default=42)</span>
+<span class="sd">        Random seed passed to models that accept it.</span>
+<span class="sd">    classifiers : list or ``&quot;all&quot;``, optional (default=&quot;all&quot;)</span>
+<span class="sd">        Specific classifier classes to train, or ``&quot;all&quot;`` for every available one.</span>
+<span class="sd">    cv : int or None, optional (default=None)</span>
+<span class="sd">        Number of folds for cross-validation.  If None, uses train/test split only.</span>
+<span class="sd">    timeout : int or float or None, optional (default=None)</span>
+<span class="sd">        Maximum seconds for each model.  Models exceeding this are skipped.</span>
+<span class="sd">    categorical_encoder : str, optional (default=&#39;onehot&#39;)</span>
+<span class="sd">        Encoder for categorical features: ``&#39;onehot&#39;``, ``&#39;ordinal&#39;``,</span>
+<span class="sd">        ``&#39;target&#39;``, or ``&#39;binary&#39;``.</span>
+<span class="sd">    n_jobs : int, optional (default=-1)</span>
+<span class="sd">        Number of parallel jobs for cross-validation. -1 uses all processors.</span>
+<span class="sd">    max_models : int or None, optional (default=None)</span>
+<span class="sd">        Maximum number of models to train. None means train all.</span>
+<span class="sd">    progress_callback : callable or None, optional (default=None)</span>
+<span class="sd">        Callback ``f(model_name, current, total, metrics)`` called after each model.</span>
+<span class="sd">    use_gpu : bool, optional (default=False)</span>
+<span class="sd">        When True, enables GPU acceleration for models that support it</span>
+<span class="sd">        (e.g., XGBoost, LightGBM, CatBoost). When cuML (RAPIDS) is installed,</span>
+<span class="sd">        GPU-accelerated scikit-learn equivalents are also added automatically.</span>
+<span class="sd">        Falls back to CPU if CUDA is unavailable.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from lazypredict.Supervised import LazyClassifier</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.datasets import load_breast_cancer</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.model_selection import train_test_split</span>
+<span class="sd">    &gt;&gt;&gt; data = load_breast_cancer()</span>
+<span class="sd">    &gt;&gt;&gt; X = data.data</span>
+<span class="sd">    &gt;&gt;&gt; y = data.target</span>
+<span class="sd">    &gt;&gt;&gt; X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.5, random_state=123)</span>
+<span class="sd">    &gt;&gt;&gt; clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)</span>
+<span class="sd">    &gt;&gt;&gt; models, predictions = clf.fit(X_train, X_test, y_train, y_test)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">ignore_warnings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">custom_metric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">predictions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+        <span class="n">classifiers</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+        <span class="n">cv</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">categorical_encoder</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;onehot&quot;</span><span class="p">,</span>
+        <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">max_models</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">use_gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+            <span class="n">ignore_warnings</span><span class="o">=</span><span class="n">ignore_warnings</span><span class="p">,</span>
+            <span class="n">custom_metric</span><span class="o">=</span><span class="n">custom_metric</span><span class="p">,</span>
+            <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+            <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">categorical_encoder</span><span class="o">=</span><span class="n">categorical_encoder</span><span class="p">,</span>
+            <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
+            <span class="n">max_models</span><span class="o">=</span><span class="n">max_models</span><span class="p">,</span>
+            <span class="n">progress_callback</span><span class="o">=</span><span class="n">progress_callback</span><span class="p">,</span>
+            <span class="n">use_gpu</span><span class="o">=</span><span class="n">use_gpu</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classifiers</span> <span class="o">=</span> <span class="n">classifiers</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_estimator_step_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;classifier&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_estimator_list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">classifiers</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">CLASSIFIERS</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span> <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">classifiers</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Invalid classifier(s): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">exc</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid classifier(s): </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_cv_scoring</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="s2">&quot;accuracy&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;balanced_accuracy&quot;</span><span class="p">:</span> <span class="s2">&quot;balanced_accuracy&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;f1_weighted&quot;</span><span class="p">:</span> <span class="s2">&quot;f1_weighted&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;precision_weighted&quot;</span><span class="p">:</span> <span class="s2">&quot;precision_weighted&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;recall_weighted&quot;</span><span class="p">:</span> <span class="s2">&quot;recall_weighted&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;roc_auc_ovr_weighted&quot;</span><span class="p">:</span> <span class="s2">&quot;roc_auc_ovr_weighted&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_cv_column_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="s2">&quot;Accuracy CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;Accuracy CV Std&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Balanced Accuracy CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;Balanced Accuracy CV Std&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ROC AUC CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;ROC AUC CV Std&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;F1 Score CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;F1 Score CV Std&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Precision CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;Precision CV Std&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Recall CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;Recall CV Std&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_process_cv_results</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">cv_results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">X_train</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+        <span class="n">result</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Accuracy CV Mean&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_accuracy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;Accuracy CV Std&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_accuracy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+            <span class="s2">&quot;Balanced Accuracy CV Mean&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_balanced_accuracy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;Balanced Accuracy CV Std&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_balanced_accuracy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+            <span class="s2">&quot;F1 Score CV Mean&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_f1_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;F1 Score CV Std&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_f1_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+            <span class="s2">&quot;Precision CV Mean&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_precision_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;Precision CV Std&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_precision_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+            <span class="s2">&quot;Recall CV Mean&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_recall_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;Recall CV Std&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_recall_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+        <span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;ROC AUC CV Mean&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_roc_auc_ovr_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;ROC AUC CV Std&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_roc_auc_ovr_weighted&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;ROC AUC CV Mean&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;ROC AUC CV Std&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_metrics</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">pipe</span><span class="p">:</span> <span class="n">Pipeline</span><span class="p">,</span> <span class="n">X_test</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">y_test</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">X_train</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+        <span class="n">accuracy</span> <span class="o">=</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">b_accuracy</span> <span class="o">=</span> <span class="n">balanced_accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+        <span class="n">f1</span> <span class="o">=</span> <span class="n">f1_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;weighted&quot;</span><span class="p">)</span>
+        <span class="n">precision</span> <span class="o">=</span> <span class="n">precision_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;weighted&quot;</span><span class="p">,</span> <span class="n">zero_division</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">recall_val</span> <span class="o">=</span> <span class="n">recall_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;weighted&quot;</span><span class="p">)</span>
+
+        <span class="n">roc_auc</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">pipe</span><span class="p">,</span> <span class="s2">&quot;predict_proba&quot;</span><span class="p">):</span>
+                <span class="n">y_pred_proba</span> <span class="o">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">y_pred_proba</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">roc_auc</span> <span class="o">=</span> <span class="n">roc_auc_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred_proba</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">roc_auc</span> <span class="o">=</span> <span class="n">roc_auc_score</span><span class="p">(</span>
+                        <span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred_proba</span><span class="p">,</span> <span class="n">multi_class</span><span class="o">=</span><span class="s2">&quot;ovr&quot;</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;weighted&quot;</span>
+                    <span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">pipe</span><span class="p">,</span> <span class="s2">&quot;decision_function&quot;</span><span class="p">):</span>
+                <span class="n">roc_auc</span> <span class="o">=</span> <span class="n">roc_auc_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">pipe</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">X_test</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">roc_auc</span> <span class="o">=</span> <span class="n">roc_auc_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">roc_exc</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_warnings</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;ROC AUC couldn&#39;t be calculated: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">roc_exc</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="n">accuracy</span><span class="p">,</span>
+            <span class="s2">&quot;balanced_accuracy&quot;</span><span class="p">:</span> <span class="n">b_accuracy</span><span class="p">,</span>
+            <span class="s2">&quot;roc_auc&quot;</span><span class="p">:</span> <span class="n">roc_auc</span><span class="p">,</span>
+            <span class="s2">&quot;f1&quot;</span><span class="p">:</span> <span class="n">f1</span><span class="p">,</span>
+            <span class="s2">&quot;precision&quot;</span><span class="p">:</span> <span class="n">precision</span><span class="p">,</span>
+            <span class="s2">&quot;recall&quot;</span><span class="p">:</span> <span class="n">recall_val</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_scores_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;Model&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;Accuracy&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;accuracy&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;Balanced Accuracy&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;balanced_accuracy&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;ROC AUC&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;roc_auc&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;F1 Score&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;f1&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;Precision&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;precision&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;Recall&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;recall&quot;</span><span class="p">],</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">custom_metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_metric</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;custom_metric&quot;</span><span class="p">)</span>
+            <span class="c1"># CV columns</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_column_names</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">r</span><span class="p">:</span>
+                    <span class="n">row</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;Time Taken&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;Balanced Accuracy&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">scores</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_log_verbose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metrics</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Model=</span><span class="si">%s</span><span class="s2"> Accuracy=</span><span class="si">%.4f</span><span class="s2"> BalAcc=</span><span class="si">%.4f</span><span class="s2"> ROC_AUC=</span><span class="si">%s</span><span class="s2"> F1=</span><span class="si">%.4f</span><span class="s2"> Time=</span><span class="si">%.2f</span><span class="s2">s&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="p">,</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;accuracy&quot;</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;balanced_accuracy&quot;</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;roc_auc&quot;</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;f1&quot;</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># LazyRegressor</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="LazyRegressor">
+<a class="viewcode-back" href="../../lazypredict.html#lazypredict.Supervised.LazyRegressor">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LazyRegressor</span><span class="p">(</span><span class="n">LazyEstimator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit all regression algorithms available in scikit-learn and benchmark them.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    verbose : int, optional (default=0)</span>
+<span class="sd">        Set to a positive number to enable progress bars and per-model metric output.</span>
+<span class="sd">    ignore_warnings : bool, optional (default=True)</span>
+<span class="sd">        When True, warnings and errors from individual models are suppressed.</span>
+<span class="sd">    custom_metric : callable or None, optional (default=None)</span>
+<span class="sd">        A function ``f(y_true, y_pred)`` used for additional evaluation.</span>
+<span class="sd">    predictions : bool, optional (default=False)</span>
+<span class="sd">        When True, ``fit()`` returns a tuple of (scores, predictions_dataframe).</span>
+<span class="sd">    random_state : int, optional (default=42)</span>
+<span class="sd">        Random seed passed to models that accept it.</span>
+<span class="sd">    regressors : list or ``&quot;all&quot;``, optional (default=&quot;all&quot;)</span>
+<span class="sd">        Specific regressor classes to train, or ``&quot;all&quot;`` for every available one.</span>
+<span class="sd">    cv : int or None, optional (default=None)</span>
+<span class="sd">        Number of folds for cross-validation.  If None, uses train/test split only.</span>
+<span class="sd">    timeout : int or float or None, optional (default=None)</span>
+<span class="sd">        Maximum seconds for each model.  Models exceeding this are skipped.</span>
+<span class="sd">    categorical_encoder : str, optional (default=&#39;onehot&#39;)</span>
+<span class="sd">        Encoder for categorical features: ``&#39;onehot&#39;``, ``&#39;ordinal&#39;``,</span>
+<span class="sd">        ``&#39;target&#39;``, or ``&#39;binary&#39;``.</span>
+<span class="sd">    n_jobs : int, optional (default=-1)</span>
+<span class="sd">        Number of parallel jobs for cross-validation. -1 uses all processors.</span>
+<span class="sd">    max_models : int or None, optional (default=None)</span>
+<span class="sd">        Maximum number of models to train. None means train all.</span>
+<span class="sd">    progress_callback : callable or None, optional (default=None)</span>
+<span class="sd">        Callback ``f(model_name, current, total, metrics)`` called after each model.</span>
+<span class="sd">    use_gpu : bool, optional (default=False)</span>
+<span class="sd">        When True, enables GPU acceleration for models that support it</span>
+<span class="sd">        (e.g., XGBoost, LightGBM). Falls back to CPU if CUDA is unavailable.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from lazypredict.Supervised import LazyRegressor</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn import datasets</span>
+<span class="sd">    &gt;&gt;&gt; from sklearn.utils import shuffle</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; diabetes = datasets.load_diabetes()</span>
+<span class="sd">    &gt;&gt;&gt; X, y = shuffle(diabetes.data, diabetes.target, random_state=13)</span>
+<span class="sd">    &gt;&gt;&gt; X = X.astype(np.float32)</span>
+<span class="sd">    &gt;&gt;&gt; offset = int(X.shape[0] * 0.9)</span>
+<span class="sd">    &gt;&gt;&gt; X_train, y_train = X[:offset], y[:offset]</span>
+<span class="sd">    &gt;&gt;&gt; X_test, y_test = X[offset:], y[offset:]</span>
+<span class="sd">    &gt;&gt;&gt; reg = LazyRegressor(verbose=0, ignore_warnings=False, custom_metric=None)</span>
+<span class="sd">    &gt;&gt;&gt; models, predictions = reg.fit(X_train, X_test, y_train, y_test)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">ignore_warnings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">custom_metric</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">predictions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+        <span class="n">regressors</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+        <span class="n">cv</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">categorical_encoder</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;onehot&quot;</span><span class="p">,</span>
+        <span class="n">n_jobs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">max_models</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">use_gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+            <span class="n">ignore_warnings</span><span class="o">=</span><span class="n">ignore_warnings</span><span class="p">,</span>
+            <span class="n">custom_metric</span><span class="o">=</span><span class="n">custom_metric</span><span class="p">,</span>
+            <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+            <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">categorical_encoder</span><span class="o">=</span><span class="n">categorical_encoder</span><span class="p">,</span>
+            <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
+            <span class="n">max_models</span><span class="o">=</span><span class="n">max_models</span><span class="p">,</span>
+            <span class="n">progress_callback</span><span class="o">=</span><span class="n">progress_callback</span><span class="p">,</span>
+            <span class="n">use_gpu</span><span class="o">=</span><span class="n">use_gpu</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">regressors</span> <span class="o">=</span> <span class="n">regressors</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_estimator_step_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;regressor&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_estimator_list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">regressors</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">REGRESSORS</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span> <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">regressors</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Invalid regressor(s): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">exc</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid regressor(s): </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_cv_scoring</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;r2&quot;</span><span class="p">:</span> <span class="s2">&quot;r2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;neg_mean_squared_error&quot;</span><span class="p">:</span> <span class="s2">&quot;neg_mean_squared_error&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_cv_column_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="s2">&quot;R-Squared CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;R-Squared CV Std&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Adjusted R-Squared CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;Adjusted R-Squared CV Std&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;RMSE CV Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;RMSE CV Std&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_process_cv_results</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">cv_results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">X_train</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+        <span class="n">rmse_cv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="o">-</span><span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_neg_mean_squared_error&quot;</span><span class="p">])</span>
+        <span class="n">adj_r2_cv</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">adjusted_rsquared</span><span class="p">(</span><span class="n">r2</span><span class="p">,</span> <span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">r2</span> <span class="ow">in</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_r2&quot;</span><span class="p">]</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;R-Squared CV Mean&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_r2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;R-Squared CV Std&quot;</span><span class="p">:</span> <span class="n">cv_results</span><span class="p">[</span><span class="s2">&quot;test_r2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+            <span class="s2">&quot;Adjusted R-Squared CV Mean&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">adj_r2_cv</span><span class="p">),</span>
+            <span class="s2">&quot;Adjusted R-Squared CV Std&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">adj_r2_cv</span><span class="p">),</span>
+            <span class="s2">&quot;RMSE CV Mean&quot;</span><span class="p">:</span> <span class="n">rmse_cv</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;RMSE CV Std&quot;</span><span class="p">:</span> <span class="n">rmse_cv</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_metrics</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">pipe</span><span class="p">:</span> <span class="n">Pipeline</span><span class="p">,</span> <span class="n">X_test</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">y_test</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">X_train</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+        <span class="n">r_squared</span> <span class="o">=</span> <span class="n">r2_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+        <span class="n">adj_rsquared</span> <span class="o">=</span> <span class="n">adjusted_rsquared</span><span class="p">(</span>
+            <span class="n">r_squared</span><span class="p">,</span> <span class="n">X_test</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">X_test</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">rmse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mean_squared_error</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;r_squared&quot;</span><span class="p">:</span> <span class="n">r_squared</span><span class="p">,</span>
+            <span class="s2">&quot;adjusted_r_squared&quot;</span><span class="p">:</span> <span class="n">adj_rsquared</span><span class="p">,</span>
+            <span class="s2">&quot;rmse&quot;</span><span class="p">:</span> <span class="n">rmse</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_scores_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;Model&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;Adjusted R-Squared&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;adjusted_r_squared&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;R-Squared&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;r_squared&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;RMSE&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;rmse&quot;</span><span class="p">],</span>
+            <span class="p">}</span>
+            <span class="c1"># CV columns</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_column_names</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">r</span><span class="p">:</span>
+                    <span class="n">row</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">custom_metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_metric</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;custom_metric&quot;</span><span class="p">)</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;Time Taken&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;Adjusted R-Squared&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">scores</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_log_verbose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metrics</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Model=</span><span class="si">%s</span><span class="s2"> R2=</span><span class="si">%.4f</span><span class="s2"> AdjR2=</span><span class="si">%.4f</span><span class="s2"> RMSE=</span><span class="si">%.4f</span><span class="s2"> Time=</span><span class="si">%.2f</span><span class="s2">s&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="p">,</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;r_squared&quot;</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;adjusted_r_squared&quot;</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;rmse&quot;</span><span class="p">],</span>
+            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="c1"># Backward-compatible aliases</span>
+<span class="n">Regression</span> <span class="o">=</span> <span class="n">LazyRegressor</span>
+<span class="n">Classification</span> <span class="o">=</span> <span class="n">LazyClassifier</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022-2026, Shankar Rao Pandala.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

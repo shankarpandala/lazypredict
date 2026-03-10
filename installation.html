@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; Lazy Predict 0.2.16 documentation</title>
+  <title>Installation &mdash; Lazy Predict 0.3.0a2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=e2418eca"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=5fdc151f"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -45,17 +45,49 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#stable-release">Stable release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stable-release">Stable release</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#optional-extras">Optional extras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gpu-acceleration-extras">GPU acceleration extras</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#from-sources">From sources</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#classification">Classification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#regression">Regression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#time-series-forecasting">Time Series Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#gpu-acceleration">GPU Acceleration</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">lazypredict</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Types of Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#tips">Tips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#deploying">Deploying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Development Lead</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html#contributors">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">0.3.0a2 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#a1-2026-03-10">0.3.0a1 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id1">0.2.15 (2025-04-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id2">0.2.11 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id3">0.2.10 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id4">0.2.8 (2021-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id5">0.2.7 (2020-07-09)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id6">0.2.6 (2020-01-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id7">0.2.5 (2020-01-20)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id8">0.2.4 (2020-01-19)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id9">0.2.3 (2019-11-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id10">0.2.2 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id11">0.2.1 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id12">0.2.0 (2019-11-17)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id13">0.1.0 (2019-11-16)</a></li>
 </ul>
 
         </div>
@@ -93,6 +125,33 @@
 <p>This is the preferred method to install Lazy Predict, as it will always install the most recent stable release.</p>
 <p>If you don’t have <a class="reference external" href="https://pip.pypa.io">pip</a> installed, this <a class="reference external" href="http://docs.python-guide.org/en/latest/starting/installation/">Python installation guide</a> can guide
 you through the process.</p>
+<section id="optional-extras">
+<h3>Optional extras<a class="headerlink" href="#optional-extras" title="Link to this heading"></a></h3>
+<p>Install with boosting libraries (XGBoost, LightGBM, CatBoost):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>boost<span class="o">]</span>
+</pre></div>
+</div>
+<p>Install with time series forecasting support:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>timeseries<span class="o">]</span><span class="w">               </span><span class="c1"># statsmodels + pmdarima</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>timeseries,deeplearning<span class="o">]</span><span class="w">   </span><span class="c1"># + LSTM/GRU via PyTorch</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>timeseries,foundation<span class="o">]</span><span class="w">     </span><span class="c1"># + Google TimesFM (Python 3.10-3.11 only)</span>
+</pre></div>
+</div>
+<p>Install with all optional dependencies:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>all<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="gpu-acceleration-extras">
+<h3>GPU acceleration extras<a class="headerlink" href="#gpu-acceleration-extras" title="Link to this heading"></a></h3>
+<p>For GPU-accelerated model training:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>boost<span class="o">]</span><span class="w">        </span><span class="c1"># XGBoost, LightGBM, CatBoost (all support GPU)</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>cuml-cu12<span class="w">                 </span><span class="c1"># cuML (RAPIDS) GPU-native sklearn models</span>
+</pre></div>
+</div>
+<p>Then enable GPU in your code with <code class="docutils literal notranslate"><span class="pre">use_gpu=True</span></code>.  See the
+<a class="reference internal" href="examples.html"><span class="doc">Examples</span></a> page for details.</p>
+</section>
 </section>
 <section id="from-sources">
 <h2>From sources<a class="headerlink" href="#from-sources" title="Link to this heading"></a></h2>
@@ -106,7 +165,7 @@ you through the process.</p>
 </pre></div>
 </div>
 <p>Once you have a copy of the source, you can install it with:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>setup.py<span class="w"> </span>install
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>.
 </pre></div>
 </div>
 </section>
@@ -123,7 +182,7 @@ you through the process.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022-2025, Shankar Rao Pandala.</p>
+    <p>&#169; Copyright 2022-2026, Shankar Rao Pandala.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

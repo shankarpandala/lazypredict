@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; Lazy Predict 0.2.16 documentation</title>
+  <title>Lazy Predict &mdash; Lazy Predict 0.3.0a2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=e2418eca"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=5fdc151f"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
@@ -46,10 +46,38 @@
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#classification">Classification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#regression">Regression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#time-series-forecasting">Time Series Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#gpu-acceleration">GPU Acceleration</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">lazypredict</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Types of Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#tips">Tips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#deploying">Deploying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Development Lead</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html#contributors">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">0.3.0a2 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#a1-2026-03-10">0.3.0a1 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id1">0.2.15 (2025-04-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id2">0.2.11 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id3">0.2.10 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id4">0.2.8 (2021-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id5">0.2.7 (2020-07-09)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id6">0.2.6 (2020-01-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id7">0.2.5 (2020-01-20)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id8">0.2.4 (2020-01-19)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id9">0.2.3 (2019-11-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id10">0.2.2 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id11">0.2.1 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id12">0.2.0 (2019-11-17)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id13">0.1.0 (2019-11-16)</a></li>
 </ul>
 
         </div>
@@ -66,7 +94,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">&lt;no title&gt;</li>
+      <li class="breadcrumb-item active">Lazy Predict</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/readme.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -76,7 +104,886 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  
+  <section id="lazy-predict">
+<h1>Lazy Predict<a class="headerlink" href="#lazy-predict" title="Link to this heading"></a></h1>
+<p><a class="reference external" href="https://pypi.python.org/pypi/lazypredict"><img alt="image" src="https://img.shields.io/pypi/v/lazypredict.svg" /></a>
+<a class="reference external" href="https://github.com/shankarpandala/lazypredict/actions/workflows/publish.yml"><img alt="Publish" src="https://github.com/shankarpandala/lazypredict/actions/workflows/publish.yml/badge.svg" /></a>
+<a class="reference external" href="https://lazypredict.readthedocs.io/en/latest/?badge=latest"><img alt="Documentation Status" src="https://readthedocs.org/projects/lazypredict/badge/?version=latest" /></a>
+<a class="reference external" href="https://pepy.tech/project/lazypredict"><img alt="Downloads" src="https://pepy.tech/badge/lazypredict" /></a>
+<a class="reference external" href="https://www.codefactor.io/repository/github/shankarpandala/lazypredict"><img alt="CodeFactor" src="https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge" /></a>
+<a class="reference external" href="https://scholar.google.com/scholar?oi=bibs&amp;amp;hl=en&amp;amp;cites=4325808232671020176,16284230108871951652&amp;amp;as_sdt=5"><img alt="Citations" src="https://img.shields.io/badge/Citations-47-blue" /></a></p>
+<p>Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning.</p>
+<ul class="simple">
+<li><p>Free software: MIT license</p></li>
+<li><p>Documentation: <a class="reference external" href="https://lazypredict.readthedocs.io">https://lazypredict.readthedocs.io</a></p></li>
+</ul>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Over 40 built-in machine learning models</p></li>
+<li><p>Automatic model selection for classification, regression, and <strong>time series forecasting</strong></p></li>
+<li><p><strong>20+ forecasting models</strong>: statistical (ETS, ARIMA, Theta), ML (Random Forest, XGBoost, etc.), deep learning (LSTM, GRU), and pretrained foundation models (TimesFM)</p></li>
+<li><p>Automatic seasonal period detection via ACF</p></li>
+<li><p>Multiple categorical encoding strategies (OneHot, Ordinal, Target, Binary)</p></li>
+<li><p>Built-in MLflow integration for experiment tracking</p></li>
+<li><p><strong>GPU acceleration</strong>: XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM</p></li>
+<li><p>Support for Python 3.9 through 3.13</p></li>
+<li><p>Custom metric evaluation support</p></li>
+<li><p>Configurable timeout and cross-validation</p></li>
+<li><p>Intel Extension for Scikit-learn acceleration support</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<section id="pip-pypi">
+<h3>pip (PyPI)<a class="headerlink" href="#pip-pypi" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict
+</pre></div>
+</div>
+</section>
+<section id="conda-conda-forge">
+<h3>conda (conda-forge)<a class="headerlink" href="#conda-conda-forge" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>lazypredict
+</pre></div>
+</div>
+</section>
+<section id="optional-extras-pip-only">
+<h3>Optional extras (pip only)<a class="headerlink" href="#optional-extras-pip-only" title="Link to this heading"></a></h3>
+<p>Install with boosting libraries (XGBoost, LightGBM, CatBoost):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>boost<span class="o">]</span>
+</pre></div>
+</div>
+<p>Install with time series forecasting support:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>timeseries<span class="o">]</span><span class="w">          </span><span class="c1"># statsmodels + pmdarima</span>
+pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>timeseries,deeplearning<span class="o">]</span><span class="w">  </span><span class="c1"># + LSTM/GRU via PyTorch</span>
+pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>timeseries,foundation<span class="o">]</span><span class="w">    </span><span class="c1"># + Google TimesFM (Python 3.10-3.11)</span>
+</pre></div>
+</div>
+<p>Install with all optional dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>lazypredict<span class="o">[</span>all<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>To use Lazy Predict in a project:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">lazypredict</span>
+</pre></div>
+</div>
+</section>
+<section id="classification">
+<h2>Classification<a class="headerlink" href="#classification" title="Link to this heading"></a></h2>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_breast_cancer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">load_breast_cancer</span><span class="p">()</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">data</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span>
+
+<span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">123</span><span class="p">)</span>
+
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="advanced-options">
+<h3>Advanced Options<a class="headerlink" href="#advanced-options" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># With categorical encoding, timeout, cross-validation, and GPU</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>                          <span class="c1"># Show progress</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>               <span class="c1"># Suppress warnings</span>
+    <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>                 <span class="c1"># Use default metrics</span>
+    <span class="n">predictions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>                   <span class="c1"># Return predictions</span>
+    <span class="n">classifiers</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span>                  <span class="c1"># Use all available classifiers</span>
+    <span class="n">categorical_encoder</span><span class="o">=</span><span class="s1">&#39;onehot&#39;</span><span class="p">,</span>       <span class="c1"># Encoding: &#39;onehot&#39;, &#39;ordinal&#39;, &#39;target&#39;, &#39;binary&#39;</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>                         <span class="c1"># Max time per model in seconds</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>                               <span class="c1"># Cross-validation folds (optional)</span>
+    <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span>                        <span class="c1"># Enable GPU acceleration</span>
+<span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">verbose</span></code> (int): 0 for silent, 1 for progress display</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ignore_warnings</span></code> (bool): Suppress scikit-learn warnings</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_metric</span></code> (callable): Custom evaluation metric</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">predictions</span></code> (bool): Return prediction DataFrame</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">classifiers</span></code> (str/list): ‘all’ or list of classifier names</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">categorical_encoder</span></code> (str): Encoding strategy for categorical features</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">'onehot'</span></code>: One-hot encoding (default)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'ordinal'</span></code>: Ordinal encoding</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'target'</span></code>: Target encoding (requires <code class="docutils literal notranslate"><span class="pre">category-encoders</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'binary'</span></code>: Binary encoding (requires <code class="docutils literal notranslate"><span class="pre">category-encoders</span></code>)</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code> (int): Maximum seconds per model (None for no limit)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cv</span></code> (int): Number of cross-validation folds (None to disable)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">use_gpu</span></code> (bool): Enable GPU acceleration for supported models (default False)</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Model</p></th>
+<th class="head text-right"><p>Accuracy</p></th>
+<th class="head text-right"><p>Balanced Accuracy</p></th>
+<th class="head text-right"><p>ROC AUC</p></th>
+<th class="head text-right"><p>F1 Score</p></th>
+<th class="head text-right"><p>Time Taken</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>LinearSVC</p></td>
+<td class="text-right"><p>0.989474</p></td>
+<td class="text-right"><p>0.987544</p></td>
+<td class="text-right"><p>0.987544</p></td>
+<td class="text-right"><p>0.989462</p></td>
+<td class="text-right"><p>0.0150008</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>SGDClassifier</p></td>
+<td class="text-right"><p>0.989474</p></td>
+<td class="text-right"><p>0.987544</p></td>
+<td class="text-right"><p>0.987544</p></td>
+<td class="text-right"><p>0.989462</p></td>
+<td class="text-right"><p>0.0109992</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>MLPClassifier</p></td>
+<td class="text-right"><p>0.985965</p></td>
+<td class="text-right"><p>0.986904</p></td>
+<td class="text-right"><p>0.986904</p></td>
+<td class="text-right"><p>0.985994</p></td>
+<td class="text-right"><p>0.426</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>Perceptron</p></td>
+<td class="text-right"><p>0.985965</p></td>
+<td class="text-right"><p>0.984797</p></td>
+<td class="text-right"><p>0.984797</p></td>
+<td class="text-right"><p>0.985965</p></td>
+<td class="text-right"><p>0.0120046</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LogisticRegression</p></td>
+<td class="text-right"><p>0.985965</p></td>
+<td class="text-right"><p>0.98269</p></td>
+<td class="text-right"><p>0.98269</p></td>
+<td class="text-right"><p>0.985934</p></td>
+<td class="text-right"><p>0.0200036</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>LogisticRegressionCV</p></td>
+<td class="text-right"><p>0.985965</p></td>
+<td class="text-right"><p>0.98269</p></td>
+<td class="text-right"><p>0.98269</p></td>
+<td class="text-right"><p>0.985934</p></td>
+<td class="text-right"><p>0.262997</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>SVC</p></td>
+<td class="text-right"><p>0.982456</p></td>
+<td class="text-right"><p>0.979942</p></td>
+<td class="text-right"><p>0.979942</p></td>
+<td class="text-right"><p>0.982437</p></td>
+<td class="text-right"><p>0.0140011</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>CalibratedClassifierCV</p></td>
+<td class="text-right"><p>0.982456</p></td>
+<td class="text-right"><p>0.975728</p></td>
+<td class="text-right"><p>0.975728</p></td>
+<td class="text-right"><p>0.982357</p></td>
+<td class="text-right"><p>0.0350015</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>PassiveAggressiveClassifier</p></td>
+<td class="text-right"><p>0.975439</p></td>
+<td class="text-right"><p>0.974448</p></td>
+<td class="text-right"><p>0.974448</p></td>
+<td class="text-right"><p>0.975464</p></td>
+<td class="text-right"><p>0.0130005</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>LabelPropagation</p></td>
+<td class="text-right"><p>0.975439</p></td>
+<td class="text-right"><p>0.974448</p></td>
+<td class="text-right"><p>0.974448</p></td>
+<td class="text-right"><p>0.975464</p></td>
+<td class="text-right"><p>0.0429988</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LabelSpreading</p></td>
+<td class="text-right"><p>0.975439</p></td>
+<td class="text-right"><p>0.974448</p></td>
+<td class="text-right"><p>0.974448</p></td>
+<td class="text-right"><p>0.975464</p></td>
+<td class="text-right"><p>0.0310006</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>RandomForestClassifier</p></td>
+<td class="text-right"><p>0.97193</p></td>
+<td class="text-right"><p>0.969594</p></td>
+<td class="text-right"><p>0.969594</p></td>
+<td class="text-right"><p>0.97193</p></td>
+<td class="text-right"><p>0.033</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>GradientBoostingClassifier</p></td>
+<td class="text-right"><p>0.97193</p></td>
+<td class="text-right"><p>0.967486</p></td>
+<td class="text-right"><p>0.967486</p></td>
+<td class="text-right"><p>0.971869</p></td>
+<td class="text-right"><p>0.166998</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>QuadraticDiscriminantAnalysis</p></td>
+<td class="text-right"><p>0.964912</p></td>
+<td class="text-right"><p>0.966206</p></td>
+<td class="text-right"><p>0.966206</p></td>
+<td class="text-right"><p>0.965052</p></td>
+<td class="text-right"><p>0.0119994</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>HistGradientBoostingClassifier</p></td>
+<td class="text-right"><p>0.968421</p></td>
+<td class="text-right"><p>0.964739</p></td>
+<td class="text-right"><p>0.964739</p></td>
+<td class="text-right"><p>0.968387</p></td>
+<td class="text-right"><p>0.682003</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>RidgeClassifierCV</p></td>
+<td class="text-right"><p>0.97193</p></td>
+<td class="text-right"><p>0.963272</p></td>
+<td class="text-right"><p>0.963272</p></td>
+<td class="text-right"><p>0.971736</p></td>
+<td class="text-right"><p>0.0130029</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>RidgeClassifier</p></td>
+<td class="text-right"><p>0.968421</p></td>
+<td class="text-right"><p>0.960525</p></td>
+<td class="text-right"><p>0.960525</p></td>
+<td class="text-right"><p>0.968242</p></td>
+<td class="text-right"><p>0.0119977</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>AdaBoostClassifier</p></td>
+<td class="text-right"><p>0.961404</p></td>
+<td class="text-right"><p>0.959245</p></td>
+<td class="text-right"><p>0.959245</p></td>
+<td class="text-right"><p>0.961444</p></td>
+<td class="text-right"><p>0.204998</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>ExtraTreesClassifier</p></td>
+<td class="text-right"><p>0.961404</p></td>
+<td class="text-right"><p>0.957138</p></td>
+<td class="text-right"><p>0.957138</p></td>
+<td class="text-right"><p>0.961362</p></td>
+<td class="text-right"><p>0.0270066</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>KNeighborsClassifier</p></td>
+<td class="text-right"><p>0.961404</p></td>
+<td class="text-right"><p>0.95503</p></td>
+<td class="text-right"><p>0.95503</p></td>
+<td class="text-right"><p>0.961276</p></td>
+<td class="text-right"><p>0.0560005</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>BaggingClassifier</p></td>
+<td class="text-right"><p>0.947368</p></td>
+<td class="text-right"><p>0.954577</p></td>
+<td class="text-right"><p>0.954577</p></td>
+<td class="text-right"><p>0.947882</p></td>
+<td class="text-right"><p>0.0559971</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>BernoulliNB</p></td>
+<td class="text-right"><p>0.950877</p></td>
+<td class="text-right"><p>0.951003</p></td>
+<td class="text-right"><p>0.951003</p></td>
+<td class="text-right"><p>0.951072</p></td>
+<td class="text-right"><p>0.0169988</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LinearDiscriminantAnalysis</p></td>
+<td class="text-right"><p>0.961404</p></td>
+<td class="text-right"><p>0.950816</p></td>
+<td class="text-right"><p>0.950816</p></td>
+<td class="text-right"><p>0.961089</p></td>
+<td class="text-right"><p>0.0199995</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>GaussianNB</p></td>
+<td class="text-right"><p>0.954386</p></td>
+<td class="text-right"><p>0.949536</p></td>
+<td class="text-right"><p>0.949536</p></td>
+<td class="text-right"><p>0.954337</p></td>
+<td class="text-right"><p>0.0139935</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>NuSVC</p></td>
+<td class="text-right"><p>0.954386</p></td>
+<td class="text-right"><p>0.943215</p></td>
+<td class="text-right"><p>0.943215</p></td>
+<td class="text-right"><p>0.954014</p></td>
+<td class="text-right"><p>0.019989</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>DecisionTreeClassifier</p></td>
+<td class="text-right"><p>0.936842</p></td>
+<td class="text-right"><p>0.933693</p></td>
+<td class="text-right"><p>0.933693</p></td>
+<td class="text-right"><p>0.936971</p></td>
+<td class="text-right"><p>0.0170023</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>NearestCentroid</p></td>
+<td class="text-right"><p>0.947368</p></td>
+<td class="text-right"><p>0.933506</p></td>
+<td class="text-right"><p>0.933506</p></td>
+<td class="text-right"><p>0.946801</p></td>
+<td class="text-right"><p>0.0160074</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>ExtraTreeClassifier</p></td>
+<td class="text-right"><p>0.922807</p></td>
+<td class="text-right"><p>0.912168</p></td>
+<td class="text-right"><p>0.912168</p></td>
+<td class="text-right"><p>0.922462</p></td>
+<td class="text-right"><p>0.0109999</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>CheckingClassifier</p></td>
+<td class="text-right"><p>0.361404</p></td>
+<td class="text-right"><p>0.5</p></td>
+<td class="text-right"><p>0.5</p></td>
+<td class="text-right"><p>0.191879</p></td>
+<td class="text-right"><p>0.0170043</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>DummyClassifier</p></td>
+<td class="text-right"><p>0.512281</p></td>
+<td class="text-right"><p>0.489598</p></td>
+<td class="text-right"><p>0.489598</p></td>
+<td class="text-right"><p>0.518924</p></td>
+<td class="text-right"><p>0.0119965</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="regression">
+<h2>Regression<a class="headerlink" href="#regression" title="Link to this heading"></a></h2>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyRegressor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">datasets</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">shuffle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">diabetes</span>  <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_diabetes</span><span class="p">()</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">shuffle</span><span class="p">(</span><span class="n">diabetes</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">diabetes</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="n">offset</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">)</span>
+
+<span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:</span><span class="n">offset</span><span class="p">],</span> <span class="n">y</span><span class="p">[:</span><span class="n">offset</span><span class="p">]</span>
+<span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">offset</span><span class="p">:],</span> <span class="n">y</span><span class="p">[</span><span class="n">offset</span><span class="p">:]</span>
+
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="id1">
+<h3>Advanced Options<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># With categorical encoding, timeout, and GPU</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>                          <span class="c1"># Show progress</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>               <span class="c1"># Suppress warnings</span>
+    <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>                 <span class="c1"># Use default metrics</span>
+    <span class="n">predictions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>                   <span class="c1"># Return predictions</span>
+    <span class="n">regressors</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span>                   <span class="c1"># Use all available regressors</span>
+    <span class="n">categorical_encoder</span><span class="o">=</span><span class="s1">&#39;ordinal&#39;</span><span class="p">,</span>      <span class="c1"># Encoding: &#39;onehot&#39;, &#39;ordinal&#39;, &#39;target&#39;, &#39;binary&#39;</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>                        <span class="c1"># Max time per model in seconds</span>
+    <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span>                        <span class="c1"># Enable GPU acceleration</span>
+<span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">verbose</span></code> (int): 0 for silent, 1 for progress display</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ignore_warnings</span></code> (bool): Suppress scikit-learn warnings</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_metric</span></code> (callable): Custom evaluation metric</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">predictions</span></code> (bool): Return prediction DataFrame</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">regressors</span></code> (str/list): ‘all’ or list of regressor names</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">categorical_encoder</span></code> (str): Encoding strategy for categorical features</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">'onehot'</span></code>: One-hot encoding (default)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'ordinal'</span></code>: Ordinal encoding</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'target'</span></code>: Target encoding (requires <code class="docutils literal notranslate"><span class="pre">category-encoders</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'binary'</span></code>: Binary encoding (requires <code class="docutils literal notranslate"><span class="pre">category-encoders</span></code>)</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code> (int): Maximum seconds per model (None for no limit)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">use_gpu</span></code> (bool): Enable GPU acceleration for supported models (default False)</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Model</p></th>
+<th class="head text-right"><p>Adjusted R-Squared</p></th>
+<th class="head text-right"><p>R-Squared</p></th>
+<th class="head text-right"><p>RMSE</p></th>
+<th class="head text-right"><p>Time Taken</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>ExtraTreesRegressor</p></td>
+<td class="text-right"><p>0.378921</p></td>
+<td class="text-right"><p>0.520076</p></td>
+<td class="text-right"><p>54.2202</p></td>
+<td class="text-right"><p>0.121466</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>OrthogonalMatchingPursuitCV</p></td>
+<td class="text-right"><p>0.374947</p></td>
+<td class="text-right"><p>0.517004</p></td>
+<td class="text-right"><p>54.3934</p></td>
+<td class="text-right"><p>0.0111742</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>Lasso</p></td>
+<td class="text-right"><p>0.373483</p></td>
+<td class="text-right"><p>0.515873</p></td>
+<td class="text-right"><p>54.457</p></td>
+<td class="text-right"><p>0.00620174</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>LassoLars</p></td>
+<td class="text-right"><p>0.373474</p></td>
+<td class="text-right"><p>0.515866</p></td>
+<td class="text-right"><p>54.4575</p></td>
+<td class="text-right"><p>0.0087235</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LarsCV</p></td>
+<td class="text-right"><p>0.3715</p></td>
+<td class="text-right"><p>0.514341</p></td>
+<td class="text-right"><p>54.5432</p></td>
+<td class="text-right"><p>0.0160234</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>LassoCV</p></td>
+<td class="text-right"><p>0.370413</p></td>
+<td class="text-right"><p>0.513501</p></td>
+<td class="text-right"><p>54.5903</p></td>
+<td class="text-right"><p>0.0624897</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>PassiveAggressiveRegressor</p></td>
+<td class="text-right"><p>0.366958</p></td>
+<td class="text-right"><p>0.510831</p></td>
+<td class="text-right"><p>54.7399</p></td>
+<td class="text-right"><p>0.00689793</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>LassoLarsIC</p></td>
+<td class="text-right"><p>0.364984</p></td>
+<td class="text-right"><p>0.509306</p></td>
+<td class="text-right"><p>54.8252</p></td>
+<td class="text-right"><p>0.0108321</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>SGDRegressor</p></td>
+<td class="text-right"><p>0.364307</p></td>
+<td class="text-right"><p>0.508783</p></td>
+<td class="text-right"><p>54.8544</p></td>
+<td class="text-right"><p>0.0055306</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>RidgeCV</p></td>
+<td class="text-right"><p>0.363002</p></td>
+<td class="text-right"><p>0.507774</p></td>
+<td class="text-right"><p>54.9107</p></td>
+<td class="text-right"><p>0.00728202</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>Ridge</p></td>
+<td class="text-right"><p>0.363002</p></td>
+<td class="text-right"><p>0.507774</p></td>
+<td class="text-right"><p>54.9107</p></td>
+<td class="text-right"><p>0.00556874</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>BayesianRidge</p></td>
+<td class="text-right"><p>0.362296</p></td>
+<td class="text-right"><p>0.507229</p></td>
+<td class="text-right"><p>54.9411</p></td>
+<td class="text-right"><p>0.0122972</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LassoLarsCV</p></td>
+<td class="text-right"><p>0.361749</p></td>
+<td class="text-right"><p>0.506806</p></td>
+<td class="text-right"><p>54.9646</p></td>
+<td class="text-right"><p>0.0175984</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>TransformedTargetRegressor</p></td>
+<td class="text-right"><p>0.361749</p></td>
+<td class="text-right"><p>0.506806</p></td>
+<td class="text-right"><p>54.9646</p></td>
+<td class="text-right"><p>0.00604773</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LinearRegression</p></td>
+<td class="text-right"><p>0.361749</p></td>
+<td class="text-right"><p>0.506806</p></td>
+<td class="text-right"><p>54.9646</p></td>
+<td class="text-right"><p>0.00677514</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>Lars</p></td>
+<td class="text-right"><p>0.358828</p></td>
+<td class="text-right"><p>0.504549</p></td>
+<td class="text-right"><p>55.0903</p></td>
+<td class="text-right"><p>0.00935149</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>ElasticNetCV</p></td>
+<td class="text-right"><p>0.356159</p></td>
+<td class="text-right"><p>0.502486</p></td>
+<td class="text-right"><p>55.2048</p></td>
+<td class="text-right"><p>0.0478678</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>HuberRegressor</p></td>
+<td class="text-right"><p>0.355251</p></td>
+<td class="text-right"><p>0.501785</p></td>
+<td class="text-right"><p>55.2437</p></td>
+<td class="text-right"><p>0.0129263</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>RandomForestRegressor</p></td>
+<td class="text-right"><p>0.349621</p></td>
+<td class="text-right"><p>0.497434</p></td>
+<td class="text-right"><p>55.4844</p></td>
+<td class="text-right"><p>0.2331</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>AdaBoostRegressor</p></td>
+<td class="text-right"><p>0.340416</p></td>
+<td class="text-right"><p>0.490322</p></td>
+<td class="text-right"><p>55.8757</p></td>
+<td class="text-right"><p>0.0512381</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LGBMRegressor</p></td>
+<td class="text-right"><p>0.339239</p></td>
+<td class="text-right"><p>0.489412</p></td>
+<td class="text-right"><p>55.9255</p></td>
+<td class="text-right"><p>0.0396187</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>HistGradientBoostingRegressor</p></td>
+<td class="text-right"><p>0.335632</p></td>
+<td class="text-right"><p>0.486625</p></td>
+<td class="text-right"><p>56.0779</p></td>
+<td class="text-right"><p>0.0897055</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>PoissonRegressor</p></td>
+<td class="text-right"><p>0.323033</p></td>
+<td class="text-right"><p>0.476889</p></td>
+<td class="text-right"><p>56.6072</p></td>
+<td class="text-right"><p>0.00953603</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>ElasticNet</p></td>
+<td class="text-right"><p>0.301755</p></td>
+<td class="text-right"><p>0.460447</p></td>
+<td class="text-right"><p>57.4899</p></td>
+<td class="text-right"><p>0.00604224</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>KNeighborsRegressor</p></td>
+<td class="text-right"><p>0.299855</p></td>
+<td class="text-right"><p>0.458979</p></td>
+<td class="text-right"><p>57.5681</p></td>
+<td class="text-right"><p>0.00757337</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>OrthogonalMatchingPursuit</p></td>
+<td class="text-right"><p>0.292421</p></td>
+<td class="text-right"><p>0.453235</p></td>
+<td class="text-right"><p>57.8729</p></td>
+<td class="text-right"><p>0.00709486</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>BaggingRegressor</p></td>
+<td class="text-right"><p>0.291213</p></td>
+<td class="text-right"><p>0.452301</p></td>
+<td class="text-right"><p>57.9223</p></td>
+<td class="text-right"><p>0.0302746</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>GradientBoostingRegressor</p></td>
+<td class="text-right"><p>0.247009</p></td>
+<td class="text-right"><p>0.418143</p></td>
+<td class="text-right"><p>59.7011</p></td>
+<td class="text-right"><p>0.136803</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>TweedieRegressor</p></td>
+<td class="text-right"><p>0.244215</p></td>
+<td class="text-right"><p>0.415984</p></td>
+<td class="text-right"><p>59.8118</p></td>
+<td class="text-right"><p>0.00633955</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>XGBRegressor</p></td>
+<td class="text-right"><p>0.224263</p></td>
+<td class="text-right"><p>0.400567</p></td>
+<td class="text-right"><p>60.5961</p></td>
+<td class="text-right"><p>0.339694</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>GammaRegressor</p></td>
+<td class="text-right"><p>0.223895</p></td>
+<td class="text-right"><p>0.400283</p></td>
+<td class="text-right"><p>60.6105</p></td>
+<td class="text-right"><p>0.0235181</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>RANSACRegressor</p></td>
+<td class="text-right"><p>0.203535</p></td>
+<td class="text-right"><p>0.38455</p></td>
+<td class="text-right"><p>61.4004</p></td>
+<td class="text-right"><p>0.0653253</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>LinearSVR</p></td>
+<td class="text-right"><p>0.116707</p></td>
+<td class="text-right"><p>0.317455</p></td>
+<td class="text-right"><p>64.6607</p></td>
+<td class="text-right"><p>0.0077076</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>ExtraTreeRegressor</p></td>
+<td class="text-right"><p>0.00201902</p></td>
+<td class="text-right"><p>0.228833</p></td>
+<td class="text-right"><p>68.7304</p></td>
+<td class="text-right"><p>0.00626636</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>NuSVR</p></td>
+<td class="text-right"><p>-0.0667043</p></td>
+<td class="text-right"><p>0.175728</p></td>
+<td class="text-right"><p>71.0575</p></td>
+<td class="text-right"><p>0.0143399</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>SVR</p></td>
+<td class="text-right"><p>-0.0964128</p></td>
+<td class="text-right"><p>0.152772</p></td>
+<td class="text-right"><p>72.0402</p></td>
+<td class="text-right"><p>0.0114729</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>DummyRegressor</p></td>
+<td class="text-right"><p>-0.297553</p></td>
+<td class="text-right"><p>-0.00265478</p></td>
+<td class="text-right"><p>78.3701</p></td>
+<td class="text-right"><p>0.00592971</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>DecisionTreeRegressor</p></td>
+<td class="text-right"><p>-0.470263</p></td>
+<td class="text-right"><p>-0.136112</p></td>
+<td class="text-right"><p>83.4229</p></td>
+<td class="text-right"><p>0.00749898</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>GaussianProcessRegressor</p></td>
+<td class="text-right"><p>-0.769174</p></td>
+<td class="text-right"><p>-0.367089</p></td>
+<td class="text-right"><p>91.5109</p></td>
+<td class="text-right"><p>0.0770502</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>MLPRegressor</p></td>
+<td class="text-right"><p>-1.86772</p></td>
+<td class="text-right"><p>-1.21597</p></td>
+<td class="text-right"><p>116.508</p></td>
+<td class="text-right"><p>0.235267</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>KernelRidge</p></td>
+<td class="text-right"><p>-5.03822</p></td>
+<td class="text-right"><p>-3.6659</p></td>
+<td class="text-right"><p>169.061</p></td>
+<td class="text-right"><p>0.0243919</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="time-series-forecasting">
+<h2>Time Series Forecasting<a class="headerlink" href="#time-series-forecasting" title="Link to this heading"></a></h2>
+<p>LazyForecaster benchmarks 20+ forecasting models on your time series in a single call:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.TimeSeriesForecasting</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyForecaster</span>
+
+<span class="c1"># Generate sample data (or use your own)</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">+</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">t</span> <span class="o">/</span> <span class="mi">12</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+<span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:</span><span class="mi">180</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">180</span><span class="p">:]</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Model</p></th>
+<th class="head text-right"><p>MAE</p></th>
+<th class="head text-right"><p>RMSE</p></th>
+<th class="head text-right"><p>MAPE</p></th>
+<th class="head text-right"><p>SMAPE</p></th>
+<th class="head text-right"><p>MASE</p></th>
+<th class="head text-right"><p>R-Squared</p></th>
+<th class="head text-right"><p>Time Taken</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>Holt</p></td>
+<td class="text-right"><p>0.8532</p></td>
+<td class="text-right"><p>1.0285</p></td>
+<td class="text-right"><p>6.3241</p></td>
+<td class="text-right"><p>6.1758</p></td>
+<td class="text-right"><p>0.6993</p></td>
+<td class="text-right"><p>0.7218</p></td>
+<td class="text-right"><p>0.03</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>SARIMAX</p></td>
+<td class="text-right"><p>0.8791</p></td>
+<td class="text-right"><p>1.0601</p></td>
+<td class="text-right"><p>6.5012</p></td>
+<td class="text-right"><p>6.3414</p></td>
+<td class="text-right"><p>0.7205</p></td>
+<td class="text-right"><p>0.7045</p></td>
+<td class="text-right"><p>0.12</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>Ridge_TS</p></td>
+<td class="text-right"><p>0.9124</p></td>
+<td class="text-right"><p>1.0843</p></td>
+<td class="text-right"><p>6.7523</p></td>
+<td class="text-right"><p>6.5721</p></td>
+<td class="text-right"><p>0.7478</p></td>
+<td class="text-right"><p>0.6912</p></td>
+<td class="text-right"><p>0.01</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>…</p></td>
+<td class="text-right"><p>…</p></td>
+<td class="text-right"><p>…</p></td>
+<td class="text-right"><p>…</p></td>
+<td class="text-right"><p>…</p></td>
+<td class="text-right"><p>…</p></td>
+<td class="text-right"><p>…</p></td>
+<td class="text-right"><p>…</p></td>
+</tr>
+</tbody>
+</table>
+<section id="with-exogenous-variables">
+<h3>With Exogenous Variables<a class="headerlink" href="#with-exogenous-variables" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Optional exogenous features</span>
+<span class="n">X_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">180</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">180</span><span class="p">])])</span>
+<span class="n">X_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">180</span><span class="p">:]),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">180</span><span class="p">:])])</span>
+
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>Advanced Options<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>                          <span class="c1"># Show progress</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>               <span class="c1"># Suppress model errors</span>
+    <span class="n">predictions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>                   <span class="c1"># Return forecast values</span>
+    <span class="n">seasonal_period</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>                 <span class="c1"># Override auto-detection</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>                               <span class="c1"># Time series cross-validation</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>                         <span class="c1"># Max seconds per model</span>
+    <span class="n">sort_by</span><span class="o">=</span><span class="s2">&quot;RMSE&quot;</span><span class="p">,</span>                     <span class="c1"># Sort metric (MAE, MAPE, SMAPE, MASE, R-Squared)</span>
+    <span class="n">forecasters</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span>                  <span class="c1"># Or list: [&quot;Holt&quot;, &quot;AutoARIMA&quot;, &quot;LSTM_TS&quot;]</span>
+    <span class="n">max_models</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>                      <span class="c1"># Limit number of models</span>
+    <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>                       <span class="c1"># GPU acceleration for supported models</span>
+    <span class="n">foundation_model_path</span><span class="o">=</span><span class="s2">&quot;/path/to/timesfm-weights&quot;</span><span class="p">,</span>  <span class="c1"># Local model weights (offline)</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Parameters:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">verbose</span></code> (int): 0 for silent, 1 for progress display</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ignore_warnings</span></code> (bool): Suppress per-model exceptions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">predictions</span></code> (bool): Return a second DataFrame of forecasted values</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seasonal_period</span></code> (int/None): Seasonal cycle length; <code class="docutils literal notranslate"><span class="pre">None</span></code> auto-detects via ACF</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cv</span></code> (int/None): Number of <code class="docutils literal notranslate"><span class="pre">TimeSeriesSplit</span></code> folds for cross-validation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code> (int/float/None): Maximum training seconds per model</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sort_by</span></code> (str): Metric to sort by (<code class="docutils literal notranslate"><span class="pre">&quot;RMSE&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;MAE&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;MAPE&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;SMAPE&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;MASE&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;R-Squared&quot;</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forecasters</span></code> (str/list): <code class="docutils literal notranslate"><span class="pre">&quot;all&quot;</span></code> or a list of model names</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_lags</span></code> (int): Number of lag features for ML/DL models (default 10)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_rolling</span></code> (tuple): Rolling-window sizes for feature engineering (default (3, 7))</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_models</span></code> (int/None): Limit total models to train</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_metric</span></code> (callable): Additional metric <code class="docutils literal notranslate"><span class="pre">f(y_true,</span> <span class="pre">y_pred)</span> <span class="pre">-&gt;</span> <span class="pre">float</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">use_gpu</span></code> (bool): Enable GPU acceleration for supported models (default False)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">foundation_model_path</span></code> (str): Local path to pre-downloaded foundation model weights (e.g. TimesFM)</p></li>
+</ul>
+<p><strong>Available model categories:</strong></p>
+<ul class="simple">
+<li><p><strong>Baselines:</strong> Naive, SeasonalNaive</p></li>
+<li><p><strong>Statistical (statsmodels):</strong> SimpleExpSmoothing, Holt, HoltWinters_Add, HoltWinters_Mul, Theta, SARIMAX</p></li>
+<li><p><strong>Statistical (pmdarima):</strong> AutoARIMA</p></li>
+<li><p><strong>ML (sklearn):</strong> LinearRegression_TS, Ridge_TS, Lasso_TS, ElasticNet_TS, KNeighborsRegressor_TS, DecisionTreeRegressor_TS, RandomForestRegressor_TS, GradientBoostingRegressor_TS, AdaBoostRegressor_TS, ExtraTreesRegressor_TS, BaggingRegressor_TS, SVR_TS, XGBRegressor_TS, LGBMRegressor_TS, CatBoostRegressor_TS</p></li>
+<li><p><strong>Deep Learning (torch):</strong> LSTM_TS, GRU_TS</p></li>
+<li><p><strong>Foundation (timesfm):</strong> TimesFM</p></li>
+</ul>
+</section>
+</section>
+<section id="gpu-acceleration">
+<h2>GPU Acceleration<a class="headerlink" href="#gpu-acceleration" title="Link to this heading"></a></h2>
+<p>Enable GPU acceleration for supported models with <code class="docutils literal notranslate"><span class="pre">use_gpu=True</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyClassifier</span><span class="p">,</span> <span class="n">LazyRegressor</span>
+
+<span class="c1"># Classification with GPU</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="c1"># Regression with GPU</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="c1"># Time Series with GPU</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.TimeSeriesForecasting</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyForecaster</span>
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Supported GPU backends:</strong></p>
+<ul class="simple">
+<li><p><strong>XGBoost</strong> — <code class="docutils literal notranslate"><span class="pre">device=&quot;cuda&quot;</span></code></p></li>
+<li><p><strong>LightGBM</strong> — <code class="docutils literal notranslate"><span class="pre">device=&quot;gpu&quot;</span></code></p></li>
+<li><p><strong>CatBoost</strong> — <code class="docutils literal notranslate"><span class="pre">task_type=&quot;GPU&quot;</span></code></p></li>
+<li><p><strong>cuML (RAPIDS)</strong> — GPU-native scikit-learn replacements (auto-discovered when installed)</p></li>
+<li><p><strong>LSTM / GRU</strong> — PyTorch CUDA</p></li>
+<li><p><strong>TimesFM</strong> — PyTorch CUDA</p></li>
+</ul>
+<p>Falls back to CPU automatically if no CUDA GPU is available.</p>
+</section>
+<section id="categorical-encoding">
+<h2>Categorical Encoding<a class="headerlink" href="#categorical-encoding" title="Link to this heading"></a></h2>
+<p>Lazy Predict supports multiple categorical encoding strategies:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyClassifier</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+
+<span class="c1"># Example with categorical features</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;data_with_categories.csv&#39;</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;target&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span>
+
+<span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+
+<span class="c1"># Try different encoders</span>
+<span class="k">for</span> <span class="n">encoder</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;onehot&#39;</span><span class="p">,</span> <span class="s1">&#39;ordinal&#39;</span><span class="p">,</span> <span class="s1">&#39;target&#39;</span><span class="p">,</span> <span class="s1">&#39;binary&#39;</span><span class="p">]:</span>
+    <span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span>
+        <span class="n">categorical_encoder</span><span class="o">=</span><span class="n">encoder</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">encoder</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2"> Encoding Results:&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+</pre></div>
+</div>
+<p><strong>Note:</strong> Target and binary encoders require the <code class="docutils literal notranslate"><span class="pre">category-encoders</span></code> package:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>category-encoders
+</pre></div>
+</div>
+</section>
+<section id="intel-extension-acceleration">
+<h2>Intel Extension Acceleration<a class="headerlink" href="#intel-extension-acceleration" title="Link to this heading"></a></h2>
+<p>For improved performance on Intel CPUs, install Intel Extension for Scikit-learn:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>scikit-learn-intelex
+</pre></div>
+</div>
+<p>Lazy Predict will automatically detect and use it for acceleration.</p>
+</section>
+<section id="mlflow-integration">
+<h2>MLflow Integration<a class="headerlink" href="#mlflow-integration" title="Link to this heading"></a></h2>
+<p>Lazy Predict includes built-in MLflow integration. Enable it by setting the MLflow tracking URI:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MLFLOW_TRACKING_URI&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;sqlite:///mlflow.db&#39;</span>
+
+<span class="c1"># MLflow tracking will be automatically enabled</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Automatically tracks:</p>
+<ul class="simple">
+<li><p>Model metrics (R-squared, RMSE, etc.)</p></li>
+<li><p>Training time</p></li>
+<li><p>Model parameters</p></li>
+<li><p>Model artifacts</p></li>
+</ul>
+</section>
+</section>
+
 
            </div>
           </div>
@@ -85,7 +992,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022-2025, Shankar Rao Pandala.</p>
+    <p>&#169; Copyright 2022-2026, Shankar Rao Pandala.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

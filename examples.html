@@ -6,21 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Examples &mdash; Lazy Predict 0.2.16 documentation</title>
+  <title>Examples &mdash; Lazy Predict 0.3.0a2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=e2418eca"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=5fdc151f"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="&lt;no title&gt;" href="contributing.html" />
-    <link rel="prev" title="Usage" href="usage.html" /> 
+    <link rel="next" title="Types of Contributions" href="contributing.html" />
+    <link rel="prev" title="lazypredict.integrations package" href="lazypredict.integrations.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,27 +48,82 @@
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#classification">Classification</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html#regression">Regression</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#time-series-forecasting">Time Series Forecasting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#gpu-acceleration">GPU Acceleration</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="modules.html">lazypredict</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#classification-example">Classification Example</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#basic-classification">Basic Classification</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#classification-with-custom-metric">Classification with Custom Metric</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#advanced-classification-options">Advanced Classification Options</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#regression-example">Regression Example</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#basic-regression">Basic Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#working-with-pandas-dataframes">Working with Pandas DataFrames</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#working-with-pandas-dataframes">Working with Pandas DataFrames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#categorical-feature-encoding">Categorical Feature Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#onehot-encoding-default">OneHot Encoding (Default)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ordinal-encoding">Ordinal Encoding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#target-encoding">Target Encoding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#binary-encoding">Binary Encoding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#comparing-encoders">Comparing Encoders</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#using-with-mlflow">Using with MLflow</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#for-databricks-users">For Databricks users:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#for-databricks-users">For Databricks Users</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#getting-model-objects">Getting Model Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-timeout">Model Timeout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gpu-acceleration">GPU Acceleration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cuml-rapids-gpu-acceleration">cuML (RAPIDS) GPU Acceleration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#time-series-forecasting-with-gpu">Time Series Forecasting with GPU</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-local-foundation-model-weights">Using Local Foundation Model Weights</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#intel-extension-acceleration">Intel Extension Acceleration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#time-series-forecasting">Time Series Forecasting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-forecasting">Basic Forecasting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#forecasting-with-seasonal-period">Forecasting with Seasonal Period</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#forecasting-with-exogenous-variables">Forecasting with Exogenous Variables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#forecasting-with-cross-validation">Forecasting with Cross-Validation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selecting-specific-forecasters">Selecting Specific Forecasters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-forecasting-metric">Custom Forecasting Metric</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#saving-and-loading-forecaster-models">Saving and Loading Forecaster Models</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Types of Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#tips">Tips</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html#deploying">Deploying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Development Lead</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html#contributors">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">0.3.0a2 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#a1-2026-03-10">0.3.0a1 (2026-03-10)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id1">0.2.15 (2025-04-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id2">0.2.11 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id3">0.2.10 (2022-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id4">0.2.8 (2021-02-06)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id5">0.2.7 (2020-07-09)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id6">0.2.6 (2020-01-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id7">0.2.5 (2020-01-20)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id8">0.2.4 (2020-01-19)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id9">0.2.3 (2019-11-22)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id10">0.2.2 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id11">0.2.1 (2019-11-18)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id12">0.2.0 (2019-11-17)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html#id13">0.1.0 (2019-11-16)</a></li>
 </ul>
 
         </div>
@@ -137,6 +192,23 @@
 </pre></div>
 </div>
 </section>
+<section id="advanced-classification-options">
+<h3>Advanced Classification Options<a class="headerlink" href="#advanced-classification-options" title="Link to this heading"></a></h3>
+<p>Use advanced options like categorical encoding, timeout, and cross-validation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>                          <span class="c1"># Show progress</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>               <span class="c1"># Suppress warnings</span>
+    <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>                 <span class="c1"># Use default metrics</span>
+    <span class="n">predictions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>                   <span class="c1"># Return predictions</span>
+    <span class="n">classifiers</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span>                  <span class="c1"># Use all available classifiers</span>
+    <span class="n">categorical_encoder</span><span class="o">=</span><span class="s1">&#39;onehot&#39;</span><span class="p">,</span>       <span class="c1"># Encoding strategy</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>                         <span class="c1"># Max time per model in seconds</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">5</span>                                <span class="c1"># Cross-validation folds</span>
+<span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 </section>
 <section id="regression-example">
 <h2>Regression Example<a class="headerlink" href="#regression-example" title="Link to this heading"></a></h2>
@@ -162,9 +234,8 @@
 </pre></div>
 </div>
 </section>
-</section>
 <section id="working-with-pandas-dataframes">
-<h2>Working with Pandas DataFrames<a class="headerlink" href="#working-with-pandas-dataframes" title="Link to this heading"></a></h2>
+<h3>Working with Pandas DataFrames<a class="headerlink" href="#working-with-pandas-dataframes" title="Link to this heading"></a></h3>
 <p>Lazy Predict works seamlessly with pandas DataFrames:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
@@ -182,9 +253,83 @@
 </pre></div>
 </div>
 </section>
+</section>
+<section id="categorical-feature-encoding">
+<h2>Categorical Feature Encoding<a class="headerlink" href="#categorical-feature-encoding" title="Link to this heading"></a></h2>
+<p>Lazy Predict supports multiple categorical encoding strategies:</p>
+<section id="onehot-encoding-default">
+<h3>OneHot Encoding (Default)<a class="headerlink" href="#onehot-encoding-default" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+
+<span class="c1"># Load data with categorical features</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;data_with_categories.csv&#39;</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;target&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;target&#39;</span><span class="p">]</span>
+
+<span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+
+<span class="c1"># Default onehot encoding</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">categorical_encoder</span><span class="o">=</span><span class="s1">&#39;onehot&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="ordinal-encoding">
+<h3>Ordinal Encoding<a class="headerlink" href="#ordinal-encoding" title="Link to this heading"></a></h3>
+<p>Useful for ordered categorical features or when one-hot encoding creates too many features:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">categorical_encoder</span><span class="o">=</span><span class="s1">&#39;ordinal&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="target-encoding">
+<h3>Target Encoding<a class="headerlink" href="#target-encoding" title="Link to this heading"></a></h3>
+<p>Target encoding requires the <code class="docutils literal notranslate"><span class="pre">category-encoders</span></code> package:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>category-encoders
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">categorical_encoder</span><span class="o">=</span><span class="s1">&#39;target&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="binary-encoding">
+<h3>Binary Encoding<a class="headerlink" href="#binary-encoding" title="Link to this heading"></a></h3>
+<p>Binary encoding is efficient for high-cardinality features:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Requires category-encoders package</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">categorical_encoder</span><span class="o">=</span><span class="s1">&#39;binary&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="comparing-encoders">
+<h3>Comparing Encoders<a class="headerlink" href="#comparing-encoders" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">encoder</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;onehot&#39;</span><span class="p">,</span> <span class="s1">&#39;ordinal&#39;</span><span class="p">,</span> <span class="s1">&#39;target&#39;</span><span class="p">,</span> <span class="s1">&#39;binary&#39;</span><span class="p">]:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span>
+            <span class="n">categorical_encoder</span><span class="o">=</span><span class="n">encoder</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+        <span class="n">results</span><span class="p">[</span><span class="n">encoder</span><span class="p">]</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">encoder</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2"> Encoding Results:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">encoder</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
 <section id="using-with-mlflow">
 <h2>Using with MLflow<a class="headerlink" href="#using-with-mlflow" title="Link to this heading"></a></h2>
-<p>Lazy Predict has built-in MLflow integration for experiment tracking. You can enable it by setting the MLflow tracking URI:</p>
+<p>Lazy Predict has built-in MLflow integration for experiment tracking. You can enable it
+by setting the MLflow tracking URI:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MLFLOW_TRACKING_URI&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;sqlite:///mlflow.db&#39;</span>  <span class="c1"># Local SQLite tracking</span>
 <span class="c1"># Or for remote tracking:</span>
@@ -209,7 +354,7 @@
 </pre></div>
 </div>
 <section id="for-databricks-users">
-<h3>For Databricks users:<a class="headerlink" href="#for-databricks-users" title="Link to this heading"></a></h3>
+<h3>For Databricks Users<a class="headerlink" href="#for-databricks-users" title="Link to this heading"></a></h3>
 <p>If you’re using Databricks, MLflow tracking is automatically configured:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># MLflow tracking will use Databricks tracking URI automatically</span>
 <span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -232,20 +377,247 @@
 </pre></div>
 </div>
 </section>
+<section id="model-timeout">
+<h2>Model Timeout<a class="headerlink" href="#model-timeout" title="Link to this heading"></a></h2>
+<p>Set a maximum time limit for each model to prevent long-running models from blocking:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Limit each model to 60 seconds</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="c1"># Models that exceed the timeout will be skipped</span>
+<span class="c1"># Check for skipped models in the verbose output</span>
+</pre></div>
+</div>
+<p>This is particularly useful when:</p>
+<ul class="simple">
+<li><p>Working with large datasets where some models might take very long</p></li>
+<li><p>Running experiments with time constraints</p></li>
+<li><p>Preventing specific slow models from blocking the entire pipeline</p></li>
+</ul>
+</section>
+<section id="gpu-acceleration">
+<h2>GPU Acceleration<a class="headerlink" href="#gpu-acceleration" title="Link to this heading"></a></h2>
+<p>Lazy Predict supports GPU acceleration for models that support it.
+Enable GPU with the <code class="docutils literal notranslate"><span class="pre">use_gpu=True</span></code> parameter:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyClassifier</span><span class="p">,</span> <span class="n">LazyRegressor</span>
+
+<span class="c1"># Classification with GPU</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="c1"># Regression with GPU</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Supported GPU backends:</p>
+<ul class="simple">
+<li><p><strong>XGBoost</strong> — uses <code class="docutils literal notranslate"><span class="pre">device=&quot;cuda&quot;</span></code></p></li>
+<li><p><strong>LightGBM</strong> — uses <code class="docutils literal notranslate"><span class="pre">device=&quot;gpu&quot;</span></code></p></li>
+<li><p><strong>CatBoost</strong> — uses <code class="docutils literal notranslate"><span class="pre">task_type=&quot;GPU&quot;</span></code></p></li>
+<li><p><strong>cuML (RAPIDS)</strong> — GPU-native scikit-learn replacements added automatically</p></li>
+<li><p><strong>LSTM / GRU</strong> — PyTorch models use CUDA device</p></li>
+<li><p><strong>TimesFM</strong> — placed on CUDA device for inference</p></li>
+</ul>
+<section id="cuml-rapids-gpu-acceleration">
+<h3>cuML (RAPIDS) GPU Acceleration<a class="headerlink" href="#cuml-rapids-gpu-acceleration" title="Link to this heading"></a></h3>
+<p>When <a class="reference external" href="https://docs.rapids.ai/api/cuml/stable/">cuML</a> is installed and
+<code class="docutils literal notranslate"><span class="pre">use_gpu=True</span></code>, GPU-accelerated versions of common scikit-learn models are
+automatically added to the benchmark:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install cuML (requires NVIDIA GPU + CUDA)</span>
+pip<span class="w"> </span>install<span class="w"> </span>cuml-cu12<span class="w">  </span><span class="c1"># for CUDA 12</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># cuML models are added automatically when use_gpu=True</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="c1"># Results will include cuML_LogisticRegression, cuML_RandomForestClassifier, etc.</span>
+</pre></div>
+</div>
+<p>cuML GPU models added:</p>
+<ul class="simple">
+<li><p><strong>Classifiers:</strong> LogisticRegression, RandomForestClassifier, KNeighborsClassifier, SVC</p></li>
+<li><p><strong>Regressors:</strong> LinearRegression, Ridge, Lasso, ElasticNet, RandomForestRegressor, KNeighborsRegressor, SVR</p></li>
+</ul>
+</section>
+<section id="time-series-forecasting-with-gpu">
+<h3>Time Series Forecasting with GPU<a class="headerlink" href="#time-series-forecasting-with-gpu" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.TimeSeriesForecasting</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyForecaster</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>       <span class="c1"># GPU for XGBoost, LightGBM, CatBoost, LSTM, GRU, TimesFM</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>GPU acceleration requires a CUDA-capable GPU and PyTorch installed with
+CUDA support.  If CUDA is not available, models automatically fall back
+to CPU with a warning.</p>
+</div>
+</section>
+<section id="using-local-foundation-model-weights">
+<h3>Using Local Foundation Model Weights<a class="headerlink" href="#using-local-foundation-model-weights" title="Link to this heading"></a></h3>
+<p>If you are offline, behind a firewall, or in an air-gapped environment,
+you can point to a local directory containing pre-downloaded model weights
+instead of downloading from Hugging Face:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.TimeSeriesForecasting</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyForecaster</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">foundation_model_path</span><span class="o">=</span><span class="s2">&quot;/path/to/timesfm-2.5-200m-pytorch&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To download the model for later offline use:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Download once (requires internet)</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<span class="s2">from huggingface_hub import snapshot_download</span>
+<span class="s2">snapshot_download(&#39;google/timesfm-2.5-200m-pytorch&#39;, local_dir=&#39;./timesfm-local&#39;)</span>
+<span class="s2">&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Then use the local path in air-gapped environments</span>
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">foundation_model_path</span><span class="o">=</span><span class="s2">&quot;./timesfm-local&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="intel-extension-acceleration">
+<h2>Intel Extension Acceleration<a class="headerlink" href="#intel-extension-acceleration" title="Link to this heading"></a></h2>
+<p>For improved performance on Intel CPUs, install Intel Extension for Scikit-learn:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>scikit-learn-intelex
+</pre></div>
+</div>
+<p>Lazy Predict will automatically detect and use it for acceleration:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># No code changes needed - acceleration is automatic</span>
+<span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+
+<span class="c1"># You&#39;ll see &quot;Intel(R) Extension for Scikit-learn enabled&quot; in verbose output</span>
+</pre></div>
+</div>
+</section>
+<section id="time-series-forecasting">
+<h2>Time Series Forecasting<a class="headerlink" href="#time-series-forecasting" title="Link to this heading"></a></h2>
+<section id="basic-forecasting">
+<h3>Basic Forecasting<a class="headerlink" href="#basic-forecasting" title="Link to this heading"></a></h3>
+<p>Benchmark 20+ forecasting models with a single call:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.TimeSeriesForecasting</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyForecaster</span>
+
+<span class="c1"># Generate sample data with trend + seasonality</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">+</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">t</span> <span class="o">/</span> <span class="mi">12</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+<span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">y</span><span class="p">[:</span><span class="mi">180</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">180</span><span class="p">:]</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">predictions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="forecasting-with-seasonal-period">
+<h3>Forecasting with Seasonal Period<a class="headerlink" href="#forecasting-with-seasonal-period" title="Link to this heading"></a></h3>
+<p>By default the seasonal period is auto-detected via ACF. Override it manually:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">seasonal_period</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>    <span class="c1"># monthly data with yearly cycle</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="forecasting-with-exogenous-variables">
+<h3>Forecasting with Exogenous Variables<a class="headerlink" href="#forecasting-with-exogenous-variables" title="Link to this heading"></a></h3>
+<p>Pass optional exogenous features to models that support them (SARIMAX, AutoARIMA, ML models):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create exogenous features</span>
+<span class="n">X_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">180</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">180</span><span class="p">])])</span>
+<span class="n">X_test</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">180</span><span class="p">:]),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">180</span><span class="p">:])])</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="forecasting-with-cross-validation">
+<h3>Forecasting with Cross-Validation<a class="headerlink" href="#forecasting-with-cross-validation" title="Link to this heading"></a></h3>
+<p>Use expanding-window time series cross-validation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>                  <span class="c1"># 5-fold TimeSeriesSplit</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="c1"># scores will contain CV Mean and CV Std columns for each metric</span>
+</pre></div>
+</div>
+</section>
+<section id="selecting-specific-forecasters">
+<h3>Selecting Specific Forecasters<a class="headerlink" href="#selecting-specific-forecasters" title="Link to this heading"></a></h3>
+<p>Run only a subset of models:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">forecasters</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Holt&quot;</span><span class="p">,</span> <span class="s2">&quot;AutoARIMA&quot;</span><span class="p">,</span> <span class="s2">&quot;Ridge_TS&quot;</span><span class="p">,</span> <span class="s2">&quot;LSTM_TS&quot;</span><span class="p">],</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="custom-forecasting-metric">
+<h3>Custom Forecasting Metric<a class="headerlink" href="#custom-forecasting-metric" title="Link to this heading"></a></h3>
+<p>Add a custom metric alongside the defaults:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">median_absolute_error</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_true</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">)))</span>
+
+<span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
+    <span class="n">custom_metric</span><span class="o">=</span><span class="n">median_absolute_error</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+<span class="c1"># scores will include a &#39;median_absolute_error&#39; column</span>
+</pre></div>
+</div>
+</section>
+<section id="saving-and-loading-forecaster-models">
+<h3>Saving and Loading Forecaster Models<a class="headerlink" href="#saving-and-loading-forecaster-models" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Save all fitted models</span>
+<span class="n">fcst</span><span class="o">.</span><span class="n">save_models</span><span class="p">(</span><span class="s2">&quot;./my_forecasters&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load them back</span>
+<span class="n">fcst2</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">()</span>
+<span class="n">fcst2</span><span class="o">.</span><span class="n">load_models</span><span class="p">(</span><span class="s2">&quot;./my_forecasters&quot;</span><span class="p">)</span>
+
+<span class="c1"># Use loaded models to forecast</span>
+<span class="n">new_forecasts</span> <span class="o">=</span> <span class="n">fcst2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">y_history</span><span class="o">=</span><span class="n">y_train</span><span class="p">,</span> <span class="n">horizon</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="usage.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="contributing.html" class="btn btn-neutral float-right" title="&lt;no title&gt;" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="lazypredict.integrations.html" class="btn btn-neutral float-left" title="lazypredict.integrations package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="contributing.html" class="btn btn-neutral float-right" title="Types of Contributions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022-2025, Shankar Rao Pandala.</p>
+    <p>&#169; Copyright 2022-2026, Shankar Rao Pandala.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -2,7 +2,7 @@
 title: History
 ---
 
-# 0.3.0a2 (2026-03-10)
+# 0.3.0a3 (2026-03-10)
 
 -   Added `use_gpu` parameter to classification and regression advanced options docs
 -   Added `foundation_model_path` parameter to LazyForecaster for offline/air-gapped environments

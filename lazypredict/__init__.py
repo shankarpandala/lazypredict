@@ -4,7 +4,7 @@
 
 __author__ = """Shankar Rao Pandala"""
 __email__ = "shankar.pandala@live.com"
-__version__ = '0.3.0a2'
+__version__ = '0.3.0a3'
 
 __all__ = [
     "LazyClassifier",

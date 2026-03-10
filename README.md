@@ -19,7 +19,8 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 - Automatic seasonal period detection via ACF
 - Multiple categorical encoding strategies (OneHot, Ordinal, Target, Binary)
 - Built-in MLflow integration for experiment tracking
-- Support for Python 3.8 through 3.13
+- **GPU acceleration**: XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM
+- Support for Python 3.9 through 3.13
 - Custom metric evaluation support
 - Configurable timeout and cross-validation
 - Intel Extension for Scikit-learn acceleration support
@@ -323,9 +324,40 @@ scores, predictions = fcst.fit(y_train, y_test)
 - **Baselines:** Naive, SeasonalNaive
 - **Statistical (statsmodels):** SimpleExpSmoothing, Holt, HoltWinters_Add, HoltWinters_Mul, Theta, SARIMAX
 - **Statistical (pmdarima):** AutoARIMA
-- **ML (sklearn):** LinearRegression_TS, Ridge_TS, Lasso_TS, ElasticNet_TS, KNeighborsRegressor_TS, DecisionTreeRegressor_TS, RandomForestRegressor_TS, GradientBoostingRegressor_TS, AdaBoostRegressor_TS, ExtraTreesRegressor_TS, BaggingRegressor_TS, SVR_TS, XGBRegressor_TS, LGBMRegressor_TS
+- **ML (sklearn):** LinearRegression_TS, Ridge_TS, Lasso_TS, ElasticNet_TS, KNeighborsRegressor_TS, DecisionTreeRegressor_TS, RandomForestRegressor_TS, GradientBoostingRegressor_TS, AdaBoostRegressor_TS, ExtraTreesRegressor_TS, BaggingRegressor_TS, SVR_TS, XGBRegressor_TS, LGBMRegressor_TS, CatBoostRegressor_TS
 - **Deep Learning (torch):** LSTM_TS, GRU_TS
 - **Foundation (timesfm):** TimesFM
+
+## GPU Acceleration
+
+Enable GPU acceleration for supported models with `use_gpu=True`:
+
+```python
+from lazypredict.Supervised import LazyClassifier, LazyRegressor
+
+# Classification with GPU
+clf = LazyClassifier(use_gpu=True, verbose=0, ignore_warnings=True)
+models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+# Regression with GPU
+reg = LazyRegressor(use_gpu=True, verbose=0, ignore_warnings=True)
+models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+# Time Series with GPU
+from lazypredict.TimeSeriesForecasting import LazyForecaster
+fcst = LazyForecaster(use_gpu=True, verbose=0, ignore_warnings=True)
+scores, predictions = fcst.fit(y_train, y_test)
+```
+
+**Supported GPU backends:**
+- **XGBoost** — `device="cuda"`
+- **LightGBM** — `device="gpu"`
+- **CatBoost** — `task_type="GPU"`
+- **cuML (RAPIDS)** — GPU-native scikit-learn replacements (auto-discovered when installed)
+- **LSTM / GRU** — PyTorch CUDA
+- **TimesFM** — PyTorch CUDA
+
+Falls back to CPU automatically if no CUDA GPU is available.
 
 ## Categorical Encoding
 

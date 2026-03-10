@@ -1,5 +1,5 @@
 Welcome to Lazy Predict
-==================
+=======================
 
 Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning.
 
@@ -19,7 +19,7 @@ Lazy Predict helps build a lot of basic models without much code and helps under
    :alt: CodeFactor
 
 Quick Links
-----------
+-----------
 * `Source Code <https://github.com/shankarpandala/lazypredict>`_
 * `Bug Reports <https://github.com/shankarpandala/lazypredict/issues>`_
 * `Documentation <https://lazypredict.readthedocs.io/>`_
@@ -33,7 +33,7 @@ Contents
 
    installation
    usage
-   
+
 .. toctree::
    :maxdepth: 2
    :caption: User Guide
@@ -53,23 +53,25 @@ Features
 --------
 * Over 40 built-in machine learning models
 * Automatic model selection for classification, regression, and **time series forecasting**
-* **20+ forecasting models** — statistical, ML, deep learning, and pretrained foundation models
+* **20+ forecasting models** --- statistical, ML, deep learning, and pretrained foundation models
+* **GPU acceleration** --- XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM
 * Automatic seasonal period detection via autocorrelation
 * Support for univariate series with optional exogenous variables
 * Support for both numerical and categorical features
 * Easy integration with scikit-learn pipelines
 * Model performance comparison and ranking
 * Built-in MLflow integration for experiment tracking
-* Support for Python 3.8 through 3.13
+* Support for Python 3.9 through 3.13
 * Minimal code required
 * Automatic model metrics logging
 * Custom metric evaluation support
 * Easy model access and reuse
 
 Key Benefits
------------
+------------
 * Rapid model prototyping and selection
 * One-line benchmarking of forecasting models (LazyForecaster)
+* GPU acceleration with automatic fallback to CPU
 * Automated experiment tracking with MLflow
 * Comprehensive model performance comparison
 * Zero-configuration model evaluation
@@ -79,7 +81,7 @@ Key Benefits
 * Extensible with custom metrics
 
 Indices and Tables
------------------
+------------------
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`

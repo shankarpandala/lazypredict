@@ -17,6 +17,16 @@ __all__ = [
     "preprocessing",
     "metrics",
     "config",
+    # New modules
+    "explainability",
+    "search_spaces",
+    "ts_search_spaces",
+    "tuning",
+    "ts_tuning",
+    "ensemble",
+    "horizon",
+    "distributed",
+    "spark",
 ]
 
 from lazypredict.Supervised import LazyClassifier, LazyRegressor

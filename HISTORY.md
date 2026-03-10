@@ -2,19 +2,31 @@
 title: History
 ---
 
+# 0.3.0a2 (2026-03-10)
+
+-   Added `use_gpu` parameter to classification and regression advanced options docs
+-   Added `foundation_model_path` parameter to LazyForecaster for offline/air-gapped environments
+-   Added CatBoost to `boost` install extras (`pip install lazypredict[boost]`)
+-   Updated all documentation examples to include GPU acceleration and local model weights
+-   Fixed Sphinx documentation build pipeline (RST formatting, myst_parser migration)
+-   Updated ReadTheDocs and GitHub Actions docs workflow configuration
+
 # 0.3.0a1 (2026-03-10)
 
--   **New: Time Series Forecasting** — `LazyForecaster` benchmarks 26 forecasting models in one call
+-   **New: Time Series Forecasting** — `LazyForecaster` benchmarks 26+ forecasting models in one call
 -   Statistical models: Naive, SeasonalNaive, SimpleExpSmoothing, Holt, HoltWinters (additive & multiplicative), Theta, SARIMAX, AutoARIMA
--   ML models: LinearRegression, Ridge, Lasso, ElasticNet, KNN, SVR, DecisionTree, RandomForest, GradientBoosting, AdaBoost, Bagging, ExtraTrees, XGBoost, LightGBM
+-   ML models: LinearRegression, Ridge, Lasso, ElasticNet, KNN, SVR, DecisionTree, RandomForest, GradientBoosting, AdaBoost, Bagging, ExtraTrees, XGBoost, LightGBM, CatBoost
 -   Deep learning models: LSTM, GRU (via PyTorch)
 -   Foundation model: Google TimesFM 2.5 (200M-parameter zero-shot pretrained transformer)
+-   **GPU acceleration** via `use_gpu=True`: XGBoost (`device="cuda"`), LightGBM (`device="gpu"`), CatBoost (`task_type="GPU"`), cuML (RAPIDS) auto-discovery, LSTM/GRU/TimesFM CUDA device placement
 -   Automatic seasonal period detection via autocorrelation (ACF)
 -   Exogenous variable support for SARIMAX, AutoARIMA, and ML models
 -   Cross-validation with expanding window (TimeSeriesSplit)
 -   New forecasting metrics: MAPE, SMAPE, MASE
 -   New install extras: `pip install lazypredict[timeseries]`, `[deeplearning]`, `[foundation]`
 -   Added `categorical_encoder` parameter to LazyClassifier and LazyRegressor
+-   Added CatBoost models (CatBoostClassifier, CatBoostRegressor) to supervised and time series
+-   Added cuML (RAPIDS) GPU-native scikit-learn model auto-discovery when `use_gpu=True`
 -   Refactored Supervised.py with type hints, logging, and input validation
 
 # 0.2.15 (2025-04-06)

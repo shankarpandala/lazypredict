@@ -5,10 +5,10 @@ Examples
 This page contains detailed examples of how to use Lazy Predict in various scenarios.
 
 Classification Example
---------------------
+----------------------
 
 Basic Classification
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 Here's a basic example using the breast cancer dataset:
 
@@ -28,13 +28,13 @@ Here's a basic example using the breast cancer dataset:
 
     # Create classifier
     clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None)
-    
+
     # Fit and get models
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
     print(models)
 
 Classification with Custom Metric
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can use custom metrics for model evaluation:
 
@@ -49,7 +49,7 @@ You can use custom metrics for model evaluation:
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 Advanced Classification Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use advanced options like categorical encoding, timeout, and cross-validation:
 
@@ -68,10 +68,10 @@ Use advanced options like categorical encoding, timeout, and cross-validation:
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 Regression Example
-----------------
+------------------
 
 Basic Regression
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 Here's an example using the diabetes dataset:
 
@@ -95,33 +95,33 @@ Here's an example using the diabetes dataset:
     print(models)
 
 Working with Pandas DataFrames
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Lazy Predict works seamlessly with pandas DataFrames:
 
 .. code-block:: python
 
     import pandas as pd
-    
+
     # Your DataFrame
     df = pd.DataFrame(X, columns=diabetes.feature_names)
-    
+
     # Split features and target
     X = df
     y = pd.Series(diabetes.target)
-    
+
     # Rest remains the same
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     reg = LazyRegressor(verbose=0, ignore_warnings=True)
     models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 
 Categorical Feature Encoding
---------------------------
+-----------------------------
 
 Lazy Predict supports multiple categorical encoding strategies:
 
 OneHot Encoding (Default)
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -141,7 +141,7 @@ OneHot Encoding (Default)
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 Ordinal Encoding
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 Useful for ordered categorical features or when one-hot encoding creates too many features:
 
@@ -151,7 +151,7 @@ Useful for ordered categorical features or when one-hot encoding creates too man
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 Target Encoding
-~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 Target encoding requires the ``category-encoders`` package:
 
@@ -165,7 +165,7 @@ Target encoding requires the ``category-encoders`` package:
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 Binary Encoding
-~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 Binary encoding is efficient for high-cardinality features:
 
@@ -176,12 +176,12 @@ Binary encoding is efficient for high-cardinality features:
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 
 Comparing Encoders
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
     import pandas as pd
-    
+
     results = {}
     for encoder in ['onehot', 'ordinal', 'target', 'binary']:
         try:
@@ -198,9 +198,10 @@ Comparing Encoders
             print(f"{encoder}: {e}")
 
 Using with MLflow
----------------
+-----------------
 
-Lazy Predict has built-in MLflow integration for experiment tracking. You can enable it by setting the MLflow tracking URI:
+Lazy Predict has built-in MLflow integration for experiment tracking. You can enable it
+by setting the MLflow tracking URI:
 
 .. code-block:: python
 
@@ -228,8 +229,8 @@ You can view the results in the MLflow UI:
 
     mlflow ui
 
-For Databricks users:
-~~~~~~~~~~~~~~~~~~
+For Databricks Users
+~~~~~~~~~~~~~~~~~~~~
 
 If you're using Databricks, MLflow tracking is automatically configured:
 
@@ -240,7 +241,7 @@ If you're using Databricks, MLflow tracking is automatically configured:
     models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 
 Getting Model Objects
-------------------
+---------------------
 
 You can access the trained model objects:
 
@@ -251,12 +252,12 @@ You can access the trained model objects:
 
     # Access specific model
     random_forest = model_dictionary['RandomForestRegressor']
-    
+
     # Make predictions with specific model
     predictions = random_forest.predict(X_test)
 
 Model Timeout
-------------
+-------------
 
 Set a maximum time limit for each model to prevent long-running models from blocking:
 
@@ -265,7 +266,7 @@ Set a maximum time limit for each model to prevent long-running models from bloc
     # Limit each model to 60 seconds
     clf = LazyClassifier(timeout=60, verbose=1)
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
-    
+
     # Models that exceed the timeout will be skipped
     # Check for skipped models in the verbose output
 
@@ -275,8 +276,112 @@ This is particularly useful when:
 * Running experiments with time constraints
 * Preventing specific slow models from blocking the entire pipeline
 
+GPU Acceleration
+----------------
+
+Lazy Predict supports GPU acceleration for models that support it.
+Enable GPU with the ``use_gpu=True`` parameter:
+
+.. code-block:: python
+
+    from lazypredict.Supervised import LazyClassifier, LazyRegressor
+
+    # Classification with GPU
+    clf = LazyClassifier(verbose=0, ignore_warnings=True, use_gpu=True)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+    # Regression with GPU
+    reg = LazyRegressor(verbose=0, ignore_warnings=True, use_gpu=True)
+    models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+Supported GPU backends:
+
+* **XGBoost** --- uses ``device="cuda"``
+* **LightGBM** --- uses ``device="gpu"``
+* **CatBoost** --- uses ``task_type="GPU"``
+* **cuML (RAPIDS)** --- GPU-native scikit-learn replacements added automatically
+* **LSTM / GRU** --- PyTorch models use CUDA device
+* **TimesFM** --- placed on CUDA device for inference
+
+cuML (RAPIDS) GPU Acceleration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When `cuML <https://docs.rapids.ai/api/cuml/stable/>`_ is installed and
+``use_gpu=True``, GPU-accelerated versions of common scikit-learn models are
+automatically added to the benchmark:
+
+.. code-block:: bash
+
+    # Install cuML (requires NVIDIA GPU + CUDA)
+    pip install cuml-cu12  # for CUDA 12
+
+.. code-block:: python
+
+    # cuML models are added automatically when use_gpu=True
+    clf = LazyClassifier(use_gpu=True, verbose=0, ignore_warnings=True)
+    models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+    # Results will include cuML_LogisticRegression, cuML_RandomForestClassifier, etc.
+
+cuML GPU models added:
+
+* **Classifiers:** LogisticRegression, RandomForestClassifier, KNeighborsClassifier, SVC
+* **Regressors:** LinearRegression, Ridge, Lasso, ElasticNet, RandomForestRegressor, KNeighborsRegressor, SVR
+
+Time Series Forecasting with GPU
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+    fcst = LazyForecaster(
+        verbose=0,
+        ignore_warnings=True,
+        use_gpu=True,       # GPU for XGBoost, LightGBM, CatBoost, LSTM, GRU, TimesFM
+    )
+    scores, predictions = fcst.fit(y_train, y_test)
+
+.. note::
+
+    GPU acceleration requires a CUDA-capable GPU and PyTorch installed with
+    CUDA support.  If CUDA is not available, models automatically fall back
+    to CPU with a warning.
+
+Using Local Foundation Model Weights
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you are offline, behind a firewall, or in an air-gapped environment,
+you can point to a local directory containing pre-downloaded model weights
+instead of downloading from Hugging Face:
+
+.. code-block:: python
+
+    from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+    fcst = LazyForecaster(
+        verbose=0,
+        ignore_warnings=True,
+        foundation_model_path="/path/to/timesfm-2.5-200m-pytorch",
+    )
+    scores, predictions = fcst.fit(y_train, y_test)
+
+To download the model for later offline use:
+
+.. code-block:: bash
+
+    # Download once (requires internet)
+    python -c "
+    from huggingface_hub import snapshot_download
+    snapshot_download('google/timesfm-2.5-200m-pytorch', local_dir='./timesfm-local')
+    "
+
+.. code-block:: python
+
+    # Then use the local path in air-gapped environments
+    fcst = LazyForecaster(foundation_model_path="./timesfm-local")
+
 Intel Extension Acceleration
---------------------------
+----------------------------
 
 For improved performance on Intel CPUs, install Intel Extension for Scikit-learn:
 
@@ -291,14 +396,14 @@ Lazy Predict will automatically detect and use it for acceleration:
     # No code changes needed - acceleration is automatic
     clf = LazyClassifier(verbose=0)
     models, predictions = clf.fit(X_train, X_test, y_train, y_test)
-    
+
     # You'll see "Intel(R) Extension for Scikit-learn enabled" in verbose output
 
 Time Series Forecasting
 -----------------------
 
 Basic Forecasting
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 Benchmark 20+ forecasting models with a single call:
 
@@ -319,7 +424,7 @@ Benchmark 20+ forecasting models with a single call:
     print(scores)
 
 Forecasting with Seasonal Period
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default the seasonal period is auto-detected via ACF. Override it manually:
 
@@ -333,7 +438,7 @@ By default the seasonal period is auto-detected via ACF. Override it manually:
     scores, predictions = fcst.fit(y_train, y_test)
 
 Forecasting with Exogenous Variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Pass optional exogenous features to models that support them (SARIMAX, AutoARIMA, ML models):
 
@@ -347,7 +452,7 @@ Pass optional exogenous features to models that support them (SARIMAX, AutoARIMA
     scores, predictions = fcst.fit(y_train, y_test, X_train, X_test)
 
 Forecasting with Cross-Validation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use expanding-window time series cross-validation:
 
@@ -362,7 +467,7 @@ Use expanding-window time series cross-validation:
     # scores will contain CV Mean and CV Std columns for each metric
 
 Selecting Specific Forecasters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Run only a subset of models:
 
@@ -394,7 +499,7 @@ Add a custom metric alongside the defaults:
     # scores will include a 'median_absolute_error' column
 
 Saving and Loading Forecaster Models
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 

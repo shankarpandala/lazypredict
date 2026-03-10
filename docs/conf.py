@@ -44,16 +44,17 @@ extensions = [
 templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-source_suffix = [".rst", ".md"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 # The master toctree document.
 master_doc = "index"
 
 # General information about the project.
 project = u"Lazy Predict"
-copyright = u"2022-2025, Shankar Rao Pandala"
+copyright = u"2022-2026, Shankar Rao Pandala"
 author = u"Shankar Rao Pandala"
 
 # The version info for the project you're documenting, acts as replacement

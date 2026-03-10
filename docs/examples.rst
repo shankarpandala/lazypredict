@@ -347,6 +347,39 @@ Time Series Forecasting with GPU
     CUDA support.  If CUDA is not available, models automatically fall back
     to CPU with a warning.
 
+Using Local Foundation Model Weights
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you are offline, behind a firewall, or in an air-gapped environment,
+you can point to a local directory containing pre-downloaded model weights
+instead of downloading from Hugging Face:
+
+.. code-block:: python
+
+    from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+    fcst = LazyForecaster(
+        verbose=0,
+        ignore_warnings=True,
+        foundation_model_path="/path/to/timesfm-2.5-200m-pytorch",
+    )
+    scores, predictions = fcst.fit(y_train, y_test)
+
+To download the model for later offline use:
+
+.. code-block:: bash
+
+    # Download once (requires internet)
+    python -c "
+    from huggingface_hub import snapshot_download
+    snapshot_download('google/timesfm-2.5-200m-pytorch', local_dir='./timesfm-local')
+    "
+
+.. code-block:: python
+
+    # Then use the local path in air-gapped environments
+    fcst = LazyForecaster(foundation_model_path="./timesfm-local")
+
 Intel Extension Acceleration
 ----------------------------
 

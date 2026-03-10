@@ -732,11 +732,22 @@ class TimesFMForecaster(ForecasterWrapper):
     When ``use_gpu=True`` and CUDA is available, the model is placed on GPU
     for faster inference.
 
+    Parameters
+    ----------
+    use_gpu : bool, optional (default=False)
+        Place the model on a CUDA device when available.
+    model_path : str or None, optional (default=None)
+        Path to a local directory containing the pre-downloaded TimesFM
+        model weights.  When ``None`` (default), the model is downloaded
+        from Hugging Face (``google/timesfm-2.5-200m-pytorch``).
+        Use this when you are offline or behind a firewall.
+
     Requires ``timesfm`` and ``torch`` (Python 3.10-3.11 only).
     """
 
-    def __init__(self, use_gpu: bool = False):
+    def __init__(self, use_gpu: bool = False, model_path: Optional[str] = None):
         self.use_gpu = use_gpu
+        self.model_path = model_path
 
     def fit(self, y_train, X_train=None):
         import torch as _torch
@@ -746,9 +757,12 @@ class TimesFMForecaster(ForecasterWrapper):
 
         # Determine device: GPU if requested and available
         backend = "gpu" if (self.use_gpu and _torch.cuda.is_available()) else "cpu"
+        device = _torch.device("cuda" if backend == "gpu" else "cpu")
+
+        repo_or_path = self.model_path or "google/timesfm-2.5-200m-pytorch"
         self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
-            "google/timesfm-2.5-200m-pytorch",
-            torch_device=_torch.device("cuda" if backend == "gpu" else "cpu"),
+            repo_or_path,
+            torch_device=device,
         )
         self._model.compile(
             _timesfm.ForecastConfig(
@@ -786,6 +800,7 @@ def _build_forecaster_list(
     random_state: int,
     seasonal_period: Optional[int],
     use_gpu: bool = False,
+    foundation_model_path: Optional[str] = None,
 ) -> List[Tuple[str, ForecasterWrapper]]:
     """Build the default list of all available forecasters.
 
@@ -801,6 +816,9 @@ def _build_forecaster_list(
         Detected or user-specified seasonal period.
     use_gpu : bool, optional (default=False)
         When True, enables GPU acceleration for models that support it.
+    foundation_model_path : str or None, optional (default=None)
+        Local path to pre-downloaded foundation model weights (e.g. TimesFM).
+        When ``None``, models are downloaded from Hugging Face.
 
     Returns
     -------
@@ -910,7 +928,10 @@ def _build_forecaster_list(
 
     # -- Pretrained foundation models (requires timesfm) ----------------------
     if _TIMESFM_AVAILABLE:
-        forecasters.append(("TimesFM", TimesFMForecaster(use_gpu=use_gpu)))
+        forecasters.append((
+            "TimesFM",
+            TimesFMForecaster(use_gpu=use_gpu, model_path=foundation_model_path),
+        ))
     else:
         logger.info(
             "timesfm not installed — TimesFM model unavailable. "
@@ -975,6 +996,11 @@ class LazyForecaster:
         When True, enables GPU acceleration for models that support it
         (e.g., XGBoost, LightGBM, LSTM, GRU). Falls back to CPU if CUDA
         is unavailable.
+    foundation_model_path : str or None, optional (default=None)
+        Local filesystem path to pre-downloaded foundation model weights
+        (e.g. TimesFM).  Use this when you are offline, behind a firewall,
+        or in an air-gapped environment.  When ``None`` (default), the
+        model is downloaded from Hugging Face automatically.
 
     Attributes
     ----------
@@ -1002,6 +1028,7 @@ class LazyForecaster:
         max_models: Optional[int] = None,
         progress_callback: Optional[Callable] = None,
         use_gpu: bool = False,
+        foundation_model_path: Optional[str] = None,
     ):
         # Validate
         if cv is not None and (not isinstance(cv, int) or cv < 2):
@@ -1039,6 +1066,7 @@ class LazyForecaster:
         self.max_models = max_models
         self.progress_callback = progress_callback
         self.use_gpu = use_gpu
+        self.foundation_model_path = foundation_model_path
 
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
@@ -1219,6 +1247,7 @@ class LazyForecaster:
             random_state=self.random_state,
             seasonal_period=seasonal_period,
             use_gpu=self.use_gpu,
+            foundation_model_path=self.foundation_model_path,
         )
 
         # Filter to user-specified subset

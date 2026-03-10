@@ -13,48 +13,77 @@ forecasting optimization** — while keeping the "3 lines of code" philosophy.
 
 ---
 
+## Summary Table
+
+| Phase | Feature | Dep | Lines of Code | Priority |
+|-------|---------|-----|---------------|----------|
+| **0.3.1** | `explain()` with `permutation_importance` | None | ~100 | P0 |
+| **0.3.1** | Auto-convert PySpark/Dask DataFrames | None | ~20 | P0 |
+| **0.3.2** | `explain(method="shap")` with auto-explainer | `shap` | ~200 | P1 |
+| **0.3.2** | `tune(top_k=5)` with Optuna | `optuna` | ~300 | P1 |
+| **0.3.3** | EBM model from InterpretML | `interpret` | ~30 | P2 |
+| **0.3.3** | Dask joblib backend for CV | `dask` | ~15 | P2 |
+| **0.3.3** | Forecasting hyperparameter tuning | `optuna` | ~400 | P1 |
+| **0.3.3** | Multi-step horizon optimization | None | ~200 | P1 |
+| **0.3.3** | Forecast loss function selection | None | ~30 | P2 |
+| **0.3.3** | Ensemble top-k forecasters | None | ~150 | P2 |
+| **0.3.3** | Seasonal period as tunable hyperparameter | None | ~50 | P2 |
+| **0.4.0** | Spark MLlib models (`LazySparkClassifier`) | `pyspark` | ~500+ | P3 |
+| **0.4.0** | FLAML as optional tune backend | `flaml` | ~100 | P3 |
+
+---
+
 ## Phase Overview
 
 | Phase | Version | Theme | Status |
 |-------|---------|-------|--------|
 | 0 | 0.3.0a3 | Core refactor, time series, GPU | Done |
-| 1 | 0.3.1 | Explainability + data auto-convert | Planned |
-| 2 | 0.3.2 | Hyperparameter tuning (supervised) | Planned |
-| 3 | 0.3.3 | Forecasting optimization | Planned |
-| 4 | 0.4.0 | Advanced integrations | Planned |
+| 1 | 0.3.1 | Explainability (zero-dep) + data auto-convert | Planned |
+| 2 | 0.3.2 | SHAP explainability + supervised HPO | Planned |
+| 3 | 0.3.3 | Forecasting optimization + EBM + Dask CV | Planned |
+| 4 | 0.4.0 | Spark MLlib + FLAML backend | Planned |
 
 ---
 
 ## Phase 1 — v0.3.1: Explainability & Data Auto-Convert
 
 **Goal:** Let users understand *why* models rank the way they do, and accept
-PySpark/Dask DataFrames without manual conversion.
+PySpark/Dask DataFrames without manual conversion. Zero new dependencies.
 
-### 1.1 `explain()` method with `permutation_importance` (P0)
+### 1.1 `explain()` method with `permutation_importance` (P0, ~100 LOC)
 
 - **Scope:** Add `explain()` to `LazyEstimator` base class.
 - **Default method:** `sklearn.inspection.permutation_importance` — works for
   ALL model types (tree, linear, SVM, KNN), requires zero extra dependencies,
   and operates on the full Pipeline (no need to extract inner estimator).
 - **Returns:** `pd.DataFrame` with feature importance rankings per model.
-- **Estimated effort:** ~100 lines of code.
 - **Dependencies:** None (sklearn built-in).
 
-### 1.2 Auto-convert PySpark/Dask DataFrames (P0)
+### 1.2 Auto-convert PySpark/Dask DataFrames (P0, ~20 LOC)
 
 - **Scope:** In `_validate_fit_inputs()`, detect `pyspark.sql.DataFrame` and
   `dask.dataframe.DataFrame` and auto-call `.toPandas()` / `.compute()` with
   a logged warning.
-- **Estimated effort:** ~20 lines of code.
 - **Dependencies:** None (optional imports only).
 
 ---
 
-## Phase 2 — v0.3.2: Hyperparameter Tuning (Supervised)
+## Phase 2 — v0.3.2: SHAP Explainability & Supervised HPO
 
-**Goal:** Add opt-in "top-k then tune" HPO for classification and regression.
+**Goal:** Add SHAP-based explainability and opt-in "top-k then tune" HPO for
+classification and regression.
 
-### 2.1 Optuna-based tuning for `LazyClassifier` / `LazyRegressor` (P1)
+### 2.1 SHAP-based Explainability (P1, ~200 LOC)
+
+- `explain(method="shap")` with auto-explainer selection:
+  - `TreeExplainer` for tree/boosting models
+  - `LinearExplainer` for linear models
+  - `permutation_importance` as fallback for all others
+- Extract model via `pipe.named_steps["regressor"]` and pre-transform data.
+- SHAP 0.50+ requires Python >= 3.11 — use version-conditional dep pinning.
+- **Dependencies:** `shap` (new optional extra: `pip install lazypredict[explain]`).
+
+### 2.2 Optuna-based tuning for `LazyClassifier` / `LazyRegressor` (P1, ~300 LOC)
 
 - **Architecture:** Two-phase workflow:
   1. **Phase A (existing):** Run all models with defaults. Rank by metric.
@@ -86,22 +115,20 @@ PySpark/Dask DataFrames without manual conversion.
 - **Output:** Return both the default-ranking DataFrame AND a tuned-ranking
   DataFrame with best params per model.
 
-- **Estimated effort:** ~300 lines of code.
-- **Dependencies:** `optuna` (new optional extra: `pip install lazypredict[tune]`).
-
-### 2.2 sklearn fallback backend (P2)
+### 2.3 sklearn fallback backend
 
 - `tune_backend="sklearn"` uses `RandomizedSearchCV` — zero extra deps.
 - Less sample-efficient than Optuna but available out of the box.
 
 ---
 
-## Phase 3 — v0.3.3: Forecasting Optimization
+## Phase 3 — v0.3.3: Forecasting Optimization + EBM + Dask CV
 
-**Goal:** Bring the same "top-k then tune" HPO workflow to `LazyForecaster`,
-plus forecasting-specific optimization techniques.
+**Goal:** Bring the "top-k then tune" HPO workflow to `LazyForecaster` with
+forecasting-specific optimization techniques, add InterpretML EBM models,
+and enable distributed CV via Dask.
 
-### 3.1 Forecasting Hyperparameter Tuning (P1)
+### 3.1 Forecasting Hyperparameter Tuning (P1, ~400 LOC)
 
 - **Extend `LazyForecaster` with `tune=True` support**, mirroring the Phase 2
   API but with forecasting-specific adaptations:
@@ -137,10 +164,9 @@ plus forecasting-specific optimization techniques.
   sizes are treated as tunable hyperparameters for ML/DL models, not just the
   model's own params. This is unique to the forecasting case.
 
-- **Estimated effort:** ~400 lines of code.
 - **Dependencies:** `optuna` (shared with Phase 2 extra).
 
-### 3.2 Multi-step Horizon Optimization (P1)
+### 3.2 Multi-step Horizon Optimization (P1, ~200 LOC)
 
 - **Current state:** `LazyForecaster` forecasts `len(y_test)` steps ahead using
   recursive forecasting for ML models.
@@ -153,13 +179,11 @@ plus forecasting-specific optimization techniques.
     at once from a single model.
 - **Tuning integration:** When `tune=True`, include `horizon_strategy` as a
   categorical hyperparameter for ML models (let Optuna find the best strategy).
-- **Estimated effort:** ~200 lines of code.
 
-### 3.3 Forecast Loss Function Selection (P2)
+### 3.3 Forecast Loss Function Selection (P2, ~30 LOC)
 
-- **Current state:** Models are ranked by RMSE, MAE, MAPE, SMAPE, MASE.
-- **Enhancement:** Allow users to specify which metric to optimize during
-  tuning via `tune_metric`:
+- Allow users to specify which metric to optimize during tuning via
+  `tune_metric`:
   ```python
   LazyForecaster(
       tune=True,
@@ -169,11 +193,10 @@ plus forecasting-specific optimization techniques.
 - **Why it matters:** RMSE penalizes outliers heavily; MAE is robust; MAPE is
   undefined at zero; SMAPE is bounded. The best metric depends on the use case
   (e.g., demand forecasting often uses SMAPE or MASE).
-- **Estimated effort:** ~30 lines of code.
 
-### 3.4 Ensemble Top-K Forecasters (P2)
+### 3.4 Ensemble Top-K Forecasters (P2, ~150 LOC)
 
-- **Concept:** After tuning, optionally ensemble the top-k tuned models using:
+- After tuning, optionally ensemble the top-k tuned models using:
   - **Simple average** of predictions
   - **Inverse-error weighted average** (weight inversely proportional to
     validation error)
@@ -186,57 +209,42 @@ plus forecasting-specific optimization techniques.
   ```
 - **Motivation:** AutoGluon's success validates that ensembling diverse models
   with reasonable defaults often beats extensively tuning a single model.
-- **Estimated effort:** ~150 lines of code.
 
-### 3.5 Seasonal Period as Tunable Hyperparameter (P2)
+### 3.5 Seasonal Period as Tunable Hyperparameter (P2, ~50 LOC)
 
 - **Current state:** `seasonal_period` is either user-specified or
   auto-detected via ACF.
 - **Enhancement:** When `tune=True`, allow Optuna to search over plausible
   seasonal periods (e.g., `[7, 12, 24, 52, 365]`) for statistical models
   like HoltWinters and SARIMAX, rather than relying on a single ACF estimate.
-- **Estimated effort:** ~50 lines of code.
+
+### 3.6 InterpretML EBM Model (P2, ~30 LOC)
+
+- Add `ExplainableBoostingClassifier` / `Regressor` from `interpret` as an
+  optional model — inherently interpretable, competitive accuracy.
+- **Dependencies:** `interpret` (optional extra).
+
+### 3.7 Dask Joblib Backend for Cross-Validation (P2, ~15 LOC)
+
+- When Dask is available, register `dask.distributed` as the joblib backend
+  for `cross_validate()` — distributes CV folds across workers.
+- **Dependencies:** `dask` (optional, auto-detected).
 
 ---
 
 ## Phase 4 — v0.4.0: Advanced Integrations
 
-### 4.1 SHAP-based Explainability (P1)
-
-- `explain(method="shap")` with auto-explainer selection:
-  - `TreeExplainer` for tree/boosting models
-  - `LinearExplainer` for linear models
-  - `permutation_importance` as fallback for all others
-- Extract model via `pipe.named_steps["regressor"]` and pre-transform data.
-- SHAP 0.50+ requires Python >= 3.11 — use version-conditional dep pinning.
-- **Dependencies:** `shap` (new optional extra: `pip install lazypredict[explain]`).
-- **Estimated effort:** ~200 lines of code.
-
-### 4.2 InterpretML EBM Model (P2)
-
-- Add `ExplainableBoostingClassifier` / `Regressor` from `interpret` as an
-  optional model — inherently interpretable, competitive accuracy.
-- **Dependencies:** `interpret` (optional).
-- **Estimated effort:** ~30 lines of code.
-
-### 4.3 Dask Joblib Backend for Cross-Validation (P2)
-
-- When Dask is available, register `dask.distributed` as the joblib backend
-  for `cross_validate()` — distributes CV folds across workers.
-- **Estimated effort:** ~15 lines of code.
-
-### 4.4 FLAML as Optional Tune Backend (P3)
-
-- `tune_backend="flaml"` uses FLAML's cost-frugal search algorithm.
-- Leverages FLAML's battle-tested per-estimator search spaces.
-- **Dependencies:** `flaml` (optional).
-
-### 4.5 Spark MLlib Models — `LazySparkClassifier` (P3)
+### 4.1 Spark MLlib Models — `LazySparkClassifier` (P3, ~500+ LOC)
 
 - Separate class that wraps Spark MLlib estimators (~12 model families).
 - Only for users with existing Spark infrastructure and datasets >10GB.
-- **Dependencies:** `pyspark` (optional).
-- **Estimated effort:** ~500+ lines of code.
+- **Dependencies:** `pyspark` (optional extra).
+
+### 4.2 FLAML as Optional Tune Backend (P3, ~100 LOC)
+
+- `tune_backend="flaml"` uses FLAML's cost-frugal search algorithm.
+- Leverages FLAML's battle-tested per-estimator search spaces.
+- **Dependencies:** `flaml` (optional extra).
 
 ---
 
@@ -244,13 +252,14 @@ plus forecasting-specific optimization techniques.
 
 | Extra | Package | Phase | Reason |
 |-------|---------|-------|--------|
-| `tune` | `optuna>=3.0` | 2, 3 | Primary HPO engine |
-| `explain` | `shap>=0.42` | 4 | SHAP explainability |
-| `interpret` | `interpret>=0.4` | 4 | EBM models |
-| `flaml` | `flaml>=2.0` | 4 | Alternative HPO backend |
-| `spark` | `pyspark>=3.3` | 4 | Spark MLlib integration |
+| *(core)* | *(none new)* | 0.3.1 | Explainability + auto-convert |
+| `explain` | `shap>=0.42` | 0.3.2 | SHAP explainability |
+| `tune` | `optuna>=3.0` | 0.3.2, 0.3.3 | Primary HPO engine |
+| `interpret` | `interpret>=0.4` | 0.3.3 | EBM models |
+| `spark` | `pyspark>=3.3` | 0.4.0 | Spark MLlib integration |
+| `flaml` | `flaml>=2.0` | 0.4.0 | Alternative HPO backend |
 
-Core functionality (Phase 1) requires **zero new dependencies**.
+Phase 1 (v0.3.1) requires **zero new dependencies**.
 
 ---
 

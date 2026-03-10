@@ -762,13 +762,16 @@ class TimesFMForecaster(ForecasterWrapper):
 
         repo_or_path = self.model_path or "google/timesfm-2.5-200m-pytorch"
         kwargs = {"torch_device": device}
-        # If user provided a local directory, prevent re-downloading
-        if self.model_path and os.path.isdir(self.model_path):
-            kwargs["local_files_only"] = True
-        self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
-            repo_or_path,
-            **kwargs,
-        )
+        # Try loading from local files / HF cache first (no network needed),
+        # then fall back to downloading if that fails.
+        try:
+            self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                repo_or_path, local_files_only=True, **kwargs,
+            )
+        except Exception:
+            self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                repo_or_path, **kwargs,
+            )
         self._model.compile(
             _timesfm.ForecastConfig(
                 max_context=min(len(y_train), 16000),

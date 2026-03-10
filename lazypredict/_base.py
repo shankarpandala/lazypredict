@@ -2,6 +2,7 @@
 
 import logging
 import time
+import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -255,101 +256,109 @@ class LazyEstimator:
 
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(estimator_list)
-        for idx, (name, model) in enumerate(
-            progress_bar(estimator_list, disable=(self.verbose == 0))
-        ):
-            start = time.time()
-            mlflow_active_run = None
-            try:
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                    mlflow_active_run = _mlflow.start_run(
-                        run_name=f"{self.__class__.__name__}-{name}"
+        with warnings.catch_warnings():
+            if self.ignore_warnings:
+                warnings.simplefilter("ignore")
+            for idx, (name, model) in enumerate(
+                progress_bar(estimator_list, disable=(self.verbose == 0))
+            ):
+                start = time.time()
+                mlflow_active_run = None
+                try:
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
+                        mlflow_active_run = _mlflow.start_run(
+                            run_name=f"{self.__class__.__name__}-{name}"
+                        )
+                        _mlflow.log_param("model_name", name)
+
+                    model_kwargs = get_gpu_model_params(model, self.use_gpu)
+                    if "random_state" in model().get_params():
+                        model_kwargs["random_state"] = self.random_state
+                    # Suppress verbose output for boosting libraries by default
+                    module = getattr(model, "__module__", "") or ""
+                    if "catboost" in module:
+                        model_kwargs.setdefault("verbose", 0)
+                    if "lightgbm" in module:
+                        model_kwargs.setdefault("verbose", -1)
+                        model_kwargs.setdefault("verbosity", -1)
+                    if "xgboost" in module:
+                        model_kwargs.setdefault("verbosity", 0)
+                    pipe = Pipeline(
+                        steps=[
+                            ("preprocessor", preprocessor),
+                            (step_name, model(**model_kwargs)),
+                        ]
                     )
-                    _mlflow.log_param("model_name", name)
 
-                model_kwargs = get_gpu_model_params(model, self.use_gpu)
-                if "random_state" in model().get_params():
-                    model_kwargs["random_state"] = self.random_state
-                # CatBoost: suppress verbose output by default
-                module = getattr(model, "__module__", "") or ""
-                if "catboost" in module:
-                    model_kwargs.setdefault("verbose", 0)
-                pipe = Pipeline(
-                    steps=[
-                        ("preprocessor", preprocessor),
-                        (step_name, model(**model_kwargs)),
-                    ]
-                )
+                    pipe.fit(X_train, y_train)
+                    fit_time = time.time() - start
 
-                pipe.fit(X_train, y_train)
-                fit_time = time.time() - start
+                    if self.timeout and fit_time > self.timeout:
+                        logger.info(
+                            "%s exceeded timeout (%.2fs > %ss), skipping...",
+                            name, fit_time, self.timeout,
+                        )
+                        if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                            _mlflow.end_run()
+                        continue
 
-                if self.timeout and fit_time > self.timeout:
-                    logger.info(
-                        "%s exceeded timeout (%.2fs > %ss), skipping...",
-                        name, fit_time, self.timeout,
-                    )
+                    self.models[name] = pipe
+
+                    # Cross-validation
+                    cv_metrics: Dict[str, Optional[float]] = {}
+                    if self.cv:
+                        cv_metrics = self._run_cv(pipe, X_train, y_train, name)
+
+                    # Test-set metrics
+                    metrics = self._compute_metrics(pipe, X_test, y_test, X_train)
+                    metrics["name"] = name
+                    metrics["time"] = time.time() - start
+                    metrics.update(cv_metrics)
+
+                    # MLflow logging
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                        self._log_mlflow_metrics(metrics, pipe, X_train, name)
+
+                    # Custom metric
+                    if self.custom_metric is not None:
+                        y_pred = pipe.predict(X_test)
+                        try:
+                            custom_val = self.custom_metric(y_test, y_pred)
+                            metrics["custom_metric"] = custom_val
+                            if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                                _mlflow.log_metric(self.custom_metric.__name__, custom_val)
+                        except Exception as custom_exc:
+                            metrics["custom_metric"] = None
+                            if not self.ignore_warnings:
+                                logger.warning(
+                                    "Custom metric %s failed for %s: %s",
+                                    self.custom_metric.__name__, name, custom_exc,
+                                )
+
+                    results.append(metrics)
+
+                    if self.verbose > 0:
+                        self._log_verbose(name, metrics)
+
+                    if self.predictions:
+                        predictions_dict[name] = pipe.predict(X_test)
+
                     if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
                         _mlflow.end_run()
-                    continue
 
-                self.models[name] = pipe
+                    # Progress callback
+                    if self.progress_callback is not None:
+                        self.progress_callback(name, idx + 1, total, metrics)
 
-                # Cross-validation
-                cv_metrics: Dict[str, Optional[float]] = {}
-                if self.cv:
-                    cv_metrics = self._run_cv(pipe, X_train, y_train, name)
+                except Exception as exc:
+                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
+                        _mlflow.end_run()
+                    self.errors[name] = exc
+                    if not self.ignore_warnings:
+                        logger.warning("%s model failed to execute: %s", name, exc)
 
-                # Test-set metrics
-                metrics = self._compute_metrics(pipe, X_test, y_test, X_train)
-                metrics["name"] = name
-                metrics["time"] = time.time() - start
-                metrics.update(cv_metrics)
-
-                # MLflow logging
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                    self._log_mlflow_metrics(metrics, pipe, X_train, name)
-
-                # Custom metric
-                if self.custom_metric is not None:
-                    y_pred = pipe.predict(X_test)
-                    try:
-                        custom_val = self.custom_metric(y_test, y_pred)
-                        metrics["custom_metric"] = custom_val
-                        if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                            _mlflow.log_metric(self.custom_metric.__name__, custom_val)
-                    except Exception as custom_exc:
-                        metrics["custom_metric"] = None
-                        if not self.ignore_warnings:
-                            logger.warning(
-                                "Custom metric %s failed for %s: %s",
-                                self.custom_metric.__name__, name, custom_exc,
-                            )
-
-                results.append(metrics)
-
-                if self.verbose > 0:
-                    self._log_verbose(name, metrics)
-
-                if self.predictions:
-                    predictions_dict[name] = pipe.predict(X_test)
-
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                    _mlflow.end_run()
-
-                # Progress callback
-                if self.progress_callback is not None:
-                    self.progress_callback(name, idx + 1, total, metrics)
-
-            except Exception as exc:
-                if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                    _mlflow.end_run()
-                self.errors[name] = exc
-                if not self.ignore_warnings:
-                    logger.warning("%s model failed to execute: %s", name, exc)
-
-                if self.progress_callback is not None:
-                    self.progress_callback(name, idx + 1, total, None)
+                    if self.progress_callback is not None:
+                        self.progress_callback(name, idx + 1, total, None)
 
         scores = self._build_scores_dataframe(results)
 

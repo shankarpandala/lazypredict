@@ -11,6 +11,7 @@ import copy
 import logging
 import os
 import time
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -495,10 +496,15 @@ class MLForecaster(ForecasterWrapper):
                 params["random_state"] = self.random_state
         except Exception:
             pass
-        # CatBoost: suppress verbose output by default
+        # Suppress verbose output for boosting libraries by default
         module = getattr(self.estimator_class, "__module__", "") or ""
         if "catboost" in module:
             params.setdefault("verbose", 0)
+        if "lightgbm" in module:
+            params.setdefault("verbose", -1)
+            params.setdefault("verbosity", -1)
+        if "xgboost" in module:
+            params.setdefault("verbosity", 0)
         self._estimator = self.estimator_class(**params)
         self._scaler = StandardScaler()
         X_scaled = self._scaler.fit_transform(X_feat)
@@ -1298,15 +1304,18 @@ class LazyForecaster:
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(all_forecasters)
 
-        for idx, (fname, wrapper) in enumerate(
-            progress_bar(all_forecasters, disable=(self.verbose == 0))
-        ):
-            metrics = self._fit_single_model(
-                fname, wrapper, y_train, y_test, X_train, X_test,
-                horizon, seasonal_period, results, predictions_dict,
-            )
-            if self.progress_callback is not None:
-                self.progress_callback(fname, idx + 1, total, metrics)
+        with warnings.catch_warnings():
+            if self.ignore_warnings:
+                warnings.simplefilter("ignore")
+            for idx, (fname, wrapper) in enumerate(
+                progress_bar(all_forecasters, disable=(self.verbose == 0))
+            ):
+                metrics = self._fit_single_model(
+                    fname, wrapper, y_train, y_test, X_train, X_test,
+                    horizon, seasonal_period, results, predictions_dict,
+                )
+                if self.progress_callback is not None:
+                    self.progress_callback(fname, idx + 1, total, metrics)
 
         scores = self._build_scores_dataframe(results)
 

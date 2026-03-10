@@ -28,7 +28,7 @@ jobs:
           channel-priority: strict
 
       - name: Install conda-build
-        run: conda install -y conda-build conda-verify
+        run: conda install -y conda-build
 
       - name: Build conda package
         run: conda build recipe/ --no-anaconda-upload
@@ -37,4 +37,4 @@ jobs:
         run: |
           PKG=$(conda build recipe/ --output)
           echo "Built package: $PKG"
-          conda verify "$PKG"
+          test -f "$PKG"

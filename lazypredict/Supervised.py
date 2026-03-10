@@ -9,7 +9,6 @@ perform best on a given dataset.
 
 import logging
 import signal
-import time
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -26,12 +25,11 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import cross_validate
 from sklearn.pipeline import Pipeline
 from sklearn.utils import all_estimators
 
 # Re-export from submodules for backward compatibility
-from lazypredict._base import (
+from lazypredict._base import (  # noqa: F401
     LazyEstimator,
     _validate_fit_inputs,
     _validate_init_params,
@@ -41,14 +39,14 @@ from lazypredict.config import (
     REMOVED_REGRESSORS,
     VALID_ENCODERS,
 )
-from lazypredict.exceptions import ModelFitError, TimeoutException
-from lazypredict.integrations.mlflow import (
+from lazypredict.exceptions import TimeoutException
+from lazypredict.integrations.mlflow import (  # noqa: F401
     MLFLOW_AVAILABLE,
     is_mlflow_tracking_enabled,
     setup_mlflow,
 )
 from lazypredict.metrics import adjusted_rsquared
-from lazypredict.preprocessing import (
+from lazypredict.preprocessing import (  # noqa: F401
     CATEGORY_ENCODERS_AVAILABLE,
     build_preprocessor,
     categorical_transformer_high,

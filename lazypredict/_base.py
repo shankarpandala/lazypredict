@@ -15,7 +15,7 @@ from lazypredict.config import (
     get_gpu_model_params,
     is_gpu_available,
 )
-from lazypredict.exceptions import ModelFitError
+from lazypredict.exceptions import ModelFitError  # noqa: F401
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
 
@@ -172,7 +172,7 @@ class LazyEstimator:
 
     # -- Shared fit logic -----------------------------------------------------
 
-    def fit(
+    def fit(  # noqa: C901
         self,
         X_train: Union[pd.DataFrame, np.ndarray],
         X_test: Union[pd.DataFrame, np.ndarray],

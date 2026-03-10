@@ -9,6 +9,7 @@ perform best on a given time series.
 
 import copy
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -760,9 +761,13 @@ class TimesFMForecaster(ForecasterWrapper):
         device = _torch.device("cuda" if backend == "gpu" else "cpu")
 
         repo_or_path = self.model_path or "google/timesfm-2.5-200m-pytorch"
+        kwargs = {"torch_device": device}
+        # If user provided a local directory, prevent re-downloading
+        if self.model_path and os.path.isdir(self.model_path):
+            kwargs["local_files_only"] = True
         self._model = _timesfm.TimesFM_2p5_200M_torch.from_pretrained(
             repo_or_path,
-            torch_device=device,
+            **kwargs,
         )
         self._model.compile(
             _timesfm.ForecastConfig(

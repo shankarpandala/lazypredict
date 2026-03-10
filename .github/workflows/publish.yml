@@ -3,12 +3,6 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'Type "publish" to confirm PyPI publish'
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -17,16 +11,13 @@ permissions:
 jobs:
   ci-check:
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'release' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'publish')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-      - run: pip install ".[dev]"
+      - run: pip install -r requirements.txt pytest
       - name: Run tests before publish
         run: pytest
 

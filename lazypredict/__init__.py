@@ -23,6 +23,8 @@ __all__ = [
     "ts_search_spaces",
     "tuning",
     "ts_tuning",
+    "ts_visualization",
+    "ts_diagnostics",
     "ensemble",
     "horizon",
     "distributed",

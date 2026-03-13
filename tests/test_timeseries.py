@@ -571,3 +571,291 @@ class TestTimesFMForecaster:
         )
         scores, _ = forecaster.fit(y_train, y_test)
         assert len(scores) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Predictions storage bug fix tests
+# ---------------------------------------------------------------------------
+
+class TestPredictionsStorage:
+    def test_predictions_stored_internally_without_flag(self, univariate_data):
+        """Predictions should always be stored internally even with predictions=False."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            predictions=False,
+            forecasters=["Naive", "Ridge_TS"],
+        )
+        scores, preds = forecaster.fit(y_train, y_test)
+        # Return value should be empty (API contract)
+        assert preds.empty
+        # But internal storage should have predictions
+        assert len(forecaster._last_predictions) >= 1
+        for name, y_pred in forecaster._last_predictions.items():
+            assert len(y_pred) == len(y_test)
+
+    def test_predictions_stored_with_flag(self, univariate_data):
+        """With predictions=True, both return value and internal storage populated."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            predictions=True,
+            forecasters=["Naive", "Ridge_TS"],
+        )
+        scores, preds = forecaster.fit(y_train, y_test)
+        assert not preds.empty
+        assert len(forecaster._last_predictions) >= 1
+
+    def test_y_test_stored(self, univariate_data):
+        """y_test should be stored internally for plot/diagnose access."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive"])
+        forecaster.fit(y_train, y_test)
+        np.testing.assert_array_equal(forecaster._last_y_test, y_test)
+
+    def test_scores_stored(self, univariate_data):
+        """Scores DataFrame should be stored internally."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive"])
+        scores, _ = forecaster.fit(y_train, y_test)
+        assert forecaster._last_scores is not None
+        assert len(forecaster._last_scores) == len(scores)
+
+
+# ---------------------------------------------------------------------------
+# Visualization tests
+# ---------------------------------------------------------------------------
+
+try:
+    import matplotlib
+    matplotlib.use("Agg")  # Non-interactive backend for tests
+    import matplotlib.pyplot as plt
+    _HAS_MATPLOTLIB = True
+except ImportError:
+    _HAS_MATPLOTLIB = False
+
+
+@pytest.mark.skipif(not _HAS_MATPLOTLIB, reason="matplotlib not installed")
+class TestVisualization:
+    def _fit_forecaster(self, univariate_data):
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            predictions=True,
+            forecasters=["Naive", "Ridge_TS"],
+        )
+        scores, preds = forecaster.fit(y_train, y_test)
+        return forecaster, y_train, y_test, scores
+
+    def test_plot_forecast_single(self, univariate_data):
+        from lazypredict.ts_visualization import plot_forecast
+        y_train, y_test = univariate_data
+        y_pred = np.full(len(y_test), y_train[-1])
+        fig = plot_forecast(y_train, y_test, y_pred)
+        assert fig is not None
+        plt.close(fig)
+
+    def test_plot_forecast_multiple(self, univariate_data):
+        from lazypredict.ts_visualization import plot_forecast
+        y_train, y_test = univariate_data
+        predictions = {
+            "Model_A": np.full(len(y_test), y_train[-1]),
+            "Model_B": np.full(len(y_test), np.mean(y_train)),
+        }
+        fig = plot_forecast(y_train, y_test, predictions)
+        assert fig is not None
+        plt.close(fig)
+
+    def test_plot_model_comparison(self, univariate_data):
+        from lazypredict.ts_visualization import plot_model_comparison
+        forecaster, y_train, y_test, scores = self._fit_forecaster(univariate_data)
+        fig = plot_model_comparison(scores, metric="RMSE")
+        assert fig is not None
+        plt.close(fig)
+
+    def test_plot_residuals(self, univariate_data):
+        from lazypredict.ts_visualization import plot_residuals
+        y_train, y_test = univariate_data
+        y_pred = np.full(len(y_test), y_train[-1])
+        fig = plot_residuals(y_test, y_pred, model_name="Naive")
+        assert fig is not None
+        plt.close(fig)
+
+    def test_plot_error_distribution(self, univariate_data):
+        from lazypredict.ts_visualization import plot_error_distribution
+        y_train, y_test = univariate_data
+        predictions = {
+            "Model_A": np.full(len(y_test), y_train[-1]),
+            "Model_B": np.full(len(y_test), np.mean(y_train)),
+        }
+        fig = plot_error_distribution(y_test, predictions)
+        assert fig is not None
+        plt.close(fig)
+
+    def test_plot_metrics_heatmap(self, univariate_data):
+        from lazypredict.ts_visualization import plot_metrics_heatmap
+        forecaster, y_train, y_test, scores = self._fit_forecaster(univariate_data)
+        fig = plot_metrics_heatmap(scores)
+        assert fig is not None
+        plt.close(fig)
+
+    def test_lazy_forecaster_plot_results_forecast(self, univariate_data):
+        forecaster, y_train, y_test, scores = self._fit_forecaster(univariate_data)
+        fig = forecaster.plot_results(plot_type="forecast")
+        assert fig is not None
+        plt.close(fig)
+
+    def test_lazy_forecaster_plot_results_comparison(self, univariate_data):
+        forecaster, y_train, y_test, scores = self._fit_forecaster(univariate_data)
+        fig = forecaster.plot_results(plot_type="comparison")
+        assert fig is not None
+        plt.close(fig)
+
+    def test_lazy_forecaster_plot_results_residuals(self, univariate_data):
+        forecaster, y_train, y_test, scores = self._fit_forecaster(univariate_data)
+        fig = forecaster.plot_results(plot_type="residuals", model_name="Naive")
+        assert fig is not None
+        plt.close(fig)
+
+    def test_lazy_forecaster_plot_results_errors(self, univariate_data):
+        forecaster, y_train, y_test, scores = self._fit_forecaster(univariate_data)
+        fig = forecaster.plot_results(plot_type="errors")
+        assert fig is not None
+        plt.close(fig)
+
+    def test_lazy_forecaster_plot_results_heatmap(self, univariate_data):
+        forecaster, y_train, y_test, scores = self._fit_forecaster(univariate_data)
+        fig = forecaster.plot_results(plot_type="heatmap")
+        assert fig is not None
+        plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Diagnostics tests
+# ---------------------------------------------------------------------------
+
+class TestDiagnostics:
+    def test_residual_diagnostics_keys(self):
+        from lazypredict.ts_diagnostics import residual_diagnostics
+        y_true = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+        y_pred = np.array([1.1, 1.9, 3.2, 3.8, 5.1, 5.9, 7.2, 7.8, 9.1, 9.9])
+        result = residual_diagnostics(y_true, y_pred)
+        expected_keys = {
+            "residuals", "mean", "std",
+            "ljung_box_stat", "ljung_box_pvalue",
+            "jarque_bera_stat", "jarque_bera_pvalue",
+            "acf_values", "is_white_noise", "is_normal",
+        }
+        assert set(result.keys()) == expected_keys
+
+    def test_residuals_computed_correctly(self):
+        from lazypredict.ts_diagnostics import residual_diagnostics
+        y_true = np.array([10.0, 20.0, 30.0])
+        y_pred = np.array([12.0, 18.0, 33.0])
+        result = residual_diagnostics(y_true, y_pred)
+        np.testing.assert_array_almost_equal(result["residuals"], [-2.0, 2.0, -3.0])
+
+    def test_white_noise_detection(self):
+        from lazypredict.ts_diagnostics import residual_diagnostics
+        np.random.seed(42)
+        y_true = np.random.randn(100)
+        y_pred = np.zeros(100)  # residuals = y_true = white noise
+        result = residual_diagnostics(y_true, y_pred)
+        # White noise residuals should pass Ljung-Box (if statsmodels available)
+        if result["ljung_box_pvalue"] is not None:
+            assert result["is_white_noise"] is True
+
+    def test_biased_residuals_mean(self):
+        from lazypredict.ts_diagnostics import residual_diagnostics
+        y_true = np.array([10.0, 20.0, 30.0, 40.0, 50.0])
+        y_pred = np.array([5.0, 15.0, 25.0, 35.0, 45.0])  # systematic under-prediction
+        result = residual_diagnostics(y_true, y_pred)
+        assert result["mean"] == 5.0  # all residuals are +5
+
+    def test_compare_diagnostics(self, univariate_data):
+        from lazypredict.ts_diagnostics import compare_diagnostics
+        y_train, y_test = univariate_data
+        predictions = {
+            "Model_A": np.full(len(y_test), y_train[-1]),
+            "Model_B": np.full(len(y_test), np.mean(y_train)),
+        }
+        result = compare_diagnostics(y_test, predictions)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 2
+        assert "Model_A" in result.index
+        assert "Model_B" in result.index
+        assert "Residual Mean" in result.columns
+        assert "White Noise" in result.columns
+
+    def test_lazy_forecaster_diagnose_single(self, univariate_data):
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive", "Ridge_TS"])
+        forecaster.fit(y_train, y_test)
+        result = forecaster.diagnose(model_name="Naive")
+        assert isinstance(result, dict)
+        assert "residuals" in result
+        assert "mean" in result
+
+    def test_lazy_forecaster_diagnose_all(self, univariate_data):
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive", "Ridge_TS"])
+        forecaster.fit(y_train, y_test)
+        result = forecaster.diagnose()
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Tuning refit tests
+# ---------------------------------------------------------------------------
+
+try:
+    import optuna  # noqa: F401
+    _HAS_OPTUNA = True
+except ImportError:
+    _HAS_OPTUNA = False
+
+
+@pytest.mark.skipif(not _HAS_OPTUNA, reason="optuna not installed")
+class TestTuningRefit:
+    def test_tune_top_k_returns_tuned_models(self, univariate_data):
+        from lazypredict.ts_tuning import tune_top_k_forecasters
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            forecasters=["Ridge_TS"],
+        )
+        scores, _ = forecaster.fit(y_train, y_test)
+        tune_results, tuned_models = tune_top_k_forecasters(
+            scores_df=scores,
+            models=forecaster.models,
+            all_wrappers=forecaster._last_all_forecasters,
+            y_train=y_train,
+            X_train=None,
+            seasonal_period=None,
+            top_k=1,
+            n_trials=3,
+            refit=True,
+        )
+        assert isinstance(tune_results, pd.DataFrame)
+        assert isinstance(tuned_models, dict)
+        # Ridge_TS should be refit
+        if "Ridge_TS" in tuned_models:
+            assert tuned_models["Ridge_TS"] is not None
+
+    def test_tune_top_k_no_refit(self, univariate_data):
+        from lazypredict.ts_tuning import tune_top_k_forecasters
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            forecasters=["Ridge_TS"],
+        )
+        scores, _ = forecaster.fit(y_train, y_test)
+        tune_results, tuned_models = tune_top_k_forecasters(
+            scores_df=scores,
+            models=forecaster.models,
+            all_wrappers=forecaster._last_all_forecasters,
+            y_train=y_train,
+            X_train=None,
+            seasonal_period=None,
+            top_k=1,
+            n_trials=3,
+            refit=False,
+        )
+        assert isinstance(tune_results, pd.DataFrame)
+        assert len(tuned_models) == 0

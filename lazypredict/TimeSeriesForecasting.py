@@ -1148,6 +1148,7 @@ class LazyForecaster:
         self.tune_seasonal = tune_seasonal
         self.horizon_strategy = horizon_strategy
         self.tuned_scores_: Optional[pd.DataFrame] = None
+        self.tuned_models_: Dict[str, ForecasterWrapper] = {}
 
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
@@ -1239,8 +1240,8 @@ class LazyForecaster:
             results.append(metrics)
             if self.verbose > 0:
                 self._log_verbose(fname, metrics)
-            if self.predictions:
-                predictions_dict[fname] = y_pred
+            # Always store predictions internally for ensemble/plotting/diagnostics
+            predictions_dict[fname] = y_pred
 
             self._end_mlflow_run(mlflow_active_run)
             return metrics
@@ -1372,12 +1373,14 @@ class LazyForecaster:
 
         scores = self._build_scores_dataframe(results)
 
-        # Store for tuning / ensemble access
+        # Store for tuning / ensemble / plotting / diagnostics access
         self._last_y_train = y_train
+        self._last_y_test = y_test
         self._last_X_train = X_train
         self._last_seasonal_period = seasonal_period
         self._last_all_forecasters = all_forecasters
         self._last_predictions = predictions_dict
+        self._last_scores = scores
 
         # Auto-tune top-k if requested
         if self.tune and len(scores) > 0:
@@ -1387,7 +1390,7 @@ class LazyForecaster:
                 "Tuning top %d forecasters with Optuna (%d trials, metric=%s)...",
                 self.tune_top_k, self.tune_trials, self.tune_metric,
             )
-            self.tuned_scores_ = tune_top_k_forecasters(
+            self.tuned_scores_, self.tuned_models_ = tune_top_k_forecasters(
                 scores_df=scores,
                 models=self.models,
                 all_wrappers=all_forecasters,
@@ -1401,6 +1404,7 @@ class LazyForecaster:
                 timeout=self.tune_timeout,
                 random_state=self.random_state,
                 tune_seasonal=self.tune_seasonal,
+                refit=True,
             )
 
         if self.predictions:
@@ -1462,6 +1466,166 @@ class LazyForecaster:
             raise ValueError(
                 f"Unknown method: {method}. Use 'simple_average', 'weighted_average', or 'stacking'."
             )
+
+    def plot_results(
+        self,
+        y_train: Optional[np.ndarray] = None,
+        y_test: Optional[np.ndarray] = None,
+        plot_type: str = "forecast",
+        **kwargs,
+    ):
+        """Generate forecast visualizations.
+
+        Parameters
+        ----------
+        y_train : np.ndarray or None
+            Training series. Uses stored values from last ``fit()`` if None.
+        y_test : np.ndarray or None
+            Test series. Uses stored values from last ``fit()`` if None.
+        plot_type : str
+            One of ``'forecast'``, ``'comparison'``, ``'residuals'``,
+            ``'errors'``, ``'heatmap'``.
+        **kwargs
+            Passed to the underlying plot function (e.g. ``figsize``,
+            ``metric``, ``model_name``, ``top_k``).
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+        """
+        from lazypredict.ts_visualization import (
+            plot_error_distribution,
+            plot_forecast,
+            plot_metrics_heatmap,
+            plot_model_comparison,
+            plot_residuals,
+        )
+
+        y_train = y_train if y_train is not None else getattr(self, "_last_y_train", None)
+        y_test = y_test if y_test is not None else getattr(self, "_last_y_test", None)
+        predictions = getattr(self, "_last_predictions", {})
+        scores = getattr(self, "_last_scores", None)
+
+        if plot_type == "forecast":
+            if y_train is None or y_test is None:
+                raise ValueError("y_train and y_test required. Call fit() first.")
+            if not predictions:
+                raise ValueError("No predictions available. Call fit() first.")
+            return plot_forecast(
+                y_train, y_test, predictions,
+                title=kwargs.get("title"),
+                figsize=kwargs.get("figsize", (12, 5)),
+                ax=kwargs.get("ax"),
+            )
+
+        elif plot_type == "comparison":
+            if scores is None or scores.empty:
+                raise ValueError("No scores available. Call fit() first.")
+            return plot_model_comparison(
+                scores,
+                metric=kwargs.get("metric", "RMSE"),
+                top_k=kwargs.get("top_k", 10),
+                figsize=kwargs.get("figsize", (10, 6)),
+                ax=kwargs.get("ax"),
+            )
+
+        elif plot_type == "residuals":
+            if y_test is None:
+                raise ValueError("y_test required. Call fit() first.")
+            model_name = kwargs.get("model_name")
+            if model_name:
+                if model_name not in predictions:
+                    raise ValueError(
+                        f"Model '{model_name}' not found in predictions. "
+                        f"Available: {list(predictions.keys())}"
+                    )
+                y_pred = predictions[model_name]
+            else:
+                # Use the best model (first in predictions)
+                model_name = next(iter(predictions))
+                y_pred = predictions[model_name]
+            return plot_residuals(
+                y_test, y_pred, model_name=model_name,
+                seasonal_period=kwargs.get("seasonal_period", getattr(self, "_last_seasonal_period", 1) or 1),
+                figsize=kwargs.get("figsize", (12, 10)),
+            )
+
+        elif plot_type == "errors":
+            if y_test is None:
+                raise ValueError("y_test required. Call fit() first.")
+            if not predictions:
+                raise ValueError("No predictions available. Call fit() first.")
+            return plot_error_distribution(
+                y_test, predictions,
+                figsize=kwargs.get("figsize", (10, 6)),
+                ax=kwargs.get("ax"),
+            )
+
+        elif plot_type == "heatmap":
+            if scores is None or scores.empty:
+                raise ValueError("No scores available. Call fit() first.")
+            return plot_metrics_heatmap(
+                scores,
+                metrics=kwargs.get("metrics"),
+                figsize=kwargs.get("figsize", (10, 8)),
+                ax=kwargs.get("ax"),
+            )
+
+        else:
+            raise ValueError(
+                f"Unknown plot_type: {plot_type!r}. "
+                "Use 'forecast', 'comparison', 'residuals', 'errors', or 'heatmap'."
+            )
+
+    def diagnose(
+        self,
+        model_name: Optional[str] = None,
+        y_test: Optional[np.ndarray] = None,
+    ):
+        """Run residual diagnostics on fitted models.
+
+        Parameters
+        ----------
+        model_name : str or None
+            Specific model name. If None, runs diagnostics for all models
+            and returns a DataFrame.
+        y_test : np.ndarray or None
+            Test values. Uses stored values from last ``fit()`` if None.
+
+        Returns
+        -------
+        dict or pd.DataFrame
+            Single model returns a diagnostic dict; multiple models
+            returns a DataFrame with one row per model.
+        """
+        from lazypredict.ts_diagnostics import compare_diagnostics, residual_diagnostics
+
+        y_test = y_test if y_test is not None else getattr(self, "_last_y_test", None)
+        if y_test is None:
+            raise ValueError("y_test required. Call fit() first or pass y_test.")
+
+        predictions = getattr(self, "_last_predictions", {})
+        if not predictions:
+            raise ValueError("No predictions available. Call fit() first.")
+
+        y_train = getattr(self, "_last_y_train", None)
+        sp = getattr(self, "_last_seasonal_period", 1) or 1
+
+        if model_name is not None:
+            if model_name not in predictions:
+                raise ValueError(
+                    f"Model '{model_name}' not found. "
+                    f"Available: {list(predictions.keys())}"
+                )
+            return residual_diagnostics(
+                y_test, predictions[model_name],
+                y_train=y_train, seasonal_period=sp,
+            )
+
+        return compare_diagnostics(
+            y_test, predictions,
+            y_train=y_train, seasonal_period=sp,
+        )
 
     def provide_models(
         self,

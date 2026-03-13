@@ -54,6 +54,9 @@ foundation = [
 tune = [
     "optuna>=3.0",
 ]
+viz = [
+    "matplotlib>=3.5",
+]
 explain = [
     "shap>=0.42",
 ]
@@ -79,6 +82,7 @@ all = [
     "optuna>=3.0",
     "shap>=0.42",
     "interpret>=0.4",
+    "matplotlib>=3.5",
 ]
 dev = [
     "pytest>=7",

@@ -11,6 +11,7 @@ import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit
 
 from lazypredict.metrics import compute_forecast_metrics

@@ -6,10 +6,7 @@ package:
   version: {{ version }}
 
 source:
-  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  # sha256 must be updated when a new release is published to PyPI.
-  # Run:  curl -sL https://pypi.org/pypi/lazypredict/<version>/json | python -c "import sys,json; print(json.load(sys.stdin)['urls'][1]['digests']['sha256'])"
-  # sha256: <UPDATE_ON_RELEASE>
+  path: ..
 
 build:
   noarch: python

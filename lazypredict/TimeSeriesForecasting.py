@@ -1493,89 +1493,99 @@ class LazyForecaster:
         -------
         matplotlib.figure.Figure
         """
-        from lazypredict.ts_visualization import (
-            plot_error_distribution,
-            plot_forecast,
-            plot_metrics_heatmap,
-            plot_model_comparison,
-            plot_residuals,
-        )
-
         y_train = y_train if y_train is not None else getattr(self, "_last_y_train", None)
         y_test = y_test if y_test is not None else getattr(self, "_last_y_test", None)
         predictions = getattr(self, "_last_predictions", {})
         scores = getattr(self, "_last_scores", None)
 
-        if plot_type == "forecast":
-            if y_train is None or y_test is None:
-                raise ValueError("y_train and y_test required. Call fit() first.")
-            if not predictions:
-                raise ValueError("No predictions available. Call fit() first.")
-            return plot_forecast(
-                y_train, y_test, predictions,
-                title=kwargs.get("title"),
-                figsize=kwargs.get("figsize", (12, 5)),
-                ax=kwargs.get("ax"),
-            )
-
-        elif plot_type == "comparison":
-            if scores is None or scores.empty:
-                raise ValueError("No scores available. Call fit() first.")
-            return plot_model_comparison(
-                scores,
-                metric=kwargs.get("metric", "RMSE"),
-                top_k=kwargs.get("top_k", 10),
-                figsize=kwargs.get("figsize", (10, 6)),
-                ax=kwargs.get("ax"),
-            )
-
-        elif plot_type == "residuals":
-            if y_test is None:
-                raise ValueError("y_test required. Call fit() first.")
-            model_name = kwargs.get("model_name")
-            if model_name:
-                if model_name not in predictions:
-                    raise ValueError(
-                        f"Model '{model_name}' not found in predictions. "
-                        f"Available: {list(predictions.keys())}"
-                    )
-                y_pred = predictions[model_name]
-            else:
-                # Use the best model (first in predictions)
-                model_name = next(iter(predictions))
-                y_pred = predictions[model_name]
-            return plot_residuals(
-                y_test, y_pred, model_name=model_name,
-                seasonal_period=kwargs.get("seasonal_period", getattr(self, "_last_seasonal_period", 1) or 1),
-                figsize=kwargs.get("figsize", (12, 10)),
-            )
-
-        elif plot_type == "errors":
-            if y_test is None:
-                raise ValueError("y_test required. Call fit() first.")
-            if not predictions:
-                raise ValueError("No predictions available. Call fit() first.")
-            return plot_error_distribution(
-                y_test, predictions,
-                figsize=kwargs.get("figsize", (10, 6)),
-                ax=kwargs.get("ax"),
-            )
-
-        elif plot_type == "heatmap":
-            if scores is None or scores.empty:
-                raise ValueError("No scores available. Call fit() first.")
-            return plot_metrics_heatmap(
-                scores,
-                metrics=kwargs.get("metrics"),
-                figsize=kwargs.get("figsize", (10, 8)),
-                ax=kwargs.get("ax"),
-            )
-
-        else:
+        handlers = {
+            "forecast": self._plot_forecast,
+            "comparison": self._plot_comparison,
+            "residuals": self._plot_residuals,
+            "errors": self._plot_errors,
+            "heatmap": self._plot_heatmap,
+        }
+        handler = handlers.get(plot_type)
+        if handler is None:
             raise ValueError(
                 f"Unknown plot_type: {plot_type!r}. "
-                "Use 'forecast', 'comparison', 'residuals', 'errors', or 'heatmap'."
+                f"Use {', '.join(repr(k) for k in handlers)}."
             )
+        return handler(y_train, y_test, predictions, scores, **kwargs)
+
+    def _plot_forecast(self, y_train, y_test, predictions, scores, **kwargs):
+        from lazypredict.ts_visualization import plot_forecast
+
+        if y_train is None or y_test is None:
+            raise ValueError("y_train and y_test required. Call fit() first.")
+        if not predictions:
+            raise ValueError("No predictions available. Call fit() first.")
+        return plot_forecast(
+            y_train, y_test, predictions,
+            title=kwargs.get("title"),
+            figsize=kwargs.get("figsize", (12, 5)),
+            ax=kwargs.get("ax"),
+        )
+
+    def _plot_comparison(self, y_train, y_test, predictions, scores, **kwargs):
+        from lazypredict.ts_visualization import plot_model_comparison
+
+        if scores is None or scores.empty:
+            raise ValueError("No scores available. Call fit() first.")
+        return plot_model_comparison(
+            scores,
+            metric=kwargs.get("metric", "RMSE"),
+            top_k=kwargs.get("top_k", 10),
+            figsize=kwargs.get("figsize", (10, 6)),
+            ax=kwargs.get("ax"),
+        )
+
+    def _plot_residuals(self, y_train, y_test, predictions, scores, **kwargs):
+        from lazypredict.ts_visualization import plot_residuals
+
+        if y_test is None:
+            raise ValueError("y_test required. Call fit() first.")
+        model_name = kwargs.get("model_name")
+        if model_name:
+            if model_name not in predictions:
+                raise ValueError(
+                    f"Model '{model_name}' not found in predictions. "
+                    f"Available: {list(predictions.keys())}"
+                )
+            y_pred = predictions[model_name]
+        else:
+            model_name = next(iter(predictions))
+            y_pred = predictions[model_name]
+        return plot_residuals(
+            y_test, y_pred, model_name=model_name,
+            seasonal_period=kwargs.get("seasonal_period", getattr(self, "_last_seasonal_period", 1) or 1),
+            figsize=kwargs.get("figsize", (12, 10)),
+        )
+
+    def _plot_errors(self, y_train, y_test, predictions, scores, **kwargs):
+        from lazypredict.ts_visualization import plot_error_distribution
+
+        if y_test is None:
+            raise ValueError("y_test required. Call fit() first.")
+        if not predictions:
+            raise ValueError("No predictions available. Call fit() first.")
+        return plot_error_distribution(
+            y_test, predictions,
+            figsize=kwargs.get("figsize", (10, 6)),
+            ax=kwargs.get("ax"),
+        )
+
+    def _plot_heatmap(self, y_train, y_test, predictions, scores, **kwargs):
+        from lazypredict.ts_visualization import plot_metrics_heatmap
+
+        if scores is None or scores.empty:
+            raise ValueError("No scores available. Call fit() first.")
+        return plot_metrics_heatmap(
+            scores,
+            metrics=kwargs.get("metrics"),
+            figsize=kwargs.get("figsize", (10, 8)),
+            ax=kwargs.get("ax"),
+        )
 
     def diagnose(
         self,

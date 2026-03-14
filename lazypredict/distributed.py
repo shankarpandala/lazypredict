@@ -93,36 +93,30 @@ def register_dask_backend() -> bool:
 
     try:
         from dask.distributed import Client
-        import joblib
 
         # Register dask as a parallel backend
         try:
-            from joblib import parallel_config
+            from joblib import parallel_config  # noqa: F401
             # joblib >= 1.3 uses parallel_config
             _dask_backend_registered = True
         except ImportError:
             pass
 
-        # Try the older registration approach
+        # Check if a client is already running
         try:
-            from dask.distributed import Client
-            # Check if a client is already running
-            try:
-                client = Client.current()
-                logger.info(
-                    "Dask client found at %s — using Dask for parallel CV.",
-                    client.dashboard_link or "local",
-                )
-            except ValueError:
-                # No client running, create a local one
-                client = Client(processes=False, silence_logs=logging.WARNING)
-                logger.info(
-                    "Created local Dask client for parallel CV."
-                )
-            _dask_backend_registered = True
-            return True
-        except ImportError:
-            return False
+            client = Client.current()
+            logger.info(
+                "Dask client found at %s — using Dask for parallel CV.",
+                client.dashboard_link or "local",
+            )
+        except ValueError:
+            # No client running, create a local one
+            client = Client(processes=False, silence_logs=logging.WARNING)
+            logger.info(
+                "Created local Dask client for parallel CV."
+            )
+        _dask_backend_registered = True
+        return True
 
     except ImportError:
         logger.info(

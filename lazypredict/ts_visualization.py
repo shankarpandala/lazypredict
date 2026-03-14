@@ -14,7 +14,6 @@ import pandas as pd
 logger = logging.getLogger("lazypredict")
 
 try:
-    import matplotlib
     import matplotlib.pyplot as plt
 
     _MATPLOTLIB_AVAILABLE = True

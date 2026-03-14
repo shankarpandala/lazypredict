@@ -26,7 +26,7 @@ def create_mixed_dataset():
     X_df['cat_low_2'] = np.random.choice(['X', 'Y'], size=200)
 
     # Add high cardinality categorical feature
-    X_df['cat_high'] = [f'cat_{i%50}' for i in range(200)]
+    X_df['cat_high'] = [f'cat_{i % 50}' for i in range(200)]
 
     return X_df, y
 

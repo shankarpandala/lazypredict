@@ -8,7 +8,6 @@ import logging
 from typing import Optional, Tuple
 
 import numpy as np
-from sklearn.base import clone
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
 

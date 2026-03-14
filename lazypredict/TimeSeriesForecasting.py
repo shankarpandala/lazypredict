@@ -1308,7 +1308,34 @@ class LazyForecaster:
         predictions : pd.DataFrame
             Per-model predictions (empty if ``self.predictions`` is False).
         """
-        # Auto-convert PySpark/Dask inputs
+        y_train, y_test, X_train, X_test = self._convert_and_validate_inputs(
+            y_train, y_test, X_train, X_test
+        )
+        horizon = len(y_test)
+        seasonal_period = self._resolve_seasonal_period(y_train)
+
+        all_forecasters = self._resolve_forecasters(seasonal_period)
+
+        results: List[Dict[str, Any]] = []
+        predictions_dict: Dict[str, np.ndarray] = {}
+
+        self._run_all_models(
+            all_forecasters, y_train, y_test, X_train, X_test,
+            horizon, seasonal_period, results, predictions_dict,
+        )
+
+        scores = self._build_scores_dataframe(results)
+        self._store_fit_state(
+            y_train, y_test, X_train, seasonal_period,
+            all_forecasters, predictions_dict, scores,
+        )
+        self._auto_tune(scores, all_forecasters, y_train, X_train, seasonal_period)
+
+        if self.predictions:
+            return scores, pd.DataFrame.from_dict(predictions_dict)
+        return scores, pd.DataFrame()
+
+    def _convert_and_validate_inputs(self, y_train, y_test, X_train, X_test):
         from lazypredict.distributed import auto_convert_dataframe
 
         y_train = auto_convert_dataframe(y_train, "y_train")
@@ -1317,22 +1344,17 @@ class LazyForecaster:
             X_train = auto_convert_dataframe(X_train, "X_train")
         if X_test is not None:
             X_test = auto_convert_dataframe(X_test, "X_test")
+        return self._validate_fit_inputs(y_train, y_test, X_train, X_test)
 
-        y_train, y_test, X_train, X_test = self._validate_fit_inputs(
-            y_train, y_test, X_train, X_test
-        )
-        horizon = len(y_test)
-
-        # Auto-detect seasonal period
+    def _resolve_seasonal_period(self, y_train):
         seasonal_period = self.seasonal_period
         if seasonal_period is None:
             seasonal_period = detect_seasonal_period(y_train)
             if seasonal_period is not None and self.verbose > 0:
-                logger.info(
-                    "Auto-detected seasonal period: %d", seasonal_period
-                )
+                logger.info("Auto-detected seasonal period: %d", seasonal_period)
+        return seasonal_period
 
-        # Build forecaster list
+    def _resolve_forecasters(self, seasonal_period):
         all_forecasters = _build_forecaster_list(
             n_lags=self.n_lags,
             n_rolling=self.n_rolling,
@@ -1341,23 +1363,21 @@ class LazyForecaster:
             use_gpu=self.use_gpu,
             foundation_model_path=self.foundation_model_path,
         )
-
-        # Filter to user-specified subset
         if self.forecasters != "all":
             selected_names = set(self.forecasters)
             all_forecasters = [
                 (n, w) for n, w in all_forecasters if n in selected_names
             ]
-
         if self.max_models is not None:
             all_forecasters = all_forecasters[: self.max_models]
+        return all_forecasters
 
-        results: List[Dict[str, Any]] = []
-        predictions_dict: Dict[str, np.ndarray] = {}
-
+    def _run_all_models(
+        self, all_forecasters, y_train, y_test, X_train, X_test,
+        horizon, seasonal_period, results, predictions_dict,
+    ):
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(all_forecasters)
-
         with warnings.catch_warnings():
             if self.ignore_warnings:
                 warnings.simplefilter("ignore")
@@ -1371,9 +1391,10 @@ class LazyForecaster:
                 if self.progress_callback is not None:
                     self.progress_callback(fname, idx + 1, total, metrics)
 
-        scores = self._build_scores_dataframe(results)
-
-        # Store for tuning / ensemble / plotting / diagnostics access
+    def _store_fit_state(
+        self, y_train, y_test, X_train, seasonal_period,
+        all_forecasters, predictions_dict, scores,
+    ):
         self._last_y_train = y_train
         self._last_y_test = y_test
         self._last_X_train = X_train
@@ -1382,34 +1403,31 @@ class LazyForecaster:
         self._last_predictions = predictions_dict
         self._last_scores = scores
 
-        # Auto-tune top-k if requested
-        if self.tune and len(scores) > 0:
-            from lazypredict.ts_tuning import tune_top_k_forecasters
+    def _auto_tune(self, scores, all_forecasters, y_train, X_train, seasonal_period):
+        if not self.tune or len(scores) == 0:
+            return
+        from lazypredict.ts_tuning import tune_top_k_forecasters
 
-            logger.info(
-                "Tuning top %d forecasters with Optuna (%d trials, metric=%s)...",
-                self.tune_top_k, self.tune_trials, self.tune_metric,
-            )
-            self.tuned_scores_, self.tuned_models_ = tune_top_k_forecasters(
-                scores_df=scores,
-                models=self.models,
-                all_wrappers=all_forecasters,
-                y_train=y_train,
-                X_train=X_train,
-                seasonal_period=seasonal_period,
-                top_k=self.tune_top_k,
-                tune_metric=self.tune_metric,
-                cv=max(self.cv or 3, 3),
-                n_trials=self.tune_trials,
-                timeout=self.tune_timeout,
-                random_state=self.random_state,
-                tune_seasonal=self.tune_seasonal,
-                refit=True,
-            )
-
-        if self.predictions:
-            return scores, pd.DataFrame.from_dict(predictions_dict)
-        return scores, pd.DataFrame()
+        logger.info(
+            "Tuning top %d forecasters with Optuna (%d trials, metric=%s)...",
+            self.tune_top_k, self.tune_trials, self.tune_metric,
+        )
+        self.tuned_scores_, self.tuned_models_ = tune_top_k_forecasters(
+            scores_df=scores,
+            models=self.models,
+            all_wrappers=all_forecasters,
+            y_train=y_train,
+            X_train=X_train,
+            seasonal_period=seasonal_period,
+            top_k=self.tune_top_k,
+            tune_metric=self.tune_metric,
+            cv=max(self.cv or 3, 3),
+            n_trials=self.tune_trials,
+            timeout=self.tune_timeout,
+            random_state=self.random_state,
+            tune_seasonal=self.tune_seasonal,
+            refit=True,
+        )
 
     def ensemble(
         self,
@@ -1431,41 +1449,42 @@ class LazyForecaster:
         np.ndarray
             Ensembled predictions.
         """
-        from lazypredict.ensemble import (
-            ensemble_simple_average,
-            ensemble_stacking,
-            ensemble_weighted_average,
-        )
-
         if not self._last_predictions:
             raise ValueError(
                 "No predictions available. Call fit() with predictions=True first."
             )
 
         preds = self._last_predictions
-
-        if method == "simple_average":
-            return ensemble_simple_average(preds)
-        elif method == "weighted_average":
-            # Use model scores (RMSE by default) as weights
-            scores = {}
-            for name in preds:
-                if name in self.models:
-                    scores[name] = 1.0  # fallback
-            # Try to get actual scores from the last fit
-            if hasattr(self, "_last_scores_dict"):
-                for name, s in self._last_scores_dict.items():
-                    if name in preds:
-                        scores[name] = s
-            return ensemble_weighted_average(preds, scores)
-        elif method == "stacking":
-            if y_true is None:
-                raise ValueError("y_true is required for stacking ensemble.")
-            return ensemble_stacking(preds, y_true)
-        else:
+        handlers = {
+            "simple_average": self._ensemble_simple,
+            "weighted_average": self._ensemble_weighted,
+            "stacking": self._ensemble_stacking,
+        }
+        handler = handlers.get(method)
+        if handler is None:
             raise ValueError(
-                f"Unknown method: {method}. Use 'simple_average', 'weighted_average', or 'stacking'."
+                f"Unknown method: {method}. Use {', '.join(repr(k) for k in handlers)}."
             )
+        return handler(preds, y_true)
+
+    def _ensemble_simple(self, preds, y_true):
+        from lazypredict.ensemble import ensemble_simple_average
+        return ensemble_simple_average(preds)
+
+    def _ensemble_weighted(self, preds, y_true):
+        from lazypredict.ensemble import ensemble_weighted_average
+        scores = {name: 1.0 for name in preds if name in self.models}
+        if hasattr(self, "_last_scores_dict"):
+            for name, s in self._last_scores_dict.items():
+                if name in preds:
+                    scores[name] = s
+        return ensemble_weighted_average(preds, scores)
+
+    def _ensemble_stacking(self, preds, y_true):
+        from lazypredict.ensemble import ensemble_stacking
+        if y_true is None:
+            raise ValueError("y_true is required for stacking ensemble.")
+        return ensemble_stacking(preds, y_true)
 
     def plot_results(
         self,

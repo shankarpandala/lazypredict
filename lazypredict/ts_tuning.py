@@ -7,8 +7,7 @@ search, and temporal cross-validation.
 
 import copy
 import logging
-import warnings
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -148,32 +147,39 @@ def _apply_params_to_wrapper(wrapper, model_name, params, n_lags, n_rolling_1, n
     """Apply tuned parameters to a forecaster wrapper instance."""
     from lazypredict.TimeSeriesForecasting import MLForecaster, _TorchRNNForecaster
 
-    # ML/DL models: update feature-engineering params
-    if isinstance(wrapper, (MLForecaster, _TorchRNNForecaster)):
-        if n_lags is not None:
-            wrapper.n_lags = n_lags
-        if n_rolling_1 is not None and n_rolling_2 is not None:
-            wrapper.n_rolling = (n_rolling_1, n_rolling_2)
+    _apply_feature_engineering_params(wrapper, n_lags, n_rolling_1, n_rolling_2)
+    _apply_stat_model_params(wrapper, model_name, params, sp)
 
-    # Statistical model params applied at fit time via wrapper attributes
-    if model_name == "SARIMAX" and "order" in params:
-        wrapper.order = params["order"]
-    if model_name in ("HoltWinters_Add", "HoltWinters_Mul") and sp is not None:
-        wrapper.seasonal_periods = sp
-
-    # DL-specific params
     if isinstance(wrapper, _TorchRNNForecaster):
         for key in ("hidden_size", "learning_rate", "batch_size", "n_epochs"):
             if key in params:
                 setattr(wrapper, key, params[key])
 
-    # ML model estimator params
     if isinstance(wrapper, MLForecaster):
-        # Store extra model params to be passed at fit time
         model_params = {k: v for k, v in params.items()
                         if k not in ("order", "seasonal_period")}
         if model_params:
             wrapper._tune_params = model_params
+
+
+def _apply_feature_engineering_params(wrapper, n_lags, n_rolling_1, n_rolling_2):
+    """Set lag/rolling params on ML/DL wrappers."""
+    from lazypredict.TimeSeriesForecasting import MLForecaster, _TorchRNNForecaster
+
+    if not isinstance(wrapper, (MLForecaster, _TorchRNNForecaster)):
+        return
+    if n_lags is not None:
+        wrapper.n_lags = n_lags
+    if n_rolling_1 is not None and n_rolling_2 is not None:
+        wrapper.n_rolling = (n_rolling_1, n_rolling_2)
+
+
+def _apply_stat_model_params(wrapper, model_name, params, sp):
+    """Set statistical model-specific parameters."""
+    if model_name == "SARIMAX" and "order" in params:
+        wrapper.order = params["order"]
+    if model_name in ("HoltWinters_Add", "HoltWinters_Mul") and sp is not None:
+        wrapper.seasonal_periods = sp
 
 
 def tune_top_k_forecasters(

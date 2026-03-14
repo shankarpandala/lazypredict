@@ -6,7 +6,7 @@ and ACF computation. Falls back gracefully when statsmodels is unavailable.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -66,61 +66,64 @@ def residual_diagnostics(
     residuals = y_true - y_pred
     n = len(residuals)
 
+    if max_lags is None:
+        max_lags = min(n - 1, max(10, 2 * seasonal_period))
+    max_lags = max(1, min(max_lags, n - 1))
+
     result: Dict[str, Any] = {
         "residuals": residuals,
         "mean": float(np.mean(residuals)),
         "std": float(np.std(residuals, ddof=1)) if n > 1 else 0.0,
     }
+    result["acf_values"] = _compute_acf(residuals, max_lags)
+    result.update(_ljung_box(residuals, max_lags))
+    result.update(_jarque_bera(residuals))
+    return result
 
-    if max_lags is None:
-        max_lags = min(n - 1, max(10, 2 * seasonal_period))
-    max_lags = max(1, min(max_lags, n - 1))
 
-    # ACF computation
+def _compute_acf(residuals: np.ndarray, max_lags: int) -> np.ndarray:
+    """Compute ACF using statsmodels if available, else numpy fallback."""
+    n = len(residuals)
     if _STATSMODELS_AVAILABLE and n > 1:
         try:
-            acf_vals = sm_acf(residuals, nlags=max_lags, fft=True)
-            result["acf_values"] = acf_vals
+            return sm_acf(residuals, nlags=max_lags, fft=True)
         except Exception:
-            result["acf_values"] = _compute_acf_numpy(residuals, max_lags)
-    else:
-        result["acf_values"] = _compute_acf_numpy(residuals, max_lags)
+            pass
+    return _compute_acf_numpy(residuals, max_lags)
 
-    # Ljung-Box test
+
+def _ljung_box(residuals: np.ndarray, max_lags: int) -> Dict[str, Any]:
+    """Run Ljung-Box test, returning a dict of results."""
+    n = len(residuals)
     if _STATSMODELS_AVAILABLE and n > max_lags + 1:
         try:
             lb_result = acorr_ljungbox(residuals, lags=max_lags, return_df=True)
             lb_stat = float(lb_result.iloc[-1]["lb_stat"])
             lb_pvalue = float(lb_result.iloc[-1]["lb_pvalue"])
-            result["ljung_box_stat"] = lb_stat
-            result["ljung_box_pvalue"] = lb_pvalue
-            result["is_white_noise"] = lb_pvalue > 0.05
+            return {
+                "ljung_box_stat": lb_stat,
+                "ljung_box_pvalue": lb_pvalue,
+                "is_white_noise": lb_pvalue > 0.05,
+            }
         except Exception:
-            result["ljung_box_stat"] = None
-            result["ljung_box_pvalue"] = None
-            result["is_white_noise"] = None
-    else:
-        result["ljung_box_stat"] = None
-        result["ljung_box_pvalue"] = None
-        result["is_white_noise"] = None
+            pass
+    return {"ljung_box_stat": None, "ljung_box_pvalue": None, "is_white_noise": None}
 
-    # Jarque-Bera test
+
+def _jarque_bera(residuals: np.ndarray) -> Dict[str, Any]:
+    """Run Jarque-Bera test, returning a dict of results."""
+    n = len(residuals)
     if _STATSMODELS_AVAILABLE and n >= 8:
         try:
             jb_stat, jb_pvalue, skew, kurtosis = jarque_bera(residuals)
-            result["jarque_bera_stat"] = float(jb_stat)
-            result["jarque_bera_pvalue"] = float(jb_pvalue)
-            result["is_normal"] = float(jb_pvalue) > 0.05
+            return {
+                "jarque_bera_stat": float(jb_stat),
+                "jarque_bera_pvalue": float(jb_pvalue),
+                "is_normal": float(jb_pvalue) > 0.05,
+            }
         except Exception:
-            result["jarque_bera_stat"] = None
-            result["jarque_bera_pvalue"] = None
-            result["is_normal"] = None
-    else:
-        result["jarque_bera_stat"] = None
-        result["jarque_bera_pvalue"] = None
-        result["is_normal"] = None
-
-    return result
+            pass
+    return {"jarque_bera_stat": None, "jarque_bera_pvalue": None, "is_normal": None}
 
 
 def compare_diagnostics(

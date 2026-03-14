@@ -859,3 +859,146 @@ class TestTuningRefit:
         )
         assert isinstance(tune_results, pd.DataFrame)
         assert len(tuned_models) == 0
+
+
+# ---------------------------------------------------------------------------
+# Tests for refactored LazyForecaster methods
+# ---------------------------------------------------------------------------
+
+
+class TestLazyForecasterRefactoredMethods:
+    """Test the refactored private methods in LazyForecaster."""
+
+    def test_convert_and_validate_inputs(self, univariate_data):
+        """Test input conversion and validation."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive"])
+        y_tr, y_te, X_tr, X_te = forecaster._convert_and_validate_inputs(
+            y_train, y_test, None, None
+        )
+        assert isinstance(y_tr, np.ndarray)
+        assert isinstance(y_te, np.ndarray)
+
+    def test_resolve_seasonal_period_none(self, univariate_data):
+        """Test seasonal period resolution when not specified."""
+        y_train, _ = univariate_data
+        forecaster = LazyForecaster(seasonal_period=None)
+        sp = forecaster._resolve_seasonal_period(y_train)
+        assert isinstance(sp, (int, type(None)))
+
+    def test_resolve_seasonal_period_specified(self, seasonal_data):
+        """Test seasonal period when explicitly specified."""
+        y_train, _ = seasonal_data
+        forecaster = LazyForecaster(seasonal_period=12)
+        sp = forecaster._resolve_seasonal_period(y_train)
+        assert sp == 12
+
+    def test_resolve_forecasters_all(self, univariate_data):
+        """Test forecaster resolution with 'all' keyword."""
+        y_train, _ = univariate_data
+        forecaster = LazyForecaster(forecasters="all", max_models=2)
+        all_forecasters = forecaster._resolve_forecasters(None)
+        assert len(all_forecasters) == 2
+
+    def test_resolve_forecasters_subset(self, univariate_data):
+        """Test forecaster resolution with specific subset."""
+        y_train, _ = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive", "SeasonalNaive"])
+        all_forecasters = forecaster._resolve_forecasters(None)
+        names = [name for name, _ in all_forecasters]
+        assert set(names) <= {"Naive", "SeasonalNaive"}
+
+    def test_store_fit_state(self, univariate_data):
+        """Test storage of fit state."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive"])
+        scores, _ = forecaster.fit(y_train, y_test)
+
+        assert hasattr(forecaster, "_last_y_train")
+        assert hasattr(forecaster, "_last_y_test")
+        assert hasattr(forecaster, "_last_scores")
+        assert len(forecaster._last_scores) > 0
+
+    def test_plot_results_dispatch(self, univariate_data):
+        """Test plot_results dispatcher."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(forecasters=["Naive"], predictions=True)
+        scores, preds = forecaster.fit(y_train, y_test)
+
+        # Test that dispatcher works with dispatch pattern
+        try:
+            fig = forecaster.plot_results(plot_type="forecast")
+            assert fig is not None
+        except (ImportError, ValueError):
+            # OK if matplotlib not available
+            pass
+
+    def test_ensemble_dispatch_simple_average(self, univariate_data):
+        """Test ensemble dispatcher with simple_average."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            forecasters=["Naive", "SeasonalNaive"],
+            predictions=True,
+        )
+        scores, preds = forecaster.fit(y_train, y_test)
+
+        ens_pred = forecaster.ensemble(method="simple_average")
+        assert len(ens_pred) == len(y_test)
+
+    def test_ensemble_dispatch_weighted_average(self, univariate_data):
+        """Test ensemble dispatcher with weighted_average."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            forecasters=["Naive", "SeasonalNaive"],
+            predictions=True,
+        )
+        scores, preds = forecaster.fit(y_train, y_test)
+
+        ens_pred = forecaster.ensemble(method="weighted_average")
+        assert len(ens_pred) == len(y_test)
+
+    def test_ensemble_dispatch_stacking(self, univariate_data):
+        """Test ensemble dispatcher with stacking."""
+        y_train, y_test = univariate_data
+        forecaster = LazyForecaster(
+            forecasters=["Naive", "SeasonalNaive"],
+            predictions=True,
+        )
+        scores, preds = forecaster.fit(y_train, y_test)
+
+        ens_pred = forecaster.ensemble(method="stacking", y_true=y_test)
+        assert len(ens_pred) == len(y_test)
+
+
+# ---------------------------------------------------------------------------
+# Tests for diagnostics edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestDiagnosticsEdgeCases:
+    """Test edge cases in residual diagnostics."""
+
+    def test_diagnostics_small_sample(self):
+        """Test with small sample size."""
+        from lazypredict.ts_diagnostics import residual_diagnostics
+        y_true = np.array([1.0, 2.0, 3.0])
+        y_pred = np.array([1.1, 2.0, 2.9])
+        result = residual_diagnostics(y_true, y_pred)
+        assert "residuals" in result
+        assert result["ljung_box_pvalue"] is None  # Too small for LB test
+
+    def test_diagnostics_zero_variance(self):
+        """Test with zero variance residuals."""
+        from lazypredict.ts_diagnostics import residual_diagnostics
+        y_true = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        y_pred = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        result = residual_diagnostics(y_true, y_pred)
+        assert result["std"] == 0.0
+
+    def test_compute_acf_numpy_fallback(self):
+        """Test ACF computation with numpy fallback."""
+        from lazypredict.ts_diagnostics import _compute_acf_numpy
+        residuals = np.random.randn(50)
+        acf = _compute_acf_numpy(residuals, max_lag=10)
+        assert len(acf) == 11
+        np.testing.assert_allclose(acf[0], 1.0, rtol=1e-10)  # ACF at lag 0 is always 1

@@ -84,46 +84,49 @@ def residual_diagnostics(
 def _compute_acf(residuals: np.ndarray, max_lags: int) -> np.ndarray:
     """Compute ACF using statsmodels if available, else numpy fallback."""
     n = len(residuals)
-    if _STATSMODELS_AVAILABLE and n > 1:
-        try:
-            return sm_acf(residuals, nlags=max_lags, fft=True)
-        except Exception:
-            pass
-    return _compute_acf_numpy(residuals, max_lags)
+    if not (_STATSMODELS_AVAILABLE and n > 1):
+        return _compute_acf_numpy(residuals, max_lags)
+    try:
+        return sm_acf(residuals, nlags=max_lags, fft=True)
+    except Exception:
+        # Edge cases may cause statsmodels to fail; fall back to numpy
+        return _compute_acf_numpy(residuals, max_lags)
 
 
 def _ljung_box(residuals: np.ndarray, max_lags: int) -> Dict[str, Any]:
     """Run Ljung-Box test, returning a dict of results."""
     n = len(residuals)
-    if _STATSMODELS_AVAILABLE and n > max_lags + 1:
-        try:
-            lb_result = acorr_ljungbox(residuals, lags=max_lags, return_df=True)
-            lb_stat = float(lb_result.iloc[-1]["lb_stat"])
-            lb_pvalue = float(lb_result.iloc[-1]["lb_pvalue"])
-            return {
-                "ljung_box_stat": lb_stat,
-                "ljung_box_pvalue": lb_pvalue,
-                "is_white_noise": lb_pvalue > 0.05,
-            }
-        except Exception:
-            pass
-    return {"ljung_box_stat": None, "ljung_box_pvalue": None, "is_white_noise": None}
+    if not (_STATSMODELS_AVAILABLE and n > max_lags + 1):
+        return {"ljung_box_stat": None, "ljung_box_pvalue": None, "is_white_noise": None}
+    try:
+        lb_result = acorr_ljungbox(residuals, lags=max_lags, return_df=True)
+        lb_stat = float(lb_result.iloc[-1]["lb_stat"])
+        lb_pvalue = float(lb_result.iloc[-1]["lb_pvalue"])
+        return {
+            "ljung_box_stat": lb_stat,
+            "ljung_box_pvalue": lb_pvalue,
+            "is_white_noise": lb_pvalue > 0.05,
+        }
+    except Exception:
+        # Edge cases may cause statsmodels to fail
+        return {"ljung_box_stat": None, "ljung_box_pvalue": None, "is_white_noise": None}
 
 
 def _jarque_bera(residuals: np.ndarray) -> Dict[str, Any]:
     """Run Jarque-Bera test, returning a dict of results."""
     n = len(residuals)
-    if _STATSMODELS_AVAILABLE and n >= 8:
-        try:
-            jb_stat, jb_pvalue, skew, kurtosis = jarque_bera(residuals)
-            return {
-                "jarque_bera_stat": float(jb_stat),
-                "jarque_bera_pvalue": float(jb_pvalue),
-                "is_normal": float(jb_pvalue) > 0.05,
-            }
-        except Exception:
-            pass
-    return {"jarque_bera_stat": None, "jarque_bera_pvalue": None, "is_normal": None}
+    if not (_STATSMODELS_AVAILABLE and n >= 8):
+        return {"jarque_bera_stat": None, "jarque_bera_pvalue": None, "is_normal": None}
+    try:
+        jb_stat, jb_pvalue, skew, kurtosis = jarque_bera(residuals)
+        return {
+            "jarque_bera_stat": float(jb_stat),
+            "jarque_bera_pvalue": float(jb_pvalue),
+            "is_normal": float(jb_pvalue) > 0.05,
+        }
+    except Exception:
+        # Edge cases may cause statsmodels to fail
+        return {"jarque_bera_stat": None, "jarque_bera_pvalue": None, "is_normal": None}
 
 
 def compare_diagnostics(

@@ -8,7 +8,7 @@ Requires: pip install lazypredict[spark]
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("lazypredict")
 
@@ -20,16 +20,14 @@ try:
         GBTClassifier as SparkGBTC,
         LinearSVC as SparkLinearSVC,
         LogisticRegression as SparkLR,
-        MultilayerPerceptronClassifier as SparkMLPC,
         NaiveBayes as SparkNB,
         RandomForestClassifier as SparkRFC,
     )
     from pyspark.ml.evaluation import (
-        BinaryClassificationEvaluator,
         MulticlassClassificationEvaluator,
         RegressionEvaluator,
     )
-    from pyspark.ml.feature import StringIndexer, VectorAssembler
+    from pyspark.ml.feature import VectorAssembler
     from pyspark.ml.regression import (
         DecisionTreeRegressor as SparkDTR,
         GBTRegressor as SparkGBTR,

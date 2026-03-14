@@ -7,10 +7,10 @@ search, and temporal cross-validation.
 
 import copy
 import logging
-import warnings
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit
 
 from lazypredict.metrics import compute_forecast_metrics
@@ -147,32 +147,39 @@ def _apply_params_to_wrapper(wrapper, model_name, params, n_lags, n_rolling_1, n
     """Apply tuned parameters to a forecaster wrapper instance."""
     from lazypredict.TimeSeriesForecasting import MLForecaster, _TorchRNNForecaster
 
-    # ML/DL models: update feature-engineering params
-    if isinstance(wrapper, (MLForecaster, _TorchRNNForecaster)):
-        if n_lags is not None:
-            wrapper.n_lags = n_lags
-        if n_rolling_1 is not None and n_rolling_2 is not None:
-            wrapper.n_rolling = (n_rolling_1, n_rolling_2)
+    _apply_feature_engineering_params(wrapper, n_lags, n_rolling_1, n_rolling_2)
+    _apply_stat_model_params(wrapper, model_name, params, sp)
 
-    # Statistical model params applied at fit time via wrapper attributes
-    if model_name == "SARIMAX" and "order" in params:
-        wrapper.order = params["order"]
-    if model_name in ("HoltWinters_Add", "HoltWinters_Mul") and sp is not None:
-        wrapper.seasonal_periods = sp
-
-    # DL-specific params
     if isinstance(wrapper, _TorchRNNForecaster):
         for key in ("hidden_size", "learning_rate", "batch_size", "n_epochs"):
             if key in params:
                 setattr(wrapper, key, params[key])
 
-    # ML model estimator params
     if isinstance(wrapper, MLForecaster):
-        # Store extra model params to be passed at fit time
         model_params = {k: v for k, v in params.items()
                         if k not in ("order", "seasonal_period")}
         if model_params:
             wrapper._tune_params = model_params
+
+
+def _apply_feature_engineering_params(wrapper, n_lags, n_rolling_1, n_rolling_2):
+    """Set lag/rolling params on ML/DL wrappers."""
+    from lazypredict.TimeSeriesForecasting import MLForecaster, _TorchRNNForecaster
+
+    if not isinstance(wrapper, (MLForecaster, _TorchRNNForecaster)):
+        return
+    if n_lags is not None:
+        wrapper.n_lags = n_lags
+    if n_rolling_1 is not None and n_rolling_2 is not None:
+        wrapper.n_rolling = (n_rolling_1, n_rolling_2)
+
+
+def _apply_stat_model_params(wrapper, model_name, params, sp):
+    """Set statistical model-specific parameters."""
+    if model_name == "SARIMAX" and "order" in params:
+        wrapper.order = params["order"]
+    if model_name in ("HoltWinters_Add", "HoltWinters_Mul") and sp is not None:
+        wrapper.seasonal_periods = sp
 
 
 def tune_top_k_forecasters(
@@ -189,13 +196,49 @@ def tune_top_k_forecasters(
     timeout: Optional[float] = None,
     random_state: int = 42,
     tune_seasonal: bool = False,
-) -> "pd.DataFrame":
+    refit: bool = True,
+) -> Tuple["pd.DataFrame", Dict[str, Any]]:
     """Tune the top-k forecasters from initial ranking.
+
+    Parameters
+    ----------
+    scores_df : pd.DataFrame
+        Ranked model scores from initial benchmarking.
+    models : dict
+        Fitted model wrappers.
+    all_wrappers : list of (name, wrapper) tuples
+        All available forecaster wrappers.
+    y_train : np.ndarray
+        Training time series.
+    X_train : np.ndarray or None
+        Exogenous features.
+    seasonal_period : int or None
+        Seasonal period.
+    top_k : int
+        Number of top models to tune.
+    tune_metric : str
+        Metric to optimize.
+    cv : int
+        Number of CV folds.
+    n_trials : int
+        Optuna trials per model.
+    timeout : float or None
+        Seconds limit per model tuning.
+    random_state : int
+        Random seed.
+    tune_seasonal : bool
+        Search over seasonal_period values.
+    refit : bool
+        When True, refit each tuned model on full ``y_train`` with
+        best parameters and return the fitted wrappers.
 
     Returns
     -------
-    pd.DataFrame
+    tune_results : pd.DataFrame
         Tuning results: Model, Best Score, Best Params.
+    tuned_models : dict
+        ``{model_name: fitted_wrapper}`` when ``refit=True``,
+        empty dict otherwise.
     """
     import pandas as pd
 
@@ -203,6 +246,8 @@ def tune_top_k_forecasters(
     name_to_wrapper = {name: w for name, w in all_wrappers}
 
     results = []
+    tuned_models: Dict[str, Any] = {}
+
     for model_name in top_model_names:
         wrapper = name_to_wrapper.get(model_name)
         if wrapper is None:
@@ -231,4 +276,24 @@ def tune_top_k_forecasters(
             "Best Params": str(best_params),
         })
 
-    return pd.DataFrame(results).set_index("Model")
+        # Refit with best params on full training data
+        if refit and best_params:
+            try:
+                w = copy.deepcopy(wrapper)
+                n_lags = best_params.pop("n_lags", None)
+                n_rolling_1 = best_params.pop("n_rolling_1", None)
+                n_rolling_2 = best_params.pop("n_rolling_2", None)
+                sp = best_params.pop("seasonal_period", seasonal_period)
+                _apply_params_to_wrapper(
+                    w, model_name, best_params,
+                    n_lags, n_rolling_1, n_rolling_2, sp,
+                )
+                w.fit(y_train, X_train)
+                tuned_models[model_name] = w
+                logger.info("Refit %s with best params.", model_name)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to refit %s with best params: %s", model_name, exc
+                )
+
+    return pd.DataFrame(results).set_index("Model"), tuned_models

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lazypredict"
-version = "0.3.0a4"
+version = "0.3.0a5"
 description = "Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning"
 readme = "README.md"
 license = {text = "MIT"}
@@ -54,6 +54,9 @@ foundation = [
 tune = [
     "optuna>=3.0",
 ]
+viz = [
+    "matplotlib>=3.5",
+]
 explain = [
     "shap>=0.42",
 ]
@@ -79,6 +82,7 @@ all = [
     "optuna>=3.0",
     "shap>=0.42",
     "interpret>=0.4",
+    "matplotlib>=3.5",
 ]
 dev = [
     "pytest>=7",

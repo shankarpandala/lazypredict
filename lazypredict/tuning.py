@@ -4,16 +4,14 @@ Provides Optuna-based and sklearn-based tuning backends for both
 supervised models and time series forecasters.
 """
 
-import copy
 import logging
 import warnings
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 
-from lazypredict.search_spaces import SEARCH_SPACES, get_search_space
+from lazypredict.search_spaces import get_search_space
 
 logger = logging.getLogger("lazypredict")
 
@@ -28,7 +26,7 @@ except ImportError:
 
 # Optional FLAML
 try:
-    from flaml import tune as flaml_tune
+    import flaml.tune  # noqa: F401
 
     _FLAML_AVAILABLE = True
 except ImportError:
@@ -139,7 +137,6 @@ def tune_supervised_sklearn(
 
     Uses a simple parameter distribution derived from the search space registry.
     """
-    from scipy import stats
     from sklearn.pipeline import Pipeline
 
     space_fn = get_search_space(model_name)

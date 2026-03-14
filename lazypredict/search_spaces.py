@@ -5,7 +5,7 @@ to pass to the model constructor.  Models not listed here are skipped during
 tuning (they have no meaningful hyperparameters or are too niche).
 """
 
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Dict, Optional
 
 
 def _ridge_space(trial) -> dict:

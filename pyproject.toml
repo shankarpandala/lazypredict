@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lazypredict"
-version = "0.3.0a4"
+version = "0.3.0a5"
 description = "Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning"
 readme = "README.md"
 license = {text = "MIT"}

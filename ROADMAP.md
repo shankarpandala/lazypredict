@@ -1,7 +1,7 @@
 # LazyPredict Roadmap — v0.3.x and Beyond
 
 **Last Updated:** 2026-03-10
-**Current Version:** 0.3.0a4
+**Current Version:** 0.3.0a5
 
 ---
 

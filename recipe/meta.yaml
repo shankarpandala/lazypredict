@@ -1,5 +1,5 @@
 {% set name = "lazypredict" %}
-{% set version = "0.3.0a4" %}
+{% set version = "0.3.0a5" %}
 
 package:
   name: {{ name|lower }}

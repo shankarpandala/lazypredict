@@ -8,6 +8,7 @@ perform best on a given time series.
 # Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
 import copy
+import importlib.util
 import logging
 import os
 import time
@@ -91,10 +92,8 @@ except ImportError:
     _PMDARIMA_AVAILABLE = False
 
 try:
-    import torch  # noqa: F401
-
-    _TORCH_AVAILABLE = True
-except ImportError:
+    _TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
+except Exception:
     _TORCH_AVAILABLE = False
 
 try:
@@ -119,10 +118,8 @@ except ImportError:
     _CATBOOST_AVAILABLE = False
 
 try:
-    import timesfm  # noqa: F401
-
-    _TIMESFM_AVAILABLE = True
-except ImportError:
+    _TIMESFM_AVAILABLE = importlib.util.find_spec("timesfm") is not None
+except Exception:
     _TIMESFM_AVAILABLE = False
 
 

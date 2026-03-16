@@ -201,6 +201,21 @@ def _gru_space(trial) -> dict:
     return _lstm_space(trial)
 
 
+def _deepar_space(trial) -> dict:
+    return {
+        "context_length": trial.suggest_int("context_length", 10, 50),
+        "hidden_size": trial.suggest_int("hidden_size", 20, 128),
+        "num_layers": trial.suggest_int("num_layers", 1, 3),
+        "lr": trial.suggest_float("lr", 1e-4, 1e-2, log=True),
+        "batch_size": trial.suggest_categorical("batch_size", [16, 32, 64]),
+        "max_epochs": trial.suggest_int("max_epochs", 3, 20),
+        "dropout_rate": trial.suggest_float("dropout_rate", 0.0, 0.5),
+        "num_batches_per_epoch": trial.suggest_int(
+            "num_batches_per_epoch", 20, 100
+        ),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Registry: model name -> search space function
 # ---------------------------------------------------------------------------
@@ -232,6 +247,7 @@ TS_SEARCH_SPACES: Dict[str, Callable] = {
     # DL
     "LSTM_TS": _lstm_space,
     "GRU_TS": _gru_space,
+    "DeepAR_TS": _deepar_space,
 }
 
 

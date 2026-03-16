@@ -554,6 +554,45 @@ class TestDeepLearningForecasters:
 
 
 # ---------------------------------------------------------------------------
+# Optional dependency tests (gluonts — DeepAR)
+# ---------------------------------------------------------------------------
+
+try:
+    import gluonts  # noqa: F401
+    _HAS_GLUONTS = True
+except ImportError:
+    _HAS_GLUONTS = False
+
+
+@pytest.mark.skipif(not _HAS_GLUONTS, reason="gluonts not installed")
+class TestDeepARForecaster:
+    def test_deepar_basic(self, univariate_data):
+        from lazypredict.TimeSeriesForecasting import DeepARForecaster
+        y_train, y_test = univariate_data
+        model = DeepARForecaster(max_epochs=1, num_batches_per_epoch=5)
+        model.fit(y_train)
+        pred = model.predict(len(y_test))
+        assert len(pred) == len(y_test)
+        assert not np.any(np.isnan(pred))
+
+    def test_deepar_custom_horizon(self, univariate_data):
+        from lazypredict.TimeSeriesForecasting import DeepARForecaster
+        y_train, _ = univariate_data
+        model = DeepARForecaster(
+            prediction_length=5, max_epochs=1, num_batches_per_epoch=5
+        )
+        model.fit(y_train)
+        pred = model.predict(5)
+        assert len(pred) == 5
+        assert not np.any(np.isnan(pred))
+
+    def test_deepar_name(self):
+        from lazypredict.TimeSeriesForecasting import DeepARForecaster
+        model = DeepARForecaster()
+        assert model.name == "DeepAR_TS"
+
+
+# ---------------------------------------------------------------------------
 # Optional dependency tests (timesfm)
 # ---------------------------------------------------------------------------
 

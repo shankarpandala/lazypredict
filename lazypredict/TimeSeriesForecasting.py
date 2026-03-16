@@ -122,6 +122,14 @@ try:
 except Exception:
     _TIMESFM_AVAILABLE = False
 
+try:
+    _GLUONTS_AVAILABLE = (
+        importlib.util.find_spec("gluonts") is not None
+        and _TORCH_AVAILABLE
+    )
+except Exception:
+    _GLUONTS_AVAILABLE = False
+
 
 # ============================================================================
 # Forecaster Wrapper Interface
@@ -721,6 +729,133 @@ class GRUForecaster(_TorchRNNForecaster):
 
 
 # ============================================================================
+# DeepAR — Amazon's probabilistic forecaster (requires gluonts[torch])
+# ============================================================================
+
+
+class DeepARForecaster(ForecasterWrapper):
+    """Amazon DeepAR probabilistic forecaster via GluonTS.
+
+    Wraps ``gluonts.torch.model.deepar.DeepAREstimator`` (Salinas et al.,
+    2020) — an autoregressive RNN that models the conditional distribution
+    of each time step.  The point forecast is the median of sampled paths.
+
+    Parameters
+    ----------
+    prediction_length : int or None, optional (default=None)
+        Forecast horizon.  When ``None`` it is set at ``fit`` time from the
+        training data length (``len(y_train) // 5``, minimum 1).
+    context_length : int or None, optional (default=None)
+        Number of past observations the model conditions on.  Defaults to
+        ``prediction_length`` when ``None``.
+    hidden_size : int, optional (default=40)
+        Number of hidden units in each RNN layer.
+    num_layers : int, optional (default=2)
+        Number of stacked RNN layers.
+    max_epochs : int, optional (default=5)
+        Maximum training epochs (passed to PyTorch Lightning trainer).
+    batch_size : int, optional (default=32)
+        Mini-batch size for training.
+    lr : float, optional (default=1e-3)
+        Adam optimiser learning rate.
+    dropout_rate : float, optional (default=0.1)
+        Dropout rate between RNN layers.
+    num_batches_per_epoch : int, optional (default=50)
+        Number of batches processed per epoch.
+    use_gpu : bool, optional (default=False)
+        Use CUDA if available.
+
+    Requires ``gluonts[torch]``.
+    """
+
+    def __init__(
+        self,
+        prediction_length: Optional[int] = None,
+        context_length: Optional[int] = None,
+        hidden_size: int = 40,
+        num_layers: int = 2,
+        max_epochs: int = 5,
+        batch_size: int = 32,
+        lr: float = 1e-3,
+        dropout_rate: float = 0.1,
+        num_batches_per_epoch: int = 50,
+        use_gpu: bool = False,
+    ):
+        self.prediction_length = prediction_length
+        self.context_length = context_length
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.max_epochs = max_epochs
+        self.batch_size = batch_size
+        self.lr = lr
+        self.dropout_rate = dropout_rate
+        self.num_batches_per_epoch = num_batches_per_epoch
+        self.use_gpu = use_gpu
+
+    def fit(self, y_train, X_train=None):
+        from gluonts.dataset.pandas import PandasDataset
+        from gluonts.torch.model.deepar import DeepAREstimator
+
+        y = np.asarray(y_train, dtype=np.float64).ravel()
+        self._y_len = len(y)
+
+        pred_len = self.prediction_length or max(len(y) // 5, 1)
+        self._pred_len = pred_len
+
+        # Build a PandasDataset with a simple integer-based frequency
+        idx = pd.date_range("2000-01-01", periods=len(y), freq="D")
+        series = pd.DataFrame({"target": y}, index=idx)
+        dataset = PandasDataset(series, target="target")
+
+        trainer_kwargs: Dict[str, Any] = {
+            "max_epochs": self.max_epochs,
+            "enable_progress_bar": False,
+            "enable_model_summary": False,
+        }
+        if self.use_gpu:
+            trainer_kwargs["accelerator"] = "gpu"
+            trainer_kwargs["devices"] = 1
+        else:
+            trainer_kwargs["accelerator"] = "cpu"
+
+        estimator = DeepAREstimator(
+            freq="D",
+            prediction_length=pred_len,
+            context_length=self.context_length,
+            hidden_size=self.hidden_size,
+            num_layers=self.num_layers,
+            lr=self.lr,
+            dropout_rate=self.dropout_rate,
+            batch_size=self.batch_size,
+            num_batches_per_epoch=self.num_batches_per_epoch,
+            trainer_kwargs=trainer_kwargs,
+        )
+
+        self._predictor = estimator.train(dataset)
+        self._train_series = series
+
+    def predict(self, horizon, X_test=None):
+        from gluonts.dataset.pandas import PandasDataset
+
+        # If requested horizon differs from training prediction_length,
+        # we tile / trim as needed (GluonTS always predicts prediction_length)
+        dataset = PandasDataset(self._train_series, target="target")
+        forecasts = list(self._predictor.predict(dataset))
+        # Take the median forecast (point forecast)
+        raw = forecasts[0].median
+
+        if len(raw) >= horizon:
+            return np.asarray(raw[:horizon], dtype=np.float64)
+        # If horizon > prediction_length, tile (rare edge case)
+        reps = int(np.ceil(horizon / len(raw)))
+        return np.tile(raw, reps)[:horizon].astype(np.float64)
+
+    @property
+    def name(self):
+        return "DeepAR_TS"
+
+
+# ============================================================================
 # Pretrained Foundation Model Wrapper (require timesfm)
 # ============================================================================
 
@@ -959,6 +1094,20 @@ def _build_forecaster_list(
         logger.info(
             "torch not installed — LSTM/GRU models unavailable. "
             "Install with: pip install torch"
+        )
+
+    # -- DeepAR (requires gluonts[torch]) ------------------------------------
+    if _GLUONTS_AVAILABLE:
+        forecasters.append((
+            "DeepAR_TS",
+            DeepARForecaster(
+                use_gpu=use_gpu,
+            ),
+        ))
+    else:
+        logger.info(
+            "gluonts not installed — DeepAR model unavailable. "
+            "Install with: pip install gluonts[torch]"
         )
 
     # -- Pretrained foundation models (requires timesfm) ----------------------

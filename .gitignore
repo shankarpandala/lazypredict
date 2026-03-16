@@ -111,3 +111,6 @@ notebook.ipynb
 
 mlruns/
 mlflow.db
+
+# PyTorch Lightning
+lightning_logs/

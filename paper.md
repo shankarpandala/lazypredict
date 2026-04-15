@@ -9,7 +9,7 @@ tags:
   - scikit-learn
 authors:
   - name: Shankar Rao Pandala
-    orcid: 0000-0000-0000-0000
+    orcid: 0009-0006-2234-6944
     affiliation: 1
 affiliations:
   - name: Independent Researcher
@@ -64,9 +64,12 @@ lightweight approach serves several use cases in scientific computing:
   deep learning (LSTM, GRU), and foundation models (TimesFM), in a single call.
 
 LazyPredict has been adopted by the research community, accumulating over 45
-citations in Google Scholar across domains including biomedical informatics,
-environmental science, materials science, and finance. The library is available
-on both PyPI and conda-forge and supports Python 3.9 through 3.14.
+citations in Google Scholar across diverse domains. Examples include heart
+failure prediction in biomedical informatics [@mahgoub2023], spam detection
+using word embeddings [@fellah2024], sepsis disease prediction
+[@alhashimi2023], and thermal conductivity modeling in chemical engineering
+[@varzandeh2025]. The library is available on both PyPI and conda-forge and
+supports Python 3.9 through 3.14.
 
 # Software Design and Features
 

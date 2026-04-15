@@ -297,6 +297,13 @@ class LazyClassifier(LazyEstimator):
     def _get_estimator_list(self) -> List[Tuple[str, Any]]:
         if self.classifiers == "all":
             return list(CLASSIFIERS)
+        # Support both string names and class objects
+        if self.classifiers and isinstance(self.classifiers[0], str):
+            return [
+                (name, cls)
+                for name, cls in CLASSIFIERS
+                if name in self.classifiers
+            ]
         try:
             return [(cls.__name__, cls) for cls in self.classifiers]
         except Exception as exc:
@@ -538,6 +545,13 @@ class LazyRegressor(LazyEstimator):
     def _get_estimator_list(self) -> List[Tuple[str, Any]]:
         if self.regressors == "all":
             return list(REGRESSORS)
+        # Support both string names and class objects
+        if self.regressors and isinstance(self.regressors[0], str):
+            return [
+                (name, cls)
+                for name, cls in REGRESSORS
+                if name in self.regressors
+            ]
         try:
             return [(cls.__name__, cls) for cls in self.regressors]
         except Exception as exc:

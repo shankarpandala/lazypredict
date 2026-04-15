@@ -16,19 +16,20 @@ Report bugs at <https://github.com/shankarpandala/lazypredict/issues>.
 If you are reporting a bug, please include:
 
 -   Your operating system name and version.
+-   Your Python version and virtual environment details.
 -   Any details about your local setup that might be helpful in
     troubleshooting.
 -   Detailed steps to reproduce the bug.
 
 ## Fix Bugs
 
-Look through the GitHub issues for bugs. Anything tagged with \"bug\"
-and \"help wanted\" is open to whoever wants to implement it.
+Look through the GitHub issues for bugs. Anything tagged with "bug"
+and "help wanted" is open to whoever wants to implement it.
 
 ## Implement Features
 
 Look through the GitHub issues for features. Anything tagged with
-\"enhancement\" and \"help wanted\" is open to whoever wants to
+"enhancement" and "help wanted" is open to whoever wants to
 implement it.
 
 ## Write Documentation
@@ -48,58 +49,59 @@ If you are proposing a feature:
 -   Keep the scope as narrow as possible, to make it easier to
     implement.
 -   Remember that this is a volunteer-driven project, and that
-    contributions are welcome :)
+    contributions are welcome.
 
 # Get Started!
 
-Ready to contribute? Here\'s how to set up [lazypredict]{.title-ref} for
+Ready to contribute? Here's how to set up `lazypredict` for
 local development.
 
-1.  Fork the [lazypredict]{.title-ref} repo on GitHub.
+1.  Fork the `lazypredict` repo on GitHub.
 
 2.  Clone your fork locally:
 
-    ``` shell
-    $ git clone git@github.com:your_name_here/lazypredict.git
+    ```shell
+    git clone git@github.com:your_name_here/lazypredict.git
     ```
 
-3.  Install your local copy into a virtualenv. Assuming you have
-    virtualenvwrapper installed, this is how you set up your fork for
-    local development:
+3.  Install your local copy into a virtual environment:
 
-    ``` shell
-    $ mkvirtualenv lazypredict
-    $ cd lazypredict/
-    $ python setup.py develop
-    $ pip install -r requirements_dev.txt
+    ```shell
+    cd lazypredict/
+    python -m venv venv
+    source venv/bin/activate   # On Windows: venv\Scripts\activate
+    pip install -e ".[dev]"
     ```
 
 4.  Create a branch for local development:
 
-    ``` shell
-    $ git checkout -b name-of-your-bugfix-or-feature
+    ```shell
+    git checkout -b name-of-your-bugfix-or-feature
     ```
 
     Now you can make your changes locally.
 
-5.  When you\'re done making changes, check that your changes pass
-    flake8 and the tests, including testing other Python versions with
-    tox:
+5.  When you're done making changes, check that your changes pass
+    flake8 and the tests:
 
-    ``` shell
-    $ flake8 lazypredict tests
-    $ python setup.py test or pytest
-    $ tox
+    ```shell
+    flake8 lazypredict tests
+    pytest
     ```
 
-    To get flake8 and tox, just pip install them into your virtualenv.
+    You can also run the full test matrix across Python versions with tox:
+
+    ```shell
+    pip install tox
+    tox
+    ```
 
 6.  Commit your changes and push your branch to GitHub:
 
-    ``` shell
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
+    ```shell
+    git add .
+    git commit -m "Your detailed description of your changes."
+    git push origin name-of-your-bugfix-or-feature
     ```
 
 7.  Submit a pull request through the GitHub website.
@@ -111,29 +113,34 @@ Before you submit a pull request, check that it meets these guidelines:
 1.  The pull request should include tests.
 2.  If the pull request adds functionality, the docs should be updated.
     Put your new functionality into a function with a docstring, and add
-    the feature to the list in README.rst.
-3.  The pull request should work for Python 2.7, 3.5, 3.6, 3.7 and 3.8,
-    and for PyPy. Check
-    <https://travis-ci.org/shankarpandala/lazypredict/pull_requests> and
-    make sure that the tests pass for all supported Python versions.
+    the feature to the list in README.md.
+3.  The pull request should work for Python 3.9 through 3.14. GitHub
+    Actions CI will automatically run the tests for all supported
+    Python versions.
 
 # Tips
 
 To run a subset of tests:
 
-``` shell
-$ pytest tests.test_lazypredict
+```shell
+pytest tests/test_supervised.py
+```
+
+To run tests with coverage:
+
+```shell
+pytest --cov=lazypredict --cov-report=term-missing
 ```
 
 # Deploying
 
 A reminder for the maintainers on how to deploy. Make sure all your
-changes are committed (including an entry in HISTORY.rst). Then run:
+changes are committed (including an entry in HISTORY.md). Then run:
 
-``` shell
-$ bump2version patch # possible: major / minor / patch
-$ git push
-$ git push --tags
+```shell
+bump2version patch  # possible: major / minor / patch
+git push
+git push --tags
 ```
 
-Travis will then deploy to PyPI if tests pass.
+GitHub Actions will then build and deploy to PyPI if tests pass.

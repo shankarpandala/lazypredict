@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "LazyPredict"
+abstract: >-
+  LazyPredict helps build a lot of basic models without much code and helps
+  understand which models work better without any parameter tuning. It supports
+  classification, regression, and time series forecasting with 40+ supervised
+  learning models and 26+ forecasting models.
+authors:
+  - family-names: Pandala
+    given-names: Shankar Rao
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+version: 0.3.0
+date-released: "2026-03-15"
+license: MIT
+repository-code: "https://github.com/shankarpandala/lazypredict"
+url: "https://lazypredict.readthedocs.io"
+keywords:
+  - machine-learning
+  - automated-machine-learning
+  - model-selection
+  - scikit-learn
+  - time-series-forecasting
+  - python

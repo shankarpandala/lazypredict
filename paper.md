@@ -73,7 +73,16 @@ supports Python 3.9 through 3.14.
 
 # Software Design and Features
 
-LazyPredict is built around a modular architecture with three main estimator
+LazyPredict was first released in November 2019 with core classification and
+regression benchmarking. The original design centered on two classes —
+`LazyClassifier` and `LazyRegressor` — that iterate over all applicable
+scikit-learn estimators, fit each with default hyperparameters, and collect
+metrics into a ranked DataFrame. This core has remained stable since early 2020,
+with subsequent releases focused on bug fixes, dependency updates, and
+refactoring. Version 0.3.0 (March 2026) introduced time series forecasting via
+`LazyForecaster` and GPU acceleration.
+
+The library is built around a modular architecture with three main estimator
 classes that share a common base class (`LazyEstimator`):
 
 - **`LazyClassifier`**: Benchmarks classification models, reporting accuracy,

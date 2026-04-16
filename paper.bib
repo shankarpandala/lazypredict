@@ -1,12 +1,13 @@
+% --- AutoML frameworks cited in State of the Field ---
+
 @article{feurer2015,
-  title   = {Efficient and Robust Automated Machine Learning},
-  author  = {Feurer, Matthias and Klein, Aaron and Eggensperger, Katharina and
-             Springenberg, Jost Tobias and Blum, Manuel and Hutter, Frank},
-  journal = {Advances in Neural Information Processing Systems},
-  volume  = {28},
-  pages   = {2962--2970},
-  year    = {2015},
-  url     = {https://papers.nips.cc/paper/2015/hash/11d0e6287202fced83f79975ec59a3a6-Abstract.html}
+  title     = {Efficient and Robust Automated Machine Learning},
+  author    = {Feurer, Matthias and Klein, Aaron and Eggensperger, Katharina and
+               Springenberg, Jost Tobias and Blum, Manuel and Hutter, Frank},
+  journal   = {Advances in Neural Information Processing Systems},
+  volume    = {28},
+  pages     = {2962--2970},
+  year      = {2015}
 }
 
 @inproceedings{olson2016,
@@ -14,11 +15,11 @@
                Machine Learning},
   author    = {Olson, Randal S. and Moore, Jason H.},
   booktitle = {Proceedings of the Workshop on Automatic Machine Learning},
-  series    = {ICML 2016 AutoML Workshop},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {64},
   pages     = {66--74},
   year      = {2016},
-  publisher = {JMLR},
-  url       = {http://proceedings.mlr.press/v64/olson_tpot_2016.html}
+  publisher = {PMLR}
 }
 
 @software{pycaret2020,
@@ -30,13 +31,6 @@
   version = {3.0}
 }
 
-@manual{h2o2024,
-  title        = {{H2O AutoML}: Scalable Automatic Machine Learning},
-  author       = {{H2O.ai}},
-  year         = {2024},
-  url          = {https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html}
-}
-
 @inproceedings{wu2021,
   title     = {{FLAML}: A Fast and Lightweight {AutoML} Library},
   author    = {Wu, Qingyun and Wang, Chi and Huang, Silu and De Mello, Arnaldo
@@ -44,9 +38,20 @@
   booktitle = {Proceedings of Machine Learning and Systems},
   volume    = {3},
   pages     = {434--447},
-  year      = {2021},
-  url       = {https://proceedings.mlsys.org/paper_files/paper/2021/hash/92cc227532d17e56e07902b254dfad10-Abstract.html}
+  year      = {2021}
 }
+
+@inproceedings{autogluon2020,
+  title     = {{AutoGluon-Tabular}: Robust and Accurate {AutoML} for Structured
+               Data},
+  author    = {Erickson, Nick and Mueller, Jonas and Shirkov, Alexander and
+               Zhang, Hang and Larroy, Pedro and Li, Mu and Smola, Alexander},
+  booktitle = {ICML 2020 AutoML Workshop},
+  year      = {2020},
+  url       = {https://arxiv.org/abs/2003.06505}
+}
+
+% --- Core dependencies ---
 
 @article{pedregosa2011,
   title   = {Scikit-learn: Machine Learning in {Python}},
@@ -59,9 +64,40 @@
   journal = {Journal of Machine Learning Research},
   volume  = {12},
   pages   = {2825--2830},
-  year    = {2011},
-  url     = {https://jmlr.org/papers/v12/pedregosa11a.html}
+  year    = {2011}
 }
+
+@article{mckinney2010,
+  title   = {Data Structures for Statistical Computing in {Python}},
+  author  = {McKinney, Wes},
+  journal = {Proceedings of the 9th Python in Science Conference},
+  pages   = {56--61},
+  year    = {2010},
+  doi     = {10.25080/Majora-92bf1922-00a}
+}
+
+@article{harris2020,
+  title     = {Array programming with {NumPy}},
+  author    = {Harris, Charles R. and Millman, K. Jarrod and van der Walt,
+               St{\'e}fan J. and Gommers, Ralf and Virtanen, Pauli and
+               Cournapeau, David and Wieser, Eric and Taylor, Julian and Berg,
+               Sebastian and Smith, Nathaniel J. and Kern, Robert and Picus,
+               Matti and Hoyer, Stephan and van Krevelen, Marten H. and Brett,
+               Matthew and Haldane, Allan and del R{\'i}o, Jaime Fern{\'a}ndez
+               and Wiebe, Mark and Peterson, Pearu and G{\'e}rard-Marchant,
+               Pierre and Sheppard, Kevin and Reddy, Tyler and Weckesser,
+               Warren and Abbasi, Hameer and Gohlke, Christoph and Oliphant,
+               Travis E.},
+  journal   = {Nature},
+  volume    = {585},
+  number    = {7825},
+  pages     = {357--362},
+  year      = {2020},
+  publisher = {Nature Publishing Group},
+  doi       = {10.1038/s41586-020-2649-2}
+}
+
+% --- Optional dependency libraries ---
 
 @inproceedings{chen2016,
   title     = {{XGBoost}: A Scalable Tree Boosting System},
@@ -103,7 +139,7 @@
   doi     = {10.25080/Majora-92bf1922-011}
 }
 
-@article{smith2017,
+@software{smith2017,
   title   = {pmdarima: {ARIMA} estimators for {Python}},
   author  = {Smith, Taylor G.},
   year    = {2017},
@@ -134,15 +170,15 @@
   url     = {https://arxiv.org/abs/2310.10688}
 }
 
-@article{akiba2019,
-  title   = {Optuna: A Next-Generation Hyperparameter Optimization Framework},
-  author  = {Akiba, Takuya and Sano, Shotaro and Yanase, Toshihiko and Ohta,
-             Takeru and Koyama, Masanori},
-  journal = {Proceedings of the 25th ACM SIGKDD International Conference on
-             Knowledge Discovery and Data Mining},
-  pages   = {2623--2631},
-  year    = {2019},
-  doi     = {10.1145/3292500.3330701}
+@inproceedings{akiba2019,
+  title     = {Optuna: A Next-Generation Hyperparameter Optimization Framework},
+  author    = {Akiba, Takuya and Sano, Shotaro and Yanase, Toshihiko and Ohta,
+               Takeru and Koyama, Masanori},
+  booktitle = {Proceedings of the 25th ACM SIGKDD International Conference on
+               Knowledge Discovery and Data Mining},
+  pages     = {2623--2631},
+  year      = {2019},
+  doi       = {10.1145/3292500.3330701}
 }
 
 @article{lundberg2017,
@@ -152,43 +188,6 @@
   volume  = {30},
   pages   = {4765--4774},
   year    = {2017}
-}
-
-@software{mlflow2024,
-  title   = {{MLflow}: An Open-Source Platform for the Machine Learning Lifecycle},
-  author  = {{Databricks}},
-  year    = {2024},
-  url     = {https://mlflow.org}
-}
-
-@article{mckinney2010,
-  title   = {Data Structures for Statistical Computing in {Python}},
-  author  = {McKinney, Wes},
-  journal = {Proceedings of the 9th Python in Science Conference},
-  pages   = {56--61},
-  year    = {2010},
-  doi     = {10.25080/Majora-92bf1922-00a}
-}
-
-@article{harris2020,
-  title     = {Array programming with {NumPy}},
-  author    = {Harris, Charles R. and Millman, K. Jarrod and van der Walt,
-               St{\'e}fan J. and Gommers, Ralf and Virtanen, Pauli and
-               Cournapeau, David and Wieser, Eric and Taylor, Julian and Berg,
-               Sebastian and Smith, Nathaniel J. and Kern, Robert and Picus,
-               Matti and Hoyer, Stephan and van Krevelen, Marten H. and Brett,
-               Matthew and Haldane, Allan and del R{\'i}o, Jaime Fern{\'a}ndez
-               and Wiebe, Mark and Peterson, Pearu and G{\'e}rard-Marchant,
-               Pierre and Sheppard, Kevin and Reddy, Tyler and Weckesser,
-               Warren and Abbasi, Hameer and Gohlke, Christoph and Oliphant,
-               Travis E.},
-  journal   = {Nature},
-  volume    = {585},
-  number    = {7825},
-  pages     = {357--362},
-  year      = {2020},
-  publisher = {Nature Publishing Group},
-  doi       = {10.1038/s41586-020-2649-2}
 }
 
 % --- Papers citing LazyPredict ---
@@ -237,4 +236,14 @@
   journal = {ACS Engineering Au},
   year    = {2025},
   doi     = {10.1021/acsengineeringau.5c00001}
+}
+
+@inproceedings{olugbade2024,
+  title     = {Comparative Analysis of Machine Learning Algorithms for Predicting
+               {PIC50} Values of {COVID-19} Compounds},
+  author    = {Olugbade, Samuel and others},
+  booktitle = {Lecture Notes in Networks and Systems},
+  publisher = {Springer},
+  year      = {2024},
+  doi       = {10.1007/978-3-031-75329-9_8}
 }

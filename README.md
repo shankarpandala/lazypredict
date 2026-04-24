@@ -2,7 +2,7 @@
 
 [![image](https://img.shields.io/pypi/v/lazypredict.svg)](https://pypi.python.org/pypi/lazypredict)
 [![Publish](https://github.com/shankarpandala/lazypredict/actions/workflows/publish.yml/badge.svg)](https://github.com/shankarpandala/lazypredict/actions/workflows/publish.yml)
-[![Documentation Status](https://readthedocs.org/projects/lazypredict/badge/?version=latest)](https://lazypredict.readthedocs.io/en/latest/?badge=latest)
+[![Documentation](https://github.com/shankarpandala/lazypredict/actions/workflows/docs.yml/badge.svg)](https://shankarpandala.github.io/lazypredict/)
 [![Downloads](https://pepy.tech/badge/lazypredict)](https://pepy.tech/project/lazypredict)
 [![CodeFactor](https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge)](https://www.codefactor.io/repository/github/shankarpandala/lazypredict)
 [![Citations](https://img.shields.io/badge/Citations-45-blue)](https://scholar.google.com/scholar?oi=bibs&hl=en&cites=4325808232671020176,16284230108871951652&as_sdt=5)
@@ -10,7 +10,7 @@
 Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning.
 
 - Free software: MIT license
-- Documentation: <https://lazypredict.readthedocs.io>
+- Documentation: <https://shankarpandala.github.io/lazypredict/>
 
 ## Features
 - Over 40 built-in machine learning models

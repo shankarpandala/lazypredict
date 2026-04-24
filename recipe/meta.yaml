@@ -51,7 +51,7 @@ about:
     It provides LazyClassifier and LazyRegressor that train and evaluate
     all applicable scikit-learn models on your dataset in a single call.
   dev_url: https://github.com/shankarpandala/lazypredict
-  doc_url: https://lazypredict.readthedocs.io
+  doc_url: https://shankarpandala.github.io/lazypredict/
 
 extra:
   recipe-maintainers:

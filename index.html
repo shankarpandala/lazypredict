@@ -449,10 +449,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-links" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Links
+        Quick Start
       
     </span>
   </a>
@@ -460,10 +460,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#what-can-it-do" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        What Can It Do?
       
     </span>
   </a>
@@ -471,10 +471,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-benefits" class="md-nav__link">
+  <a href="#feature-highlights" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Benefits
+        Feature Highlights
       
     </span>
   </a>
@@ -486,6 +486,17 @@
     <span class="md-ellipsis">
       
         Getting Started
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Links
       
     </span>
   </a>
@@ -634,6 +645,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -696,6 +711,62 @@
     
   
     Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="forecasting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Series Forecasting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Features
   
 
     
@@ -1019,10 +1090,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-links" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Links
+        Quick Start
       
     </span>
   </a>
@@ -1030,10 +1101,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#what-can-it-do" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        What Can It Do?
       
     </span>
   </a>
@@ -1041,10 +1112,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-benefits" class="md-nav__link">
+  <a href="#feature-highlights" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Benefits
+        Feature Highlights
       
     </span>
   </a>
@@ -1056,6 +1127,17 @@
     <span class="md-ellipsis">
       
         Getting Started
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Links
       
     </span>
   </a>
@@ -1096,53 +1178,148 @@
 
 
 <h1 id="welcome-to-lazy-predict">Welcome to Lazy Predict<a class="headerlink" href="#welcome-to-lazy-predict" title="Permanent link">&para;</a></h1>
-<p>Lazy Predict helps build a lot of basic models without much code and helps understand which models work better without any parameter tuning.</p>
+<p><strong>Lazy Predict</strong> helps you build and benchmark a large number of machine learning models with minimal code, so you can quickly discover which algorithms work best on your dataset — without any parameter tuning.</p>
 <p><a href="https://pypi.python.org/pypi/lazypredict"><img alt="PyPI version" src="https://img.shields.io/pypi/v/lazypredict.svg" /></a>
 <a href="https://pepy.tech/project/lazypredict"><img alt="Downloads" src="https://pepy.tech/badge/lazypredict" /></a>
 <a href="https://www.codefactor.io/repository/github/shankarpandala/lazypredict"><img alt="CodeFactor" src="https://www.codefactor.io/repository/github/shankarpandala/lazypredict/badge" /></a></p>
-<h2 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Classification</label><label for="__tabbed_1_2">Regression</label><label for="__tabbed_1_3">Time Series</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyClassifier</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_breast_cancer</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">data</span> <span class="o">=</span> <span class="n">load_breast_cancer</span><span class="p">()</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">clf</span> <span class="o">=</span> <span class="n">LazyClassifier</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="nb">print</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.Supervised</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyRegressor</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_diabetes</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">data</span> <span class="o">=</span> <span class="n">load_diabetes</span><span class="p">()</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">reg</span> <span class="o">=</span> <span class="n">LazyRegressor</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">models</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nb">print</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">lazypredict.TimeSeriesForecasting</span><span class="w"> </span><span class="kn">import</span> <span class="n">LazyForecaster</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">y</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">+</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">t</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">t</span> <span class="o">/</span> <span class="mi">12</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ignore_warnings</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y</span><span class="p">[:</span><span class="mi">180</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">180</span><span class="p">:])</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<hr />
+<h2 id="what-can-it-do">What Can It Do?<a class="headerlink" href="#what-can-it-do" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Class</th>
+<th>Models</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classification</td>
+<td><code>LazyClassifier</code></td>
+<td>40+ scikit-learn classifiers + XGBoost, LightGBM, CatBoost, cuML</td>
+</tr>
+<tr>
+<td>Regression</td>
+<td><code>LazyRegressor</code></td>
+<td>40+ scikit-learn regressors + XGBoost, LightGBM, CatBoost, cuML</td>
+</tr>
+<tr>
+<td>Time Series</td>
+<td><code>LazyForecaster</code></td>
+<td>20+ statistical, ML, deep learning, and foundation models</td>
+</tr>
+<tr>
+<td>Distributed</td>
+<td><code>LazySparkClassifier</code> / <code>LazySparkRegressor</code></td>
+<td>PySpark MLlib models</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="feature-highlights">Feature Highlights<a class="headerlink" href="#feature-highlights" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Zero-boilerplate benchmarking</strong> — one call trains and evaluates all models</li>
+<li><strong>40+ classifiers and regressors</strong> from scikit-learn plus optional boosting libraries</li>
+<li><strong>20+ time series forecasting models</strong> — Naive, ETS, ARIMA, Theta, ML, LSTM/GRU, TimesFM</li>
+<li><strong>GPU acceleration</strong> — XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM</li>
+<li><strong>Automatic seasonal period detection</strong> via autocorrelation analysis</li>
+<li><strong>Exogenous variables</strong> support in time series forecasting (SARIMAX, AutoARIMA, ML models)</li>
+<li><strong>Multiple categorical encoders</strong> — OneHot, Ordinal, Target, Binary</li>
+<li><strong>MLflow integration</strong> — automatic experiment tracking via environment variable</li>
+<li><strong>Cross-validation</strong> — both train/test split and k-fold CV supported</li>
+<li><strong>Per-model timeout</strong> — skip slow models automatically</li>
+<li><strong>Hyperparameter tuning</strong> — Optuna, scikit-learn, or FLAML backends</li>
+<li><strong>Explainability</strong> — permutation importance and optional SHAP values</li>
+<li><strong>Ensemble methods</strong> — simple average, weighted average, stacking</li>
+<li><strong>Visualization</strong> — forecast plots, model comparison, residuals, error heatmaps</li>
+<li><strong>Intel Extension acceleration</strong> — automatic CPU speedup when installed</li>
+<li><strong>Python 3.9 – 3.13</strong> support</li>
+<li><strong>MIT licensed</strong>, free software</li>
+</ul>
+<hr />
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<div class="grid cards">
+<ul>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> <strong><a href="installation/">Installation</a></strong></p>
+<p>Install from PyPI, conda-forge, or source. Learn about optional extras.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 12h7v1.5h-7m0-4h7V11h-7m0 3.5h7V16h-7m8-12H3a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 15h-9V6h9"/></svg></span> <strong><a href="usage/">Usage Guide</a></strong></p>
+<p>Core usage patterns for classification, regression, time series, and the CLI.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m16 11.78 4.24-7.33 1.73 1-5.23 9.05-6.51-3.75L5.46 19H22v2H2V3h2v14.54L9.5 8z"/></svg></span> <strong><a href="forecasting/">Time Series Forecasting</a></strong></p>
+<p>Deep dive into <code>LazyForecaster</code> — all 20+ models, cross-validation, ensembles, and plots.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3v2a2 2 0 0 1 2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 1 2-2V3zm4 6h3v1H7zm0 2h3v1H7zm3 5H7v-1h3zm2-2H7v-1h5zm0-6H7V7h5z"/></svg></span> <strong><a href="examples/">Examples</a></strong></p>
+<p>Detailed worked examples for every feature with copy-paste code.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64z"/></svg></span> <strong><a href="advanced/">Advanced Features</a></strong></p>
+<p>Explainability, hyperparameter tuning, visualization, distributed computing, and Spark.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.6 16.6 4.6-4.6-4.6-4.6L16 6l6 6-6 6zm-5.2 0L4.8 12l4.6-4.6L8 6l-6 6 6 6z"/></svg></span> <strong><a href="api/lazypredict/">API Reference</a></strong></p>
+<p>Complete auto-generated API docs for every public class and function.</p>
+</li>
+</ul>
+</div>
+<hr />
+<h2 id="links">Links<a class="headerlink" href="#links" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="https://github.com/shankarpandala/lazypredict">Source Code</a></li>
-<li><a href="https://github.com/shankarpandala/lazypredict/issues">Bug Reports</a></li>
-<li><a href="https://shankarpandala.github.io/lazypredict/">Documentation</a></li>
-</ul>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Over 40 built-in machine learning models</li>
-<li>Automatic model selection for classification, regression, and <strong>time series forecasting</strong></li>
-<li><strong>20+ forecasting models</strong> — statistical, ML, deep learning, and pretrained foundation models</li>
-<li><strong>GPU acceleration</strong> — XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM</li>
-<li>Automatic seasonal period detection via autocorrelation</li>
-<li>Support for univariate series with optional exogenous variables</li>
-<li>Support for both numerical and categorical features</li>
-<li>Easy integration with scikit-learn pipelines</li>
-<li>Model performance comparison and ranking</li>
-<li>Built-in MLflow integration for experiment tracking</li>
-<li>Support for Python 3.9 through 3.13</li>
-<li>Minimal code required</li>
-<li>Automatic model metrics logging</li>
-<li>Custom metric evaluation support</li>
-<li>Easy model access and reuse</li>
-</ul>
-<h2 id="key-benefits">Key Benefits<a class="headerlink" href="#key-benefits" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Rapid model prototyping and selection</li>
-<li>One-line benchmarking of forecasting models (<code>LazyForecaster</code>)</li>
-<li>GPU acceleration with automatic fallback to CPU</li>
-<li>Automated experiment tracking with MLflow</li>
-<li>Comprehensive model performance comparison</li>
-<li>Zero-configuration model evaluation</li>
-<li>Support for local and remote tracking</li>
-<li>Integration with Databricks environment</li>
-<li>Parallel model training capability</li>
-<li>Extensible with custom metrics</li>
-</ul>
-<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="installation/">Installation</a></li>
-<li><a href="usage/">Usage</a></li>
-<li><a href="examples/">Examples</a></li>
-<li><a href="api/lazypredict/">API Reference</a></li>
+<li><a href="https://pypi.org/project/lazypredict/">PyPI</a></li>
+<li><a href="https://github.com/shankarpandala/lazypredict/issues">Bug Reports / Feature Requests</a></li>
 </ul>
 
 

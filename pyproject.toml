@@ -98,7 +98,7 @@ lazypredict = "lazypredict.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/shankarpandala/lazypredict"
-Documentation = "https://lazypredict.readthedocs.io"
+Documentation = "https://shankarpandala.github.io/lazypredict/"
 Repository = "https://github.com/shankarpandala/lazypredict"
 Issues = "https://github.com/shankarpandala/lazypredict/issues"
 

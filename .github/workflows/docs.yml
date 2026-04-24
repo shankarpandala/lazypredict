@@ -5,14 +5,19 @@ on:
     branches: [master, dev]
   pull_request:
     branches: [master, dev]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, closed]
 
 permissions:
   contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    if: github.event_name == 'push' || (github.event.action != 'closed' && github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +38,37 @@ jobs:
           name: documentation
           path: site/
 
+  preview:
+    # Deploy every (non-draft) PR to a preview path on gh-pages and
+    # clean it up when the PR is closed.
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event.action != 'closed'
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        if: github.event.action != 'closed'
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        if: github.event.action != 'closed'
+        run: |
+          pip install -e .
+          pip install -r docs/requirements.txt
+      - name: Build documentation
+        if: github.event.action != 'closed'
+        run: mkdocs build --strict
+      - name: Deploy PR preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: ./site/
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: auto
+
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: build
@@ -49,5 +85,11 @@ jobs:
         run: |
           pip install -e .
           pip install -r docs/requirements.txt
+      - name: Build documentation
+        run: mkdocs build --strict
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: site
+          branch: gh-pages
+          clean-exclude: pr-preview/**

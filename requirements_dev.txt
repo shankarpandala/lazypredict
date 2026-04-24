@@ -8,4 +8,3 @@ xgboost>=1.5
 lightgbm>=3.0
 pytest>=7.0
 pytest-cov>=4.0
-myst-parser

@@ -70,7 +70,7 @@ jobs:
           action: auto
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')
     needs: build
     runs-on: ubuntu-latest
     steps:

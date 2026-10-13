@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
+from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, OrdinalEncoder, StandardScaler
 
 from lazypredict.config import VALID_ENCODERS
 
@@ -41,6 +41,13 @@ categorical_transformer_high = Pipeline(
         ("encoding", OrdinalEncoder()),
     ]
 )
+
+
+def _categorical_as_object(X):
+    """Represent pandas categorical values and missing markers for sklearn."""
+    if isinstance(X, pd.DataFrame):
+        return X.astype(object).where(X.notna(), np.nan)
+    return X
 
 
 def get_categorical_encoder(
@@ -104,7 +111,13 @@ def get_categorical_encoder(
             f"Choose from {VALID_ENCODERS!r}"
         )
 
-    return Pipeline(steps=[("imputer", imputer), ("encoding", encoder)])
+    return Pipeline(
+        steps=[
+            ("to_object", FunctionTransformer(_categorical_as_object, feature_names_out="one-to-one")),
+            ("imputer", imputer),
+            ("encoding", encoder),
+        ]
+    )
 
 
 def get_card_split(
@@ -152,7 +165,7 @@ def build_preprocessor(
 ) -> ColumnTransformer:
     """Build a ColumnTransformer for the given data."""
     numeric_features = X_train.select_dtypes(include=[np.number, "bool"]).columns
-    categorical_features = X_train.select_dtypes(include=["object"]).columns
+    categorical_features = X_train.select_dtypes(include=["object", "string", "category"]).columns
 
     categorical_low, categorical_high = get_card_split(X_train, categorical_features)
 

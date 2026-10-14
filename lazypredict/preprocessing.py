@@ -53,8 +53,16 @@ def _datetime_label(value):
         timestamp = pd.Timestamp(value)
         if timestamp.tzinfo is not None:
             timestamp = timestamp.tz_convert("UTC")
-    except pd.errors.OutOfBoundsDatetime:
-        timestamp = value.astype("datetime64[us]").item() if isinstance(value, np.datetime64) else value
+    except (pd.errors.OutOfBoundsDatetime, OverflowError):
+        timestamp = value
+        if isinstance(value, np.datetime64):
+            try:
+                narrowed = value.astype("datetime64[us]")
+            except OverflowError:
+                return f"datetime:{np.datetime_as_string(value, unit='auto')}"
+            if narrowed.astype(value.dtype) != value:
+                return f"datetime:{np.datetime_as_string(value, unit='auto')}"
+            timestamp = narrowed.item()
         if not isinstance(timestamp, datetime):
             return f"datetime:{np.datetime_as_string(value, unit='auto')}"
         if timestamp.tzinfo is not None:
@@ -71,10 +79,7 @@ def _timedelta_label(value):
         scales = {"W": 604800000000000, "D": 86400000000000, "h": 3600000000000,
                   "m": 60000000000, "s": 1000000000, "ms": 1000000, "us": 1000, "ns": 1}
         if unit not in scales:
-            try:
-                return f"timedelta:{pd.Timedelta(value).isoformat()}"
-            except pd.errors.OutOfBoundsTimedelta:
-                return f"{type(value).__name__}:{value}"
+            return f"{type(value).__name__}:{value}"
         total = int(value.view("i8")) * multiplier * scales[unit]
     else:
         total = ((value.days * 86400 + value.seconds) * 1000000 + value.microseconds) * 1000
@@ -92,6 +97,8 @@ def _categorical_label(value):
         return _datetime_label(value)
     if isinstance(value, (pd.Timedelta, np.timedelta64, timedelta)):
         return _timedelta_label(value)
+    if isinstance(value, pd.Period):
+        return f"Period:{value}:{value.freqstr}"
     if isinstance(value, (bool, np.bool_)):
         return f"bool:{bool(value)}"
     if isinstance(value, numbers.Integral):
@@ -166,14 +173,17 @@ class _CategoricalTransformer(FunctionTransformer):
             if isinstance(X, pd.DataFrame) else ()
         )
         self.none_columns_ = _object_none_columns(X)
+        self.nan_columns_ = [column for column in self.none_columns_
+                             if any(isinstance(value, (float, np.floating)) and np.isnan(value) for value in X[column])]
         return super().fit(X, y)
 
     def transform(self, X):
         if not isinstance(X, pd.DataFrame) and any((len(self.category_columns_), len(self.string_columns_),
                                                     len(self.none_columns_))):
-            X = pd.DataFrame(X, columns=self.input_columns_)
+            X = pd.DataFrame(X, columns=self.input_columns_, dtype=object)
             for column in self.none_columns_:
-                X[column] = X[column].where(X[column].notna(), None)
+                if column not in self.nan_columns_:
+                    X[column] = X[column].where(X[column].notna(), None)
         values = _categorical_as_object(X, self.category_columns_, self.string_columns_, self.none_columns_)
         return super().transform(values)
 

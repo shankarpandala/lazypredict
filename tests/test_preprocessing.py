@@ -41,6 +41,11 @@ from lazypredict.preprocessing import get_categorical_encoder
              np.datetime64("12000-01-01T00:00:00.000001", "us"), None],
             id="wide-numpy-microseconds",
         ),
+        pytest.param(
+            [np.datetime64(2**51, "D"), np.datetime64(0, "D"), None],
+            [np.datetime64(0, "D"), np.datetime64(2**51, "D"), None],
+            id="numpy-date-narrowing-overflow",
+        ),
         ([datetime(2500, 1, 1, tzinfo=timezone.utc), datetime(2500, 1, 2, tzinfo=timezone.utc), None],
          [datetime(2500, 1, 2, 2, tzinfo=timezone(timedelta(hours=2))),
           datetime(2500, 1, 1, 2, tzinfo=timezone(timedelta(hours=2))), None]),
@@ -92,6 +97,16 @@ def test_datetime_category_labels_match_equivalent_prediction_values(
          [timedelta(microseconds=1), np.timedelta64(-2000, "ns")]),
         ([pd.Timedelta(1, "ns"), pd.Timedelta(2, "ns")],
          [np.timedelta64(2, "ns"), np.timedelta64(1, "ns")]),
+        pytest.param(
+            [np.timedelta64(1, "M"), np.timedelta64(2, "M")],
+            [np.timedelta64(2, "M"), np.timedelta64(1, "M")],
+            id="calendar-month-categories",
+        ),
+        pytest.param(
+            [np.timedelta64(1, "Y"), np.timedelta64(2, "Y")],
+            [np.timedelta64(2, "Y"), np.timedelta64(1, "Y")],
+            id="calendar-year-categories",
+        ),
         pytest.param(
             [timedelta(days=200000), timedelta(days=200002)],
             [np.array(100001, dtype="timedelta64[2D]")[()],
@@ -226,6 +241,60 @@ def test_object_none_schema_survives_arrays_refit_and_clone(encoder):
         np.testing.assert_array_equal(pipeline.transform(prediction), refitted)
     pipeline.fit(train)
     np.testing.assert_array_equal(pipeline.transform(train), expected)
+
+
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("with_literal", [False, True])
+def test_object_none_and_nan_keep_array_prediction_identity(encoder, with_literal):
+    """An object array preserves both null kinds observed during fitting."""
+    from sklearn.pipeline import Pipeline
+
+    values = [None, np.nan, "cedar"] + (["missing"] if with_literal else [])
+    target = [0, 1, 0] + ([1] if with_literal else [])
+    frame = pd.DataFrame({"signal": pd.Series(values * 4, dtype=object)})
+    array = frame.to_numpy()
+    before_frame, before_array = frame.copy(deep=True), array.copy()
+    model = Pipeline([("encoding", get_categorical_encoder(encoder)),
+                      ("tree", DecisionTreeClassifier(random_state=42))])
+    model.fit(frame, target * 4)
+    pipeline = model.named_steps["encoding"]
+    encoded_frame, encoded_array = pipeline.transform(frame), pipeline.transform(array)
+    np.testing.assert_array_equal(encoded_array, encoded_frame)
+    assert not np.array_equal(encoded_array[0], encoded_array[1])
+    if with_literal:
+        np.testing.assert_array_equal(encoded_array[1], encoded_array[3])
+    np.testing.assert_array_equal(model.predict(frame), target * 4)
+    np.testing.assert_array_equal(model.predict(array), target * 4)
+    pd.testing.assert_frame_equal(frame, before_frame)
+    pd.testing.assert_frame_equal(pd.DataFrame(array), pd.DataFrame(before_array))
+
+
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+def test_period_categories_preserve_frequency_in_predictions(encoder, task):
+    """Equal-looking periods from different frequencies remain distinct."""
+    periods = [pd.Period("2020Q1", "Q-DEC"), pd.Period("2020Q1", "Q-MAR")]
+    assert str(periods[0]) == str(periods[1]) and periods[0] != periods[1]
+    train = pd.DataFrame({"signal": pd.Categorical.from_codes(
+        [0, 1] * 6, categories=pd.Index(periods, dtype=object))})
+    query = pd.DataFrame({"signal": pd.Series(periods[::-1] * 3, dtype=object)})
+    target, expected = [0, 1] * 6, [1, 0] * 3
+    kwargs = {"predictions": True, "n_jobs": 1, "categorical_encoder": encoder}
+    if task == "classification":
+        model, name = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs), "DecisionTreeClassifier"
+    else:
+        model, name = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs), "DecisionTreeRegressor"
+    before_train, before_query = train.copy(deep=True), query.copy(deep=True)
+    scores, predictions = model.fit(train, query, target, expected)
+    assert not model.errors and scores.index.tolist() == [name]
+    np.testing.assert_array_equal(predictions[name], expected)
+    np.testing.assert_array_equal(model.predict(query, name), expected)
+    pre = model.models[name].named_steps["preprocessor"]
+    encoded = pre.transform(query)
+    assert not np.array_equal(encoded[0], encoded[1])
+    assert len(pre.get_feature_names_out()) == encoded.shape[1]
+    pd.testing.assert_frame_equal(train, before_train)
+    pd.testing.assert_frame_equal(query, before_query)
 
 
 @pytest.mark.parametrize("test_dtype", ["string", "object", "category"])

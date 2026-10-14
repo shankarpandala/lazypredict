@@ -47,16 +47,21 @@ def _categorical_as_object(X):
     """Represent pandas categorical values and missing markers for sklearn."""
     if isinstance(X, pd.DataFrame):
         values = X.astype(object)
-        for column in X.select_dtypes(include="category"):
-            dtype = X[column].cat.categories.dtype
-            if pd.api.types.is_numeric_dtype(dtype) and not pd.api.types.is_complex_dtype(dtype):
-                # Keep numeric categories compatible with the string missing label.
-                values[column] = X[column].map(
-                    lambda value: str(int(value))
-                    if np.isfinite(value) and value % 1 == 0
-                    else str(value)
-                ).astype(object)
-        return values.where(X.notna(), np.nan)
+        for column in X:
+            dtype = X[column].dtype
+            if dtype.name not in ("string", "category"):
+                continue
+            if isinstance(dtype, pd.CategoricalDtype):
+                category_dtype = X[column].cat.categories.dtype
+                if pd.api.types.is_numeric_dtype(category_dtype) and not pd.api.types.is_complex_dtype(category_dtype):
+                    values[column] = X[column].map(
+                        lambda value: str(int(value))
+                        if np.isfinite(value) and value % 1 == 0
+                        else str(value)
+                    ).astype(object)
+            # Fill extension markers before the imputer can drop an empty column.
+            values[column] = values[column].where(X[column].notna(), "missing")
+        return values
     return X
 
 

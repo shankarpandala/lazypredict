@@ -89,8 +89,67 @@ def test_mixed_type_categories_remain_distinct():
     assert normalized["value"].iloc[0] == 1
     assert normalized["value"].iloc[1] == "1"
     assert normalized["value"].iloc[0] != normalized["value"].iloc[1]
-    assert pd.isna(normalized["value"].iloc[2])
+    assert normalized["value"].iloc[2] == "missing"
     pd.testing.assert_frame_equal(X, before)
+
+
+@pytest.mark.parametrize("dtype", ["string", "category"])
+@pytest.mark.parametrize("mixed", [False, True])
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+def test_empty_extension_columns_remain_valid_features(dtype, mixed, encoder, task):
+    """An all-missing extension column must not prevent a valid model fit."""
+    X_train = pd.DataFrame({"empty": pd.Series([None] * 12, dtype=dtype)})
+    X_test = pd.DataFrame({"empty": pd.Series([None] * 8, dtype=dtype)})
+    if mixed:
+        X_train["constant"], X_test["constant"] = 2.25, 2.25
+    train_before, test_before = X_train.copy(deep=True), X_test.copy(deep=True)
+    y_train, y_test = np.zeros(len(X_train)), np.zeros(len(X_test))
+    kwargs = {"categorical_encoder": encoder, "predictions": True, "n_jobs": 1}
+    if task == "classification":
+        estimator = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        model_name = "DecisionTreeClassifier"
+    else:
+        estimator = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        model_name = "DecisionTreeRegressor"
+
+    scores, predictions = estimator.fit(X_train, X_test, y_train, y_test)
+
+    assert not estimator.errors
+    assert scores.index.tolist() == [model_name]
+    np.testing.assert_array_equal(predictions[model_name], y_test)
+    np.testing.assert_array_equal(estimator.predict(X_test, model_name), y_test)
+    preprocessor = estimator.models[model_name].named_steps["preprocessor"]
+    assert any("empty" in name for name in preprocessor.get_feature_names_out())
+    pd.testing.assert_frame_equal(X_train, train_before)
+    pd.testing.assert_frame_equal(X_test, test_before)
+
+
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+def test_object_none_remains_distinct_from_missing_literal(encoder, task):
+    """Legacy None labels must retain their existing category identity."""
+    X_train = pd.DataFrame({"value": pd.Series(["cedar", None, "missing"] * 4, dtype=object)})
+    X_test = pd.DataFrame({"value": pd.Series(["cedar", None, "missing"] * 3, dtype=object)})
+    X_train["constant"], X_test["constant"] = 2.25, 2.25
+    train_before, test_before = X_train.copy(deep=True), X_test.copy(deep=True)
+    y_train, y_test = np.tile([0, 1, 0], 4), np.tile([0, 1, 0], 3)
+    kwargs = {"categorical_encoder": encoder, "predictions": True, "n_jobs": 1}
+    if task == "classification":
+        estimator = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        model_name = "DecisionTreeClassifier"
+    else:
+        estimator = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        model_name = "DecisionTreeRegressor"
+
+    scores, predictions = estimator.fit(X_train, X_test, y_train, y_test)
+
+    assert not estimator.errors
+    assert scores.index.tolist() == [model_name]
+    np.testing.assert_array_equal(predictions[model_name], y_test)
+    np.testing.assert_array_equal(estimator.predict(X_test, model_name), y_test)
+    pd.testing.assert_frame_equal(X_train, train_before)
+    pd.testing.assert_frame_equal(X_test, test_before)
 
 
 @pytest.mark.parametrize(

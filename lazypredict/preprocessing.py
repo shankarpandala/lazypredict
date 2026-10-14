@@ -4,6 +4,7 @@ import inspect
 import logging
 import numbers
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Tuple, Union
 
 import numpy as np
@@ -76,19 +77,52 @@ def _timedelta_label(value):
         value = value.asm8
     if isinstance(value, np.timedelta64):
         unit, multiplier = np.datetime_data(value.dtype)
-        scales = {"W": 604800000000000, "D": 86400000000000, "h": 3600000000000,
-                  "m": 60000000000, "s": 1000000000, "ms": 1000000, "us": 1000, "ns": 1}
+        scales = {"W": 604800 * 10**18, "D": 86400 * 10**18, "h": 3600 * 10**18,
+                  "m": 60 * 10**18, "s": 10**18, "ms": 10**15, "us": 10**12,
+                  "ns": 10**9, "ps": 10**6, "fs": 10**3, "as": 1}
         if unit not in scales:
             return f"{type(value).__name__}:{value}"
         total = int(value.view("i8")) * multiplier * scales[unit]
     else:
-        total = ((value.days * 86400 + value.seconds) * 1000000 + value.microseconds) * 1000
-    days, remainder = divmod(total, 86400000000000)
-    hours, remainder = divmod(remainder, 3600000000000)
-    minutes, remainder = divmod(remainder, 60000000000)
-    seconds, nanoseconds = divmod(remainder, 1000000000)
-    fraction = f".{nanoseconds:09d}".rstrip("0") if nanoseconds else ""
+        total = ((value.days * 86400 + value.seconds) * 1000000 + value.microseconds) * 10**12
+    days, remainder = divmod(total, 86400 * 10**18)
+    hours, remainder = divmod(remainder, 3600 * 10**18)
+    minutes, remainder = divmod(remainder, 60 * 10**18)
+    seconds, attoseconds = divmod(remainder, 10**18)
+    fraction = f".{attoseconds:018d}".rstrip("0") if attoseconds else ""
     return f"timedelta:P{days}DT{hours}H{minutes}M{seconds}{fraction}S"
+
+
+def _rational_label(value):
+    """Match builtin labels only when conversion preserves the exact ratio."""
+    numerator, denominator = (
+        value.as_integer_ratio() if isinstance(value, Decimal) else (value.numerator, value.denominator)
+    )
+    if denominator == 1:
+        return f"number:{numerator}"
+    try:
+        approximate = float(value)
+    except OverflowError:
+        approximate = np.inf
+    if np.isfinite(approximate) and approximate.as_integer_ratio() == (numerator, denominator):
+        return f"number:{approximate!r}"
+    return f"number:{numerator}/{denominator}"
+
+
+def _numeric_label(value):
+    """Preserve exact numeric equality without rounding distinct categories."""
+    if isinstance(value, numbers.Integral):
+        return f"number:{int(value)}"
+    if isinstance(value, (float, np.floating)):
+        label = str(int(value)) if np.isfinite(value) and value % 1 == 0 else repr(float(value))
+        return f"number:{label}"
+    if isinstance(value, Decimal) and not value.is_finite():
+        return f"number:{float(value)!r}"
+    if isinstance(value, (Decimal, numbers.Rational)):
+        return _rational_label(value)
+    if isinstance(value, (complex, np.complexfloating)) and value.imag == 0:
+        return _numeric_label(value.real)
+    return f"{type(value).__name__}:{value}"
 
 
 def _categorical_label(value):
@@ -101,11 +135,8 @@ def _categorical_label(value):
         return f"Period:{value}:{value.freqstr}"
     if isinstance(value, (bool, np.bool_)):
         return f"bool:{bool(value)}"
-    if isinstance(value, numbers.Integral):
-        return f"number:{int(value)}"
-    if isinstance(value, (float, np.floating)):
-        label = str(int(value)) if np.isfinite(value) and value % 1 == 0 else repr(float(value))
-        return f"number:{label}"
+    if isinstance(value, (numbers.Number, Decimal)):
+        return _numeric_label(value)
     if isinstance(value, str):
         return f"str:{value}"
     return f"{type(value).__name__}:{value}"
@@ -174,7 +205,8 @@ class _CategoricalTransformer(FunctionTransformer):
         )
         self.none_columns_ = _object_none_columns(X)
         self.nan_columns_ = [column for column in self.none_columns_
-                             if any(isinstance(value, (float, np.floating)) and np.isnan(value) for value in X[column])]
+                             if any(missing and value is not None
+                                    for value, missing in zip(X[column], X[column].isna()))]
         return super().fit(X, y)
 
     def transform(self, X):

@@ -1,6 +1,8 @@
 """Public estimator coverage for categorical pandas dtypes."""
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+from fractions import Fraction
 
 import numpy as np
 import pandas as pd
@@ -98,6 +100,41 @@ def test_datetime_category_labels_match_equivalent_prediction_values(
         ([pd.Timedelta(1, "ns"), pd.Timedelta(2, "ns")],
          [np.timedelta64(2, "ns"), np.timedelta64(1, "ns")]),
         pytest.param(
+            [pd.Timedelta(1, "ns"), pd.Timedelta(2, "ns")],
+            [np.timedelta64(2000, "ps"), np.timedelta64(1000, "ps")],
+            id="picoseconds-equivalent-to-nanoseconds",
+        ),
+        pytest.param(
+            [np.timedelta64(-1000000, "fs"), np.timedelta64(-2000000, "fs")],
+            [np.timedelta64(-2, "ns"), np.timedelta64(-1, "ns")],
+            id="negative-femtoseconds-equivalent-to-nanoseconds",
+        ),
+        pytest.param(
+            [np.timedelta64(1000000000, "as"), np.timedelta64(2000000000, "as")],
+            [np.timedelta64(2, "ns"), np.timedelta64(1, "ns")],
+            id="attoseconds-equivalent-to-nanoseconds",
+        ),
+        pytest.param(
+            [np.timedelta64(1, "ps"), np.timedelta64(2, "ps")],
+            [np.timedelta64(2000, "fs"), np.timedelta64(1000, "fs")],
+            id="sub-nanosecond-precision",
+        ),
+        pytest.param(
+            [np.timedelta64(-1, "fs"), np.timedelta64(-2, "fs")],
+            [np.timedelta64(-2000, "as"), np.timedelta64(-1000, "as")],
+            id="negative-sub-picosecond-precision",
+        ),
+        pytest.param(
+            [np.timedelta64(1, "as"), np.timedelta64(2, "as")],
+            [np.timedelta64(2, "as"), np.timedelta64(1, "as")],
+            id="single-attosecond-distinction",
+        ),
+        pytest.param(
+            [pd.Timedelta(1, "ns"), pd.Timedelta(2, "ns")],
+            [np.array(2, dtype="timedelta64[1000ps]")[()], np.array(1, dtype="timedelta64[1000ps]")[()]],
+            id="picosecond-multipliers",
+        ),
+        pytest.param(
             [np.timedelta64(1, "M"), np.timedelta64(2, "M")],
             [np.timedelta64(2, "M"), np.timedelta64(1, "M")],
             id="calendar-month-categories",
@@ -178,6 +215,53 @@ def test_timedelta_category_labels_match_equivalent_prediction_values(
     pd.testing.assert_frame_equal(X_test, before_test)
 
 
+@pytest.mark.parametrize(
+    "train_values,test_values",
+    [
+        pytest.param([Decimal("1.5"), Decimal("2.5")], [2.5, 1.5], id="decimal-halves"),
+        pytest.param([Fraction(3, 2), Fraction(5, 2)], [2.5, 1.5], id="fraction-halves"),
+        pytest.param([Decimal("0"), Decimal("2")], [2, 0], id="decimal-integers"),
+        pytest.param([Fraction(0), Fraction(2)], [2, 0], id="fraction-integers"),
+        pytest.param([Decimal.from_float(0.1), Decimal.from_float(0.2)], [0.2, 0.1], id="exact-decimal-floats"),
+        pytest.param([Fraction.from_float(0.1), Fraction.from_float(0.2)], [0.2, 0.1], id="exact-fraction-floats"),
+        pytest.param([Decimal("0.1"), Decimal("0.2")], [Fraction(1, 5), Fraction(1, 10)], id="decimal-rational"),
+        pytest.param([Decimal(10**400), Decimal(10**400 + 1)], [10**400 + 1, 10**400], id="wide-decimal-integers"),
+        pytest.param([complex(1.5, 0), complex(2.5, 0)], [2.5, 1.5], id="real-complex-values"),
+        pytest.param([Decimal("Infinity"), Decimal("-Infinity")], [-np.inf, np.inf], id="decimal-infinities"),
+        pytest.param([Decimal("0.1"), 0.1], [0.1, Decimal("0.1")], id="unequal-rounded-decimal"),
+        pytest.param([Fraction(1, 10), 0.1], [0.1, Fraction(1, 10)], id="unequal-rounded-fraction"),
+        pytest.param([Fraction(1, 3), 1 / 3], [1 / 3, Fraction(1, 3)], id="unequal-rounded-thirds"),
+        pytest.param([complex(1, 2), complex(1, 3)], [complex(1, 3), complex(1, 2)], id="distinct-complex-values"),
+    ],
+)
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+def test_numeric_categories_preserve_exact_equivalence(train_values, test_values, encoder, task):
+    """Equal numeric representations match without merging rounded values."""
+    train = pd.DataFrame({"signal": pd.Categorical.from_codes(
+        [0, 1] * 6, categories=pd.Index(train_values, dtype=object))})
+    query = pd.DataFrame({"signal": pd.Series(test_values * 3, dtype=object)})
+    before_train, before_query = train.copy(deep=True), query.copy(deep=True)
+    target, expected = [0, 1] * 6, [1, 0] * 3
+    kwargs = {"predictions": True, "n_jobs": 1, "categorical_encoder": encoder}
+    if task == "classification":
+        model, name = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs), "DecisionTreeClassifier"
+    else:
+        model, name = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs), "DecisionTreeRegressor"
+    scores, predictions = model.fit(train, query, target, expected)
+    assert not model.errors and scores.index.tolist() == [name]
+    np.testing.assert_array_equal(predictions[name], expected)
+    np.testing.assert_array_equal(model.predict(query, name), expected)
+    pre = model.models[name].named_steps["preprocessor"]
+    encoded_train, encoded_query = pre.transform(train), pre.transform(query)
+    np.testing.assert_array_equal(encoded_train[0], encoded_query[1])
+    np.testing.assert_array_equal(encoded_train[1], encoded_query[0])
+    assert not np.array_equal(encoded_query[0], encoded_query[1])
+    assert len(pre.get_feature_names_out()) == encoded_query.shape[1]
+    pd.testing.assert_frame_equal(train, before_train)
+    pd.testing.assert_frame_equal(query, before_query)
+
+
 @pytest.mark.parametrize("missing", [None, np.nan])
 @pytest.mark.parametrize("test_dtype", ["object", "string", "category"])
 @pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
@@ -245,17 +329,20 @@ def test_object_none_schema_survives_arrays_refit_and_clone(encoder):
 
 @pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
 @pytest.mark.parametrize("with_literal", [False, True])
-def test_object_none_and_nan_keep_array_prediction_identity(encoder, with_literal):
+@pytest.mark.parametrize("missing", [np.nan, pd.NaT, np.datetime64("NaT")])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+def test_object_none_and_nan_keep_array_prediction_identity(encoder, with_literal, missing, task):
     """An object array preserves both null kinds observed during fitting."""
     from sklearn.pipeline import Pipeline
 
-    values = [None, np.nan, "cedar"] + (["missing"] if with_literal else [])
+    values = [None, missing, "cedar"] + (["missing"] if with_literal else [])
     target = [0, 1, 0] + ([1] if with_literal else [])
     frame = pd.DataFrame({"signal": pd.Series(values * 4, dtype=object)})
     array = frame.to_numpy()
     before_frame, before_array = frame.copy(deep=True), array.copy()
+    estimator = DecisionTreeClassifier if task == "classification" else DecisionTreeRegressor
     model = Pipeline([("encoding", get_categorical_encoder(encoder)),
-                      ("tree", DecisionTreeClassifier(random_state=42))])
+                      ("tree", estimator(random_state=42))])
     model.fit(frame, target * 4)
     pipeline = model.named_steps["encoding"]
     encoded_frame, encoded_array = pipeline.transform(frame), pipeline.transform(array)

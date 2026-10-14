@@ -25,8 +25,13 @@ from lazypredict.preprocessing import get_categorical_encoder
           datetime(2020, 1, 1, 2, tzinfo=timezone(timedelta(hours=2))), None]),
         ([pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02"), None],
          [pd.Timestamp("2020-01-02"), pd.Timestamp("2020-01-01"), None]),
-        ([pd.Timestamp("2500-01-01"), pd.Timestamp("2500-01-02"), None],
-         [pd.Timestamp("2500-01-02"), pd.Timestamp("2500-01-01"), None]),
+        ([datetime(2500, 1, 1), datetime(2500, 1, 2), None],
+         [datetime(2500, 1, 2), datetime(2500, 1, 1), None]),
+        ([datetime(2500, 1, 1), datetime(2500, 1, 2), None],
+         [np.datetime64("2500-01-02", "us"), np.datetime64("2500-01-01", "us"), None]),
+        ([datetime(2500, 1, 1, tzinfo=timezone.utc), datetime(2500, 1, 2, tzinfo=timezone.utc), None],
+         [datetime(2500, 1, 2, 2, tzinfo=timezone(timedelta(hours=2))),
+          datetime(2500, 1, 1, 2, tzinfo=timezone(timedelta(hours=2))), None]),
     ],
 )
 @pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
@@ -36,7 +41,8 @@ def test_datetime_category_labels_match_equivalent_prediction_values(
     train_values, test_values, encoder, task, mixed
 ):
     """Equivalent instants retain known labels across datetime representations."""
-    X_train = pd.DataFrame({"signal": pd.Series(train_values * 4, dtype="category")})
+    categories = pd.Index(train_values[:-1], dtype=object)
+    X_train = pd.DataFrame({"signal": pd.Categorical.from_codes(np.tile([0, 1, -1], 4), categories=categories)})
     X_test = pd.DataFrame({"signal": pd.Series(test_values * 3, dtype=object)})
     if mixed:
         X_train["constant"], X_test["constant"] = 2.25, 2.25
@@ -64,13 +70,19 @@ def test_datetime_category_labels_match_equivalent_prediction_values(
 
 
 @pytest.mark.parametrize("test_dtype", ["string", "object", "category"])
+@pytest.mark.parametrize(
+    "train_dtype",
+    [dtype for dtype in ("string", "str", None) if isinstance(pd.Series(["cedar"], dtype=dtype).dtype, pd.StringDtype)],
+)
 @pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
 @pytest.mark.parametrize("task", ["classification", "regression"])
 @pytest.mark.parametrize("mixed", [False, True])
-def test_string_missing_labels_remain_distinct_in_public_predictions(test_dtype, encoder, task, mixed):
+def test_string_missing_labels_remain_distinct_in_public_predictions(
+    train_dtype, test_dtype, encoder, task, mixed
+):
     """The literal missing and escape-looking text must stay separate from NA."""
     values = ["cedar", "missing", None, "str:missing"]
-    X_train = pd.DataFrame({"signal": pd.Series(values * 4, dtype="string")})
+    X_train = pd.DataFrame({"signal": pd.Series(values * 4, dtype=train_dtype)})
     X_test = pd.DataFrame({"signal": pd.Series(values * 3, dtype=test_dtype)})
     if mixed:
         X_train["constant"], X_test["constant"] = 2.25, 2.25
@@ -335,7 +347,7 @@ def test_mixed_type_categories_remain_distinct():
     pd.testing.assert_frame_equal(X, before)
 
 
-@pytest.mark.parametrize("dtype", ["string", "category"])
+@pytest.mark.parametrize("dtype", ["string", "str", "category"])
 @pytest.mark.parametrize("mixed", [False, True])
 @pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
 @pytest.mark.parametrize("task", ["classification", "regression"])

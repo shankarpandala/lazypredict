@@ -3,7 +3,7 @@
 import inspect
 import logging
 import numbers
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Tuple, Union
 
 import numpy as np
@@ -50,9 +50,14 @@ categorical_transformer_high = Pipeline(
 def _categorical_label(value):
     """Use consistent typed labels across separately inferred categories."""
     if isinstance(value, (pd.Timestamp, np.datetime64, datetime)):
-        timestamp = pd.Timestamp(value)
-        if timestamp.tzinfo is not None:
-            timestamp = timestamp.tz_convert("UTC")
+        try:
+            timestamp = pd.Timestamp(value)
+            if timestamp.tzinfo is not None:
+                timestamp = timestamp.tz_convert("UTC")
+        except pd.errors.OutOfBoundsDatetime:
+            timestamp = value.astype("datetime64[us]").item() if isinstance(value, np.datetime64) else value
+            if timestamp.tzinfo is not None:
+                timestamp = timestamp.astimezone(timezone.utc)
         return f"datetime:{timestamp.isoformat()}"
     if isinstance(value, (bool, np.bool_)):
         return f"bool:{bool(value)}"
@@ -80,12 +85,12 @@ def _categorical_as_object(X, category_columns=None, string_columns=None):
         if category_columns is None:
             category_columns = X.select_dtypes(include="category").columns
         if string_columns is None:
-            string_columns = [column for column in X if X[column].dtype.name == "string"]
+            string_columns = [column for column in X if isinstance(X[column].dtype, pd.StringDtype)]
         for column in X:
             dtype = X[column].dtype
             use_labels = column in category_columns
             use_strings = column in string_columns
-            if not use_labels and not use_strings and dtype.name not in ("string", "category"):
+            if not use_labels and not use_strings and not isinstance(dtype, (pd.StringDtype, pd.CategoricalDtype)):
                 continue
             if use_labels:
                 values[column] = X[column].map(_categorical_label).astype(object)
@@ -114,7 +119,7 @@ class _CategoricalTransformer(FunctionTransformer):
             if isinstance(X, pd.DataFrame) else ()
         )
         self.string_columns_ = (
-            [column for column in X if X[column].dtype.name == "string"]
+            [column for column in X if isinstance(X[column].dtype, pd.StringDtype)]
             if isinstance(X, pd.DataFrame) else ()
         )
         return super().fit(X, y)

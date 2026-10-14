@@ -1,5 +1,7 @@
 """Public estimator coverage for categorical pandas dtypes."""
 
+from datetime import datetime, timedelta, timezone
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,6 +9,104 @@ from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from lazypredict.Supervised import LazyClassifier, LazyRegressor
 from lazypredict.preprocessing import get_categorical_encoder
+
+
+@pytest.mark.parametrize(
+    "train_values,test_values",
+    [
+        ([pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02"), None],
+         [datetime(2020, 1, 2), datetime(2020, 1, 1), None]),
+        ([pd.Timestamp("2020-01-01T00:00:00.000000001"),
+          pd.Timestamp("2020-01-01T00:00:00.000000002"), None],
+         [np.datetime64("2020-01-01T00:00:00.000000002"),
+          np.datetime64("2020-01-01T00:00:00.000000001"), np.datetime64("NaT", "ns")]),
+        ([pd.Timestamp("2020-01-01", tz="UTC"), pd.Timestamp("2020-01-02", tz="UTC"), None],
+         [datetime(2020, 1, 2, 2, tzinfo=timezone(timedelta(hours=2))),
+          datetime(2020, 1, 1, 2, tzinfo=timezone(timedelta(hours=2))), None]),
+        ([pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02"), None],
+         [pd.Timestamp("2020-01-02"), pd.Timestamp("2020-01-01"), None]),
+        ([pd.Timestamp("2500-01-01"), pd.Timestamp("2500-01-02"), None],
+         [pd.Timestamp("2500-01-02"), pd.Timestamp("2500-01-01"), None]),
+    ],
+)
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+@pytest.mark.parametrize("mixed", [False, True])
+def test_datetime_category_labels_match_equivalent_prediction_values(
+    train_values, test_values, encoder, task, mixed
+):
+    """Equivalent instants retain known labels across datetime representations."""
+    X_train = pd.DataFrame({"signal": pd.Series(train_values * 4, dtype="category")})
+    X_test = pd.DataFrame({"signal": pd.Series(test_values * 3, dtype=object)})
+    if mixed:
+        X_train["constant"], X_test["constant"] = 2.25, 2.25
+    before_train, before_test = X_train.copy(deep=True), X_test.copy(deep=True)
+    y_train, y_test = np.tile([0, 1, 0], 4), np.tile([1, 0, 0], 3)
+    kwargs = {"predictions": True, "n_jobs": 1, "categorical_encoder": encoder}
+    if task == "classification":
+        model = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        name = "DecisionTreeClassifier"
+    else:
+        model = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        name = "DecisionTreeRegressor"
+    scores, predictions = model.fit(X_train, X_test, y_train, y_test)
+    assert not model.errors
+    assert scores.index.tolist() == [name]
+    np.testing.assert_array_equal(predictions[name], y_test)
+    np.testing.assert_array_equal(model.predict(X_test, name), y_test)
+    pre = model.models[name].named_steps["preprocessor"]
+    encoded_train, encoded_test = pre.transform(X_train), pre.transform(X_test)
+    np.testing.assert_array_equal(encoded_train[0], encoded_test[1])
+    np.testing.assert_array_equal(encoded_train[1], encoded_test[0])
+    assert len(pre.get_feature_names_out()) == encoded_test.shape[1]
+    pd.testing.assert_frame_equal(X_train, before_train)
+    pd.testing.assert_frame_equal(X_test, before_test)
+
+
+@pytest.mark.parametrize("test_dtype", ["string", "object", "category"])
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+@pytest.mark.parametrize("mixed", [False, True])
+def test_string_missing_labels_remain_distinct_in_public_predictions(test_dtype, encoder, task, mixed):
+    """The literal missing and escape-looking text must stay separate from NA."""
+    values = ["cedar", "missing", None, "str:missing"]
+    X_train = pd.DataFrame({"signal": pd.Series(values * 4, dtype="string")})
+    X_test = pd.DataFrame({"signal": pd.Series(values * 3, dtype=test_dtype)})
+    if mixed:
+        X_train["constant"], X_test["constant"] = 2.25, 2.25
+    before_train, before_test = X_train.copy(deep=True), X_test.copy(deep=True)
+    y_train, y_test = np.tile([0, 1, 0, 0], 4), np.tile([0, 1, 0, 0], 3)
+    kwargs = {"predictions": True, "n_jobs": 1, "categorical_encoder": encoder}
+    if task == "classification":
+        model = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        name = "DecisionTreeClassifier"
+    else:
+        model = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        name = "DecisionTreeRegressor"
+    scores, predictions = model.fit(X_train, X_test, y_train, y_test)
+    assert not model.errors
+    assert scores.index.tolist() == [name]
+    np.testing.assert_array_equal(predictions[name], y_test)
+    np.testing.assert_array_equal(model.predict(X_test, name), y_test)
+    pre = model.models[name].named_steps["preprocessor"]
+    encoded = pre.transform(X_test)
+    assert all(not np.array_equal(encoded[i], encoded[j]) for i in range(4) for j in range(i))
+    assert len(pre.get_feature_names_out()) == encoded.shape[1]
+    pd.testing.assert_frame_equal(X_train, before_train)
+    pd.testing.assert_frame_equal(X_test, before_test)
+
+
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+def test_feature_names_when_base_transformer_has_no_names_api(monkeypatch, encoder):
+    """A missing legacy method is a component contract, not an old package run."""
+    from sklearn.preprocessing import FunctionTransformer
+    monkeypatch.delattr(FunctionTransformer, "get_feature_names_out")
+    frame = pd.DataFrame({"signal": pd.Series(["cedar", "elm", "cedar"], dtype=object)})
+    pipeline = get_categorical_encoder(encoder)
+    pipeline.fit(frame)
+    names = pipeline.get_feature_names_out()
+    assert len(names) == pipeline.transform(frame).shape[1]
+    assert all("signal" in name for name in names)
 
 
 @pytest.mark.parametrize(

@@ -3,6 +3,7 @@
 import inspect
 import logging
 import numbers
+from datetime import datetime
 from typing import Tuple, Union
 
 import numpy as np
@@ -11,6 +12,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, OrdinalEncoder, StandardScaler
+from sklearn.utils.validation import _check_feature_names_in
 
 from lazypredict.config import VALID_ENCODERS
 
@@ -47,6 +49,11 @@ categorical_transformer_high = Pipeline(
 
 def _categorical_label(value):
     """Use consistent typed labels across separately inferred categories."""
+    if isinstance(value, (pd.Timestamp, np.datetime64, datetime)):
+        timestamp = pd.Timestamp(value)
+        if timestamp.tzinfo is not None:
+            timestamp = timestamp.tz_convert("UTC")
+        return f"datetime:{timestamp.isoformat()}"
     if isinstance(value, (bool, np.bool_)):
         return f"bool:{bool(value)}"
     if isinstance(value, numbers.Integral):
@@ -59,19 +66,31 @@ def _categorical_label(value):
     return f"{type(value).__name__}:{value}"
 
 
-def _categorical_as_object(X, category_columns=None):
+def _string_label(value):
+    """Escape the missing sentinel without changing ordinary string labels."""
+    if isinstance(value, str) and (value == "missing" or value.startswith("str:")):
+        return f"str:{value}"
+    return value
+
+
+def _categorical_as_object(X, category_columns=None, string_columns=None):
     """Represent pandas categorical values and missing markers for sklearn."""
     if isinstance(X, pd.DataFrame):
         values = X.astype(object)
         if category_columns is None:
             category_columns = X.select_dtypes(include="category").columns
+        if string_columns is None:
+            string_columns = [column for column in X if X[column].dtype.name == "string"]
         for column in X:
             dtype = X[column].dtype
             use_labels = column in category_columns
-            if not use_labels and dtype.name not in ("string", "category"):
+            use_strings = column in string_columns
+            if not use_labels and not use_strings and dtype.name not in ("string", "category"):
                 continue
             if use_labels:
                 values[column] = X[column].map(_categorical_label).astype(object)
+            elif use_strings:
+                values[column] = X[column].map(_string_label).astype(object)
             # Fill extension markers before the imputer can drop an empty column.
             values[column] = values[column].where(X[column].notna(), "missing")
         return values
@@ -83,17 +102,36 @@ class _CategoricalTransformer(FunctionTransformer):
 
     def fit(self, X, y=None):
         self.input_columns_ = X.columns if isinstance(X, pd.DataFrame) else None
+        shape = np.shape(X)
+        if len(shape) == 2:
+            self.n_features_in_ = shape[1]
+        if self.input_columns_ is not None and all(isinstance(column, str) for column in self.input_columns_):
+            self.feature_names_in_ = np.asarray(self.input_columns_, dtype=object)
+        elif hasattr(self, "feature_names_in_"):
+            del self.feature_names_in_
         self.category_columns_ = (
             X.select_dtypes(include="category").columns
+            if isinstance(X, pd.DataFrame) else ()
+        )
+        self.string_columns_ = (
+            [column for column in X if X[column].dtype.name == "string"]
             if isinstance(X, pd.DataFrame) else ()
         )
         return super().fit(X, y)
 
     def transform(self, X):
-        if not isinstance(X, pd.DataFrame) and len(self.category_columns_):
+        if not isinstance(X, pd.DataFrame) and (len(self.category_columns_) or len(self.string_columns_)):
             X = pd.DataFrame(X, columns=self.input_columns_)
-        values = _categorical_as_object(X, self.category_columns_)
+        values = _categorical_as_object(X, self.category_columns_, self.string_columns_)
         return super().transform(values)
+
+    def get_feature_names_out(self, input_features=None):
+        if (
+            hasattr(FunctionTransformer, "get_feature_names_out")
+            and getattr(self, "feature_names_out", None) is not None
+        ):
+            return super().get_feature_names_out(input_features)
+        return _check_feature_names_in(self, input_features)
 
 
 def get_categorical_encoder(

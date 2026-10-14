@@ -9,6 +9,148 @@ from lazypredict.Supervised import LazyClassifier, LazyRegressor
 from lazypredict.preprocessing import get_categorical_encoder
 
 
+@pytest.mark.parametrize(
+    "train_values,test_values,target,expected,known",
+    [
+        ([1, "1", None], [1, "1", None], [0, 1, 0], [0, 1, 0], [True, True, True]),
+        ([False, "False", True, "True"], [False, "False", True, "True"],
+         [0, 1, 1, 0], [0, 1, 1, 0], [True, True, True, True]),
+        ([1, "1", 2, "2"], [1.0, 2.0, None], [0, 1, 0, 1], [0, 0, 0], [True, True, False]),
+        ([1, "1", 2, "2"], ["1", "2", None], [0, 1, 0, 1], [1, 1, 0], [True, True, False]),
+        ([1, 2], [1.0, 2.0, "1", "2"], [0, 1], [0, 1, 0, 0], [True, True, False, False]),
+        (["1", "2"], ["1", "2", 1.0, 2.0], [0, 1], [0, 1, 0, 0], [True, True, False, False]),
+        ([False, "False", True, "True"], [False, True, None],
+         [0, 1, 1, 0], [0, 1, 0], [True, True, False]),
+        ([False, True], [False, True, "False", "True"],
+         [0, 1], [0, 1, 0, 0], [True, True, False, False]),
+    ],
+)
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("mixed", [False, True])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+def test_heterogeneous_category_labels_keep_public_predictions(
+    train_values, test_values, target, expected, known, encoder, mixed, task
+):
+    """Typed labels stay distinct and stable across independent category inference."""
+    X_train = pd.DataFrame({"signal": pd.Series(train_values * 4, dtype="category")})
+    X_test = pd.DataFrame({"signal": pd.Series(test_values * 3, dtype="category")})
+    if mixed:
+        X_train["numeric"], X_test["numeric"] = 2.25, 2.25
+    before_train, before_test = X_train.copy(deep=True), X_test.copy(deep=True)
+    y_train, y_test = np.tile(target, 4), np.tile(expected, 3)
+    known_rows = np.tile(known, 3)
+    kwargs = {"categorical_encoder": encoder, "predictions": True, "n_jobs": 1}
+    if task == "classification":
+        estimator = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        model_name = "DecisionTreeClassifier"
+    else:
+        estimator = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        model_name = "DecisionTreeRegressor"
+
+    scores, predictions = estimator.fit(X_train, X_test, y_train, y_test)
+
+    assert not estimator.errors
+    assert scores.index.tolist() == [model_name]
+    actual = predictions[model_name].to_numpy()
+    assert np.all(np.isfinite(actual))
+    np.testing.assert_array_equal(actual[known_rows], y_test[known_rows])
+    np.testing.assert_array_equal(estimator.predict(X_test, model_name), actual)
+    preprocessor = estimator.models[model_name].named_steps["preprocessor"]
+    names = preprocessor.get_feature_names_out()
+    assert any("signal" in name for name in names)
+    assert len(names) == preprocessor.transform(X_test).shape[1]
+    pd.testing.assert_frame_equal(X_train, before_train)
+    pd.testing.assert_frame_equal(X_test, before_test)
+
+
+def test_new_transformer_keyword_respects_constructor_capabilities(monkeypatch):
+    """Exercise the legacy constructor contract, not a full old sklearn runtime."""
+    import lazypredict.preprocessing as preprocessing_module
+    from sklearn.preprocessing import FunctionTransformer
+
+    original_constructor = FunctionTransformer.__init__
+
+    def limited_constructor(
+        self, func=None, inverse_func=None, *, validate=False, accept_sparse=False,
+        check_inverse=True, kw_args=None, inv_kw_args=None
+    ):
+        original_constructor(
+            self,
+            func=func, inverse_func=inverse_func, validate=validate,
+            accept_sparse=accept_sparse, check_inverse=check_inverse,
+            kw_args=kw_args, inv_kw_args=inv_kw_args,
+        )
+
+    monkeypatch.setattr(FunctionTransformer, "__init__", limited_constructor)
+    pipeline = preprocessing_module.get_categorical_encoder("ordinal")
+    frame = pd.DataFrame({"signal": pd.Series([1, "1", 1], dtype="category")})
+    before = frame.copy(deep=True)
+    encoded = pipeline.fit_transform(frame)
+
+    assert encoded.shape == (3, 1)
+    np.testing.assert_array_equal(encoded[0], encoded[2])
+    assert encoded[0, 0] != encoded[1, 0]
+    pd.testing.assert_frame_equal(frame, before)
+
+
+@pytest.mark.parametrize(
+    "train_dtype,test_dtype",
+    [
+        ("object", "string"), ("object", "category"),
+        ("string", "object"), ("string", "category"),
+        ("category", "object"), ("category", "string"),
+    ],
+)
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("mixed", [False, True])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+def test_prediction_dtype_changes_preserve_fitted_labels(train_dtype, test_dtype, encoder, mixed, task):
+    """Known labels must keep their encoding when prediction dtypes change."""
+    X_train = pd.DataFrame({"signal": pd.Series(["cedar", "elm"] * 6, dtype=train_dtype)})
+    X_test = pd.DataFrame({"signal": pd.Series(["elm", "cedar"] * 4, dtype=test_dtype)})
+    if mixed:
+        X_train["constant"], X_test["constant"] = 2.25, 2.25
+    before_train, before_test = X_train.copy(deep=True), X_test.copy(deep=True)
+    y_train, y_test = np.tile([0, 1], 6), np.tile([1, 0], 4)
+    kwargs = {"categorical_encoder": encoder, "predictions": True, "n_jobs": 1}
+    if task == "classification":
+        estimator = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        model_name = "DecisionTreeClassifier"
+    else:
+        estimator = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        model_name = "DecisionTreeRegressor"
+
+    scores, predictions = estimator.fit(X_train, X_test, y_train, y_test)
+
+    assert not estimator.errors
+    assert scores.index.tolist() == [model_name]
+    np.testing.assert_array_equal(predictions[model_name], y_test)
+    np.testing.assert_array_equal(estimator.predict(X_test, model_name), y_test)
+    preprocessor = estimator.models[model_name].named_steps["preprocessor"]
+    encoded_train, encoded_test = preprocessor.transform(X_train), preprocessor.transform(X_test)
+    np.testing.assert_array_equal(encoded_test[0], encoded_train[1])
+    np.testing.assert_array_equal(encoded_test[1], encoded_train[0])
+    assert len(preprocessor.get_feature_names_out()) == encoded_test.shape[1]
+    pd.testing.assert_frame_equal(X_train, before_train)
+    pd.testing.assert_frame_equal(X_test, before_test)
+
+
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+def test_category_encoder_keeps_dataframe_labels_for_array_prediction(encoder):
+    """The public encoder keeps known labels for an equivalent ndarray."""
+    frame = pd.DataFrame({"signal": pd.Series(["cedar", "elm", "cedar"], dtype="category")})
+    array = np.array([["elm"], ["cedar"]], dtype=object)
+    before_frame, before_array = frame.copy(deep=True), array.copy()
+    pipeline = get_categorical_encoder(encoder)
+    pipeline.fit(frame)
+    expected = pipeline.transform(frame.iloc[[1, 0]])
+
+    np.testing.assert_array_equal(pipeline.transform(array), expected)
+    assert len(pipeline.get_feature_names_out()) == expected.shape[1]
+    pd.testing.assert_frame_equal(frame, before_frame)
+    np.testing.assert_array_equal(array, before_array)
+
+
 @pytest.mark.parametrize("dtype", ["object", "string", "category", None])
 @pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
 @pytest.mark.parametrize("mixed", [False, True])
@@ -86,8 +228,8 @@ def test_mixed_type_categories_remain_distinct():
     before = X.copy(deep=True)
     normalized = get_categorical_encoder().named_steps["to_object"].fit_transform(X)
 
-    assert normalized["value"].iloc[0] == 1
-    assert normalized["value"].iloc[1] == "1"
+    assert normalized["value"].iloc[0] == "number:1"
+    assert normalized["value"].iloc[1] == "str:1"
     assert normalized["value"].iloc[0] != normalized["value"].iloc[1]
     assert normalized["value"].iloc[2] == "missing"
     pd.testing.assert_frame_equal(X, before)

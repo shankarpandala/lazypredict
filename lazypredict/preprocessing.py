@@ -1,6 +1,8 @@
 """Preprocessing utilities — encoders, transformers, and cardinality splitting."""
 
+import inspect
 import logging
+import numbers
 from typing import Tuple, Union
 
 import numpy as np
@@ -43,26 +45,55 @@ categorical_transformer_high = Pipeline(
 )
 
 
-def _categorical_as_object(X):
+def _categorical_label(value):
+    """Use consistent typed labels across separately inferred categories."""
+    if isinstance(value, (bool, np.bool_)):
+        return f"bool:{bool(value)}"
+    if isinstance(value, numbers.Integral):
+        return f"number:{int(value)}"
+    if isinstance(value, (float, np.floating)):
+        label = str(int(value)) if np.isfinite(value) and value % 1 == 0 else repr(float(value))
+        return f"number:{label}"
+    if isinstance(value, str):
+        return f"str:{value}"
+    return f"{type(value).__name__}:{value}"
+
+
+def _categorical_as_object(X, category_columns=None):
     """Represent pandas categorical values and missing markers for sklearn."""
     if isinstance(X, pd.DataFrame):
         values = X.astype(object)
+        if category_columns is None:
+            category_columns = X.select_dtypes(include="category").columns
         for column in X:
             dtype = X[column].dtype
-            if dtype.name not in ("string", "category"):
+            use_labels = column in category_columns
+            if not use_labels and dtype.name not in ("string", "category"):
                 continue
-            if isinstance(dtype, pd.CategoricalDtype):
-                category_dtype = X[column].cat.categories.dtype
-                if pd.api.types.is_numeric_dtype(category_dtype) and not pd.api.types.is_complex_dtype(category_dtype):
-                    values[column] = X[column].map(
-                        lambda value: str(int(value))
-                        if np.isfinite(value) and value % 1 == 0
-                        else str(value)
-                    ).astype(object)
+            if use_labels:
+                values[column] = X[column].map(_categorical_label).astype(object)
             # Fill extension markers before the imputer can drop an empty column.
             values[column] = values[column].where(X[column].notna(), "missing")
         return values
     return X
+
+
+class _CategoricalTransformer(FunctionTransformer):
+    """Keep fitted category labels consistent when prediction dtypes change."""
+
+    def fit(self, X, y=None):
+        self.input_columns_ = X.columns if isinstance(X, pd.DataFrame) else None
+        self.category_columns_ = (
+            X.select_dtypes(include="category").columns
+            if isinstance(X, pd.DataFrame) else ()
+        )
+        return super().fit(X, y)
+
+    def transform(self, X):
+        if not isinstance(X, pd.DataFrame) and len(self.category_columns_):
+            X = pd.DataFrame(X, columns=self.input_columns_)
+        values = _categorical_as_object(X, self.category_columns_)
+        return super().transform(values)
 
 
 def get_categorical_encoder(
@@ -126,9 +157,12 @@ def get_categorical_encoder(
             f"Choose from {VALID_ENCODERS!r}"
         )
 
+    transformer_kwargs = {}
+    if "feature_names_out" in inspect.signature(FunctionTransformer).parameters:
+        transformer_kwargs["feature_names_out"] = "one-to-one"
     return Pipeline(
         steps=[
-            ("to_object", FunctionTransformer(_categorical_as_object, feature_names_out="one-to-one")),
+            ("to_object", _CategoricalTransformer(**transformer_kwargs)),
             ("imputer", imputer),
             ("encoding", encoder),
         ]

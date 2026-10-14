@@ -92,6 +92,37 @@ def test_datetime_category_labels_match_equivalent_prediction_values(
          [timedelta(microseconds=1), np.timedelta64(-2000, "ns")]),
         ([pd.Timedelta(1, "ns"), pd.Timedelta(2, "ns")],
          [np.timedelta64(2, "ns"), np.timedelta64(1, "ns")]),
+        pytest.param(
+            [timedelta(days=200000), timedelta(days=200002)],
+            [np.array(100001, dtype="timedelta64[2D]")[()],
+             np.array(100000, dtype="timedelta64[2D]")[()]],
+            id="duration-day-multipliers",
+        ),
+        pytest.param(
+            [pd.Timedelta(3, "ns"), pd.Timedelta(6, "ns")],
+            [np.array(2, dtype="timedelta64[3ns]")[()], np.array(1, dtype="timedelta64[3ns]")[()]],
+            id="duration-nanosecond-multipliers",
+        ),
+        pytest.param(
+            [timedelta(days=999999998), timedelta(days=999999999)],
+            [np.timedelta64(999999999, "D"), np.timedelta64(999999998, "D")],
+            id="wide-duration-python-limit",
+        ),
+        pytest.param(
+            [timedelta(days=-999999999), timedelta(days=-999999998)],
+            [np.timedelta64(-999999998, "D"), np.timedelta64(-999999999, "D")],
+            id="wide-negative-duration-python-limit",
+        ),
+        pytest.param(
+            [timedelta(days=200000), timedelta(days=200001)],
+            [np.timedelta64(200001, "D"), np.timedelta64(200000, "D")],
+            id="wide-duration-days",
+        ),
+        pytest.param(
+            [timedelta(days=-200000, microseconds=1), timedelta(days=-200000, microseconds=2)],
+            [np.timedelta64(-17279999999999998, "us"), np.timedelta64(-17279999999999999, "us")],
+            id="wide-negative-duration-microseconds",
+        ),
         ([pd.Timedelta(days=1), pd.Timedelta(days=2)],
          [pd.Timedelta(days=2), pd.Timedelta(days=1)]),
     ],
@@ -130,6 +161,71 @@ def test_timedelta_category_labels_match_equivalent_prediction_values(
     assert len(pre.get_feature_names_out()) == encoded_test.shape[1]
     pd.testing.assert_frame_equal(X_train, before_train)
     pd.testing.assert_frame_equal(X_test, before_test)
+
+
+@pytest.mark.parametrize("missing", [None, np.nan])
+@pytest.mark.parametrize("test_dtype", ["object", "string", "category"])
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+@pytest.mark.parametrize("mixed", [False, True])
+def test_object_missing_labels_match_extension_prediction_values(
+    missing, test_dtype, encoder, task, mixed
+):
+    """Object-trained None remains separate from the literal missing category."""
+    values = ["cedar", "missing", missing, "str:missing"]
+    X_train = pd.DataFrame({"signal": pd.Series(values * 4, dtype=object)})
+    X_test = pd.DataFrame({"signal": pd.Series(values * 3, dtype=test_dtype)})
+    if mixed:
+        X_train["constant"], X_test["constant"] = 2.25, 2.25
+    target = [0, 1, 0 if missing is None else 1, 0]
+    y_train, y_test = np.tile(target, 4), np.tile(target, 3)
+    before_train, before_test = X_train.copy(deep=True), X_test.copy(deep=True)
+    kwargs = {"predictions": True, "n_jobs": 1, "categorical_encoder": encoder}
+    if task == "classification":
+        model = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        name = "DecisionTreeClassifier"
+    else:
+        model = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        name = "DecisionTreeRegressor"
+    scores, predictions = model.fit(X_train, X_test, y_train, y_test)
+    assert not model.errors
+    assert scores.index.tolist() == [name]
+    np.testing.assert_array_equal(predictions[name], y_test)
+    np.testing.assert_array_equal(model.predict(X_test, name), y_test)
+    pre = model.models[name].named_steps["preprocessor"]
+    encoded_train, encoded_test = pre.transform(X_train), pre.transform(X_test)
+    np.testing.assert_array_equal(encoded_test, encoded_train[:12])
+    if missing is None:
+        assert not np.array_equal(encoded_test[1], encoded_test[2])
+    assert len(pre.get_feature_names_out()) == encoded_test.shape[1]
+    pd.testing.assert_frame_equal(X_train, before_train)
+    pd.testing.assert_frame_equal(X_test, before_test)
+
+
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+def test_object_none_schema_survives_arrays_refit_and_clone(encoder):
+    """Fitted missing categories govern arrays, and refit resets that schema."""
+    from sklearn.base import clone
+
+    train = pd.DataFrame({"signal": pd.Series(["cedar", "missing", None, "str:missing"], dtype=object)})
+    pipeline = get_categorical_encoder(encoder)
+    expected = pipeline.fit_transform(train)
+    for dtype in ("string", "category"):
+        prediction = pd.DataFrame({"signal": pd.Series(["cedar", "missing", None, "str:missing"], dtype=dtype)})
+        before = prediction.copy(deep=True)
+        np.testing.assert_array_equal(pipeline.transform(prediction.to_numpy()), expected)
+        pd.testing.assert_frame_equal(prediction, before)
+    copied = clone(pipeline)
+    assert not hasattr(copied.named_steps["to_object"], "none_columns_")
+    nan_train = pd.DataFrame({"signal": pd.Series(["cedar", "missing", np.nan, "str:missing"], dtype=object)})
+    refitted = pipeline.fit_transform(nan_train)
+    assert not pipeline.named_steps["to_object"].none_columns_
+    assert np.array_equal(refitted[1], refitted[2])
+    for dtype in ("string", "category"):
+        prediction = pd.DataFrame({"signal": pd.Series(["cedar", "missing", None, "str:missing"], dtype=dtype)})
+        np.testing.assert_array_equal(pipeline.transform(prediction), refitted)
+    pipeline.fit(train)
+    np.testing.assert_array_equal(pipeline.transform(train), expected)
 
 
 @pytest.mark.parametrize("test_dtype", ["string", "object", "category"])

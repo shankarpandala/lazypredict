@@ -62,15 +62,36 @@ def _datetime_label(value):
     return f"datetime:{timestamp.isoformat()}"
 
 
+def _timedelta_label(value):
+    """Serialize fixed durations exactly without bounded-width casts."""
+    if isinstance(value, pd.Timedelta):
+        value = value.asm8
+    if isinstance(value, np.timedelta64):
+        unit, multiplier = np.datetime_data(value.dtype)
+        scales = {"W": 604800000000000, "D": 86400000000000, "h": 3600000000000,
+                  "m": 60000000000, "s": 1000000000, "ms": 1000000, "us": 1000, "ns": 1}
+        if unit not in scales:
+            try:
+                return f"timedelta:{pd.Timedelta(value).isoformat()}"
+            except pd.errors.OutOfBoundsTimedelta:
+                return f"{type(value).__name__}:{value}"
+        total = int(value.view("i8")) * multiplier * scales[unit]
+    else:
+        total = ((value.days * 86400 + value.seconds) * 1000000 + value.microseconds) * 1000
+    days, remainder = divmod(total, 86400000000000)
+    hours, remainder = divmod(remainder, 3600000000000)
+    minutes, remainder = divmod(remainder, 60000000000)
+    seconds, nanoseconds = divmod(remainder, 1000000000)
+    fraction = f".{nanoseconds:09d}".rstrip("0") if nanoseconds else ""
+    return f"timedelta:P{days}DT{hours}H{minutes}M{seconds}{fraction}S"
+
+
 def _categorical_label(value):
     """Use consistent typed labels across separately inferred categories."""
     if isinstance(value, (pd.Timestamp, np.datetime64, datetime)):
         return _datetime_label(value)
     if isinstance(value, (pd.Timedelta, np.timedelta64, timedelta)):
-        try:
-            return f"timedelta:{pd.Timedelta(value).isoformat()}"
-        except pd.errors.OutOfBoundsTimedelta:
-            return f"{type(value).__name__}:{value}"
+        return _timedelta_label(value)
     if isinstance(value, (bool, np.bool_)):
         return f"bool:{bool(value)}"
     if isinstance(value, numbers.Integral):
@@ -90,7 +111,14 @@ def _string_label(value):
     return value
 
 
-def _categorical_as_object(X, category_columns=None, string_columns=None):
+def _object_none_columns(X):
+    """Retain actual None categories when later inputs use extension dtypes."""
+    if isinstance(X, pd.DataFrame):
+        return [column for column in X.select_dtypes(include="object") if any(value is None for value in X[column])]
+    return ()
+
+
+def _categorical_as_object(X, category_columns=None, string_columns=None, none_columns=()):
     """Represent pandas categorical values and missing markers for sklearn."""
     if isinstance(X, pd.DataFrame):
         values = X.astype(object)
@@ -102,7 +130,10 @@ def _categorical_as_object(X, category_columns=None, string_columns=None):
             dtype = X[column].dtype
             use_labels = column in category_columns
             use_strings = column in string_columns
-            if not use_labels and not use_strings and not isinstance(dtype, (pd.StringDtype, pd.CategoricalDtype)):
+            if not use_labels and not use_strings:
+                if isinstance(dtype, (pd.StringDtype, pd.CategoricalDtype)):
+                    missing = None if column in none_columns else np.nan
+                    values[column] = values[column].where(X[column].notna(), missing)
                 continue
             if use_labels:
                 values[column] = X[column].map(_categorical_label).astype(object)
@@ -134,12 +165,16 @@ class _CategoricalTransformer(FunctionTransformer):
             [column for column in X if isinstance(X[column].dtype, pd.StringDtype)]
             if isinstance(X, pd.DataFrame) else ()
         )
+        self.none_columns_ = _object_none_columns(X)
         return super().fit(X, y)
 
     def transform(self, X):
-        if not isinstance(X, pd.DataFrame) and (len(self.category_columns_) or len(self.string_columns_)):
+        if not isinstance(X, pd.DataFrame) and any((len(self.category_columns_), len(self.string_columns_),
+                                                    len(self.none_columns_))):
             X = pd.DataFrame(X, columns=self.input_columns_)
-        values = _categorical_as_object(X, self.category_columns_, self.string_columns_)
+            for column in self.none_columns_:
+                X[column] = X[column].where(X[column].notna(), None)
+        values = _categorical_as_object(X, self.category_columns_, self.string_columns_, self.none_columns_)
         return super().transform(values)
 
     def get_feature_names_out(self, input_features=None):

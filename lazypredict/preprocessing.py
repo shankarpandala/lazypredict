@@ -3,7 +3,7 @@
 import inspect
 import logging
 import numbers
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Tuple, Union
 
 import numpy as np
@@ -47,18 +47,30 @@ categorical_transformer_high = Pipeline(
 )
 
 
+def _datetime_label(value):
+    """Preserve valid date labels outside pandas' nanosecond bounds."""
+    try:
+        timestamp = pd.Timestamp(value)
+        if timestamp.tzinfo is not None:
+            timestamp = timestamp.tz_convert("UTC")
+    except pd.errors.OutOfBoundsDatetime:
+        timestamp = value.astype("datetime64[us]").item() if isinstance(value, np.datetime64) else value
+        if not isinstance(timestamp, datetime):
+            return f"datetime:{np.datetime_as_string(value, unit='auto')}"
+        if timestamp.tzinfo is not None:
+            timestamp = timestamp.astimezone(timezone.utc)
+    return f"datetime:{timestamp.isoformat()}"
+
+
 def _categorical_label(value):
     """Use consistent typed labels across separately inferred categories."""
     if isinstance(value, (pd.Timestamp, np.datetime64, datetime)):
+        return _datetime_label(value)
+    if isinstance(value, (pd.Timedelta, np.timedelta64, timedelta)):
         try:
-            timestamp = pd.Timestamp(value)
-            if timestamp.tzinfo is not None:
-                timestamp = timestamp.tz_convert("UTC")
-        except pd.errors.OutOfBoundsDatetime:
-            timestamp = value.astype("datetime64[us]").item() if isinstance(value, np.datetime64) else value
-            if timestamp.tzinfo is not None:
-                timestamp = timestamp.astimezone(timezone.utc)
-        return f"datetime:{timestamp.isoformat()}"
+            return f"timedelta:{pd.Timedelta(value).isoformat()}"
+        except pd.errors.OutOfBoundsTimedelta:
+            return f"{type(value).__name__}:{value}"
     if isinstance(value, (bool, np.bool_)):
         return f"bool:{bool(value)}"
     if isinstance(value, numbers.Integral):

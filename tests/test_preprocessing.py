@@ -29,6 +29,18 @@ from lazypredict.preprocessing import get_categorical_encoder
          [datetime(2500, 1, 2), datetime(2500, 1, 1), None]),
         ([datetime(2500, 1, 1), datetime(2500, 1, 2), None],
          [np.datetime64("2500-01-02", "us"), np.datetime64("2500-01-01", "us"), None]),
+        pytest.param(
+            [np.datetime64("12000-01-01", "D"), np.datetime64("12000-01-02", "D"), None],
+            [np.datetime64("12000-01-02", "us"), np.datetime64("12000-01-01", "us"), None],
+            id="wide-numpy-year",
+        ),
+        pytest.param(
+            [np.datetime64("12000-01-01T00:00:00.000001", "us"),
+             np.datetime64("12000-01-01T00:00:00.000002", "us"), None],
+            [np.datetime64("12000-01-01T00:00:00.000002", "us"),
+             np.datetime64("12000-01-01T00:00:00.000001", "us"), None],
+            id="wide-numpy-microseconds",
+        ),
         ([datetime(2500, 1, 1, tzinfo=timezone.utc), datetime(2500, 1, 2, tzinfo=timezone.utc), None],
          [datetime(2500, 1, 2, 2, tzinfo=timezone(timedelta(hours=2))),
           datetime(2500, 1, 1, 2, tzinfo=timezone(timedelta(hours=2))), None]),
@@ -64,6 +76,57 @@ def test_datetime_category_labels_match_equivalent_prediction_values(
     encoded_train, encoded_test = pre.transform(X_train), pre.transform(X_test)
     np.testing.assert_array_equal(encoded_train[0], encoded_test[1])
     np.testing.assert_array_equal(encoded_train[1], encoded_test[0])
+    assert len(pre.get_feature_names_out()) == encoded_test.shape[1]
+    pd.testing.assert_frame_equal(X_train, before_train)
+    pd.testing.assert_frame_equal(X_test, before_test)
+
+
+@pytest.mark.parametrize(
+    "train_values,test_values",
+    [
+        ([pd.Timedelta(days=1), pd.Timedelta(days=2)],
+         [timedelta(days=2), timedelta(days=1)]),
+        ([pd.Timedelta(days=1), pd.Timedelta(days=2)],
+         [np.timedelta64(48, "h"), np.timedelta64(24, "h")]),
+        ([pd.Timedelta(microseconds=-2), pd.Timedelta(microseconds=1)],
+         [timedelta(microseconds=1), np.timedelta64(-2000, "ns")]),
+        ([pd.Timedelta(1, "ns"), pd.Timedelta(2, "ns")],
+         [np.timedelta64(2, "ns"), np.timedelta64(1, "ns")]),
+        ([pd.Timedelta(days=1), pd.Timedelta(days=2)],
+         [pd.Timedelta(days=2), pd.Timedelta(days=1)]),
+    ],
+)
+@pytest.mark.parametrize("encoder", ["onehot", "ordinal"])
+@pytest.mark.parametrize("task", ["classification", "regression"])
+@pytest.mark.parametrize("mixed", [False, True])
+def test_timedelta_category_labels_match_equivalent_prediction_values(
+    train_values, test_values, encoder, task, mixed
+):
+    """Equivalent durations keep known categories and sub-microsecond precision."""
+    categories = pd.Index(train_values, dtype=object)
+    X_train = pd.DataFrame({"signal": pd.Categorical.from_codes(np.tile([0, 1, -1], 4), categories=categories)})
+    X_test = pd.DataFrame({"signal": pd.Series((test_values + [None]) * 3, dtype=object)})
+    if mixed:
+        X_train["constant"], X_test["constant"] = 2.25, 2.25
+    before_train, before_test = X_train.copy(deep=True), X_test.copy(deep=True)
+    y_train, y_test = np.tile([0, 1, 0], 4), np.tile([1, 0, 0], 3)
+    kwargs = {"predictions": True, "n_jobs": 1, "categorical_encoder": encoder}
+    if task == "classification":
+        model = LazyClassifier(classifiers=[DecisionTreeClassifier], **kwargs)
+        name = "DecisionTreeClassifier"
+    else:
+        model = LazyRegressor(regressors=[DecisionTreeRegressor], **kwargs)
+        name = "DecisionTreeRegressor"
+    scores, predictions = model.fit(X_train, X_test, y_train, y_test)
+    assert not model.errors
+    assert scores.index.tolist() == [name]
+    np.testing.assert_array_equal(predictions[name], y_test)
+    np.testing.assert_array_equal(model.predict(X_test, name), y_test)
+    pre = model.models[name].named_steps["preprocessor"]
+    encoded_train, encoded_test = pre.transform(X_train), pre.transform(X_test)
+    np.testing.assert_array_equal(encoded_train[0], encoded_test[1])
+    np.testing.assert_array_equal(encoded_train[1], encoded_test[0])
+    assert not np.array_equal(encoded_test[0], encoded_test[1])
     assert len(pre.get_feature_names_out()) == encoded_test.shape[1]
     pd.testing.assert_frame_equal(X_train, before_train)
     pd.testing.assert_frame_equal(X_test, before_test)
@@ -112,7 +175,7 @@ def test_string_missing_labels_remain_distinct_in_public_predictions(
 def test_feature_names_when_base_transformer_has_no_names_api(monkeypatch, encoder):
     """A missing legacy method is a component contract, not an old package run."""
     from sklearn.preprocessing import FunctionTransformer
-    monkeypatch.delattr(FunctionTransformer, "get_feature_names_out")
+    monkeypatch.delattr(FunctionTransformer, "get_feature_names_out", raising=False)
     frame = pd.DataFrame({"signal": pd.Series(["cedar", "elm", "cedar"], dtype=object)})
     pipeline = get_categorical_encoder(encoder)
     pipeline.fit(frame)

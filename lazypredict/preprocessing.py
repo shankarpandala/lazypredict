@@ -77,6 +77,9 @@ def _timedelta_label(value):
         value = value.asm8
     if isinstance(value, np.timedelta64):
         unit, multiplier = np.datetime_data(value.dtype)
+        if unit in ("Y", "M"):
+            months = int(value.view("i8")) * multiplier * (12 if unit == "Y" else 1)
+            return f"timedelta64:{months} months"
         scales = {"W": 604800 * 10**18, "D": 86400 * 10**18, "h": 3600 * 10**18,
                   "m": 60 * 10**18, "s": 10**18, "ms": 10**15, "us": 10**12,
                   "ns": 10**9, "ps": 10**6, "fs": 10**3, "as": 1}
@@ -96,7 +99,9 @@ def _timedelta_label(value):
 def _rational_label(value):
     """Match builtin labels only when conversion preserves the exact ratio."""
     numerator, denominator = (
-        value.as_integer_ratio() if isinstance(value, Decimal) else (value.numerator, value.denominator)
+        value.as_integer_ratio()
+        if isinstance(value, (Decimal, float, np.floating))
+        else (value.numerator, value.denominator)
     )
     if denominator == 1:
         return f"number:{numerator}"
@@ -106,7 +111,11 @@ def _rational_label(value):
         approximate = np.inf
     if np.isfinite(approximate) and approximate.as_integer_ratio() == (numerator, denominator):
         return f"number:{approximate!r}"
-    return f"number:{numerator}/{denominator}"
+    try:
+        return f"number:{numerator}/{denominator}"
+    except ValueError:
+        # Large exact ratios can exceed Python's decimal integer digit limit.
+        return f"number:{numerator:#x}/{denominator:#x}"
 
 
 def _numeric_label(value):
@@ -114,14 +123,18 @@ def _numeric_label(value):
     if isinstance(value, numbers.Integral):
         return f"number:{int(value)}"
     if isinstance(value, (float, np.floating)):
-        label = str(int(value)) if np.isfinite(value) and value % 1 == 0 else repr(float(value))
-        return f"number:{label}"
+        if np.isfinite(value):
+            return _rational_label(value)
+        return f"number:{float(value)!r}"
     if isinstance(value, Decimal) and not value.is_finite():
         return f"number:{float(value)!r}"
     if isinstance(value, (Decimal, numbers.Rational)):
         return _rational_label(value)
-    if isinstance(value, (complex, np.complexfloating)) and value.imag == 0:
-        return _numeric_label(value.real)
+    if isinstance(value, (complex, np.complexfloating)):
+        real = _numeric_label(value.real)
+        if value.imag == 0:
+            return real
+        return f"complex:{real}:{_numeric_label(value.imag)}"
     return f"{type(value).__name__}:{value}"
 
 

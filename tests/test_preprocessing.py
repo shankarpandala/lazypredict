@@ -145,6 +145,26 @@ def test_datetime_category_labels_match_equivalent_prediction_values(
             id="calendar-year-categories",
         ),
         pytest.param(
+            [np.timedelta64(1, "Y"), np.timedelta64(2, "Y")],
+            [np.timedelta64(24, "M"), np.timedelta64(12, "M")],
+            id="calendar-year-to-months",
+        ),
+        pytest.param(
+            [np.timedelta64(12, "M"), np.timedelta64(24, "M")],
+            [np.timedelta64(2, "Y"), np.timedelta64(1, "Y")],
+            id="calendar-months-to-years",
+        ),
+        pytest.param(
+            [np.array(1, dtype="timedelta64[2Y]")[()], np.array(2, dtype="timedelta64[2Y]")[()]],
+            [np.timedelta64(48, "M"), np.timedelta64(24, "M")],
+            id="calendar-year-multiplier-equivalence",
+        ),
+        pytest.param(
+            [np.timedelta64(-1, "Y"), np.timedelta64(-2, "Y")],
+            [np.timedelta64(-24, "M"), np.timedelta64(-12, "M")],
+            id="negative-calendar-equivalence",
+        ),
+        pytest.param(
             [timedelta(days=200000), timedelta(days=200002)],
             [np.array(100001, dtype="timedelta64[2D]")[()],
              np.array(100000, dtype="timedelta64[2D]")[()]],
@@ -232,6 +252,75 @@ def test_timedelta_category_labels_match_equivalent_prediction_values(
         pytest.param([Fraction(1, 10), 0.1], [0.1, Fraction(1, 10)], id="unequal-rounded-fraction"),
         pytest.param([Fraction(1, 3), 1 / 3], [1 / 3, Fraction(1, 3)], id="unequal-rounded-thirds"),
         pytest.param([complex(1, 2), complex(1, 3)], [complex(1, 3), complex(1, 2)], id="distinct-complex-values"),
+        pytest.param(
+            [complex(1.5, 2.5), complex(3.5, -4.5)],
+            [np.complex128(complex(3.5, -4.5)), np.complex128(complex(1.5, 2.5))],
+            id="builtin-to-numpy-complex",
+        ),
+        pytest.param(
+            [np.complex128(complex(1.5, 2.5)), np.complex128(complex(3.5, -4.5))],
+            [complex(3.5, -4.5), complex(1.5, 2.5)],
+            id="numpy-to-builtin-complex",
+        ),
+        pytest.param(
+            [np.complex64(complex(1.5, 2.5)), np.complex64(complex(3.5, -4.5))],
+            [complex(3.5, -4.5), complex(1.5, 2.5)],
+            id="numpy-complex64-equivalence",
+        ),
+        pytest.param(
+            [np.complex128(complex(1.5, 2.5)), np.complex128(complex(3.5, -4.5))],
+            [np.complex64(complex(3.5, -4.5)), np.complex64(complex(1.5, 2.5))],
+            id="numpy-complex-cross-width-equivalence",
+        ),
+        pytest.param(
+            [np.longdouble("1.5"), np.nextafter(np.longdouble("1.5"), np.longdouble("2"))],
+            [np.nextafter(np.longdouble("1.5"), np.longdouble("2")), np.longdouble("1.5")],
+            marks=pytest.mark.skipif(
+                np.finfo(np.longdouble).nmant <= np.finfo(np.float64).nmant,
+                reason="longdouble has no additional precision on this platform",
+            ),
+            id="extended-longdouble-neighbor",
+        ),
+        pytest.param(
+            [np.longdouble("-1.5"), np.nextafter(np.longdouble("-1.5"), np.longdouble("-2"))],
+            [np.nextafter(np.longdouble("-1.5"), np.longdouble("-2")), np.longdouble("-1.5")],
+            marks=pytest.mark.skipif(
+                np.finfo(np.longdouble).nmant <= np.finfo(np.float64).nmant,
+                reason="longdouble has no additional precision on this platform",
+            ),
+            id="extended-longdouble-negative-neighbor",
+        ),
+        pytest.param(
+            [np.longdouble("1e-400"), np.longdouble("2e-400")],
+            [np.longdouble("2e-400"), np.longdouble("1e-400")],
+            marks=pytest.mark.skipif(
+                np.finfo(np.longdouble).nmant <= np.finfo(np.float64).nmant,
+                reason="longdouble has no additional precision on this platform",
+            ),
+            id="extended-longdouble-sub-binary64",
+        ),
+        pytest.param(
+            [np.nextafter(np.longdouble(0), np.longdouble(1)),
+             np.nextafter(np.longdouble(0), np.longdouble(1)) * 2],
+            [np.nextafter(np.longdouble(0), np.longdouble(1)) * 2,
+             np.nextafter(np.longdouble(0), np.longdouble(1))],
+            marks=pytest.mark.skipif(
+                np.finfo(np.longdouble).nmant <= np.finfo(np.float64).nmant,
+                reason="longdouble has no additional precision on this platform",
+            ),
+            id="extended-longdouble-subnormal-neighbors",
+        ),
+        pytest.param(
+            [np.nextafter(np.longdouble(0), np.longdouble(1)),
+             np.nextafter(np.longdouble(0), np.longdouble(1)) * 2],
+            [Fraction(*(np.nextafter(np.longdouble(0), np.longdouble(1)) * 2).as_integer_ratio()),
+             Fraction(*np.nextafter(np.longdouble(0), np.longdouble(1)).as_integer_ratio())],
+            marks=pytest.mark.skipif(
+                np.finfo(np.longdouble).nmant <= np.finfo(np.float64).nmant,
+                reason="longdouble has no additional precision on this platform",
+            ),
+            id="extended-longdouble-subnormal-rational-equivalence",
+        ),
     ],
 )
 @pytest.mark.parametrize("encoder", ["onehot", "ordinal"])

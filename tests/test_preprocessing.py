@@ -239,6 +239,10 @@ def test_timedelta_category_labels_match_equivalent_prediction_values(
     "train_values,test_values",
     [
         pytest.param([Decimal("1.5"), Decimal("2.5")], [2.5, 1.5], id="decimal-halves"),
+        pytest.param([False, True], [1, 0], id="boolean-integers"),
+        pytest.param([0, 1], [True, False], id="integer-booleans"),
+        pytest.param([np.bool_(False), np.bool_(True)], [1.0, 0.0], id="numpy-boolean-floats"),
+        pytest.param([0.0, 1.0], [np.bool_(True), np.bool_(False)], id="float-numpy-booleans"),
         pytest.param([Fraction(3, 2), Fraction(5, 2)], [2.5, 1.5], id="fraction-halves"),
         pytest.param([Decimal("0"), Decimal("2")], [2, 0], id="decimal-integers"),
         pytest.param([Fraction(0), Fraction(2)], [2, 0], id="fraction-integers"),

@@ -147,7 +147,7 @@ def _categorical_label(value):
     if isinstance(value, pd.Period):
         return f"Period:{value}:{value.freqstr}"
     if isinstance(value, (bool, np.bool_)):
-        return f"bool:{bool(value)}"
+        return f"number:{int(value)}"
     if isinstance(value, (numbers.Number, Decimal)):
         return _numeric_label(value)
     if isinstance(value, str):

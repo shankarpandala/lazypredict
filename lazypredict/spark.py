@@ -10,6 +10,8 @@ import logging
 import time
 from typing import Any, Dict, List, Optional
 
+from lazypredict._optional import warn_if_broken
+
 logger = logging.getLogger("lazypredict")
 
 # Optional PySpark
@@ -38,8 +40,9 @@ try:
     from pyspark.sql import DataFrame as SparkDataFrame
 
     _SPARK_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _SPARK_AVAILABLE = False
+    warn_if_broken("pyspark", exc)
 
 
 def _check_spark():

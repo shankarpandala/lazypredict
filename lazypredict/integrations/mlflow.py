@@ -5,13 +5,16 @@ import logging
 import os
 from typing import Any, Optional
 
+from lazypredict._optional import warn_if_broken
+
 logger = logging.getLogger("lazypredict")
 
 try:
     import mlflow
     MLFLOW_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     MLFLOW_AVAILABLE = False
+    warn_if_broken("mlflow", exc)
 
 
 def is_mlflow_tracking_enabled() -> bool:

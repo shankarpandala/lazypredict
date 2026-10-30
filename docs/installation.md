@@ -32,6 +32,14 @@ XGBoost, LightGBM, and CatBoost (all support GPU acceleration):
 pip install lazypredict[boost]
 ```
 
+On macOS, XGBoost and LightGBM also need the OpenMP runtime:
+
+```console
+brew install libomp
+```
+
+Without it, lazypredict warns that the library could not be imported and skips its models.
+
 ### Categorical encoders
 
 Target and binary encoding (`categorical_encoder="target"` / `"binary"`) via

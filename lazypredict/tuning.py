@@ -14,6 +14,7 @@ from sklearn.base import clone
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 
 from lazypredict.search_spaces import SEARCH_SPACES, get_search_space
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -23,16 +24,18 @@ try:
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     _OPTUNA_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _OPTUNA_AVAILABLE = False
+    warn_if_broken("optuna", exc)
 
 # Optional FLAML
 try:
     import flaml.tune  # noqa: F401
 
     _FLAML_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _FLAML_AVAILABLE = False
+    warn_if_broken("flaml", exc)
 
 
 def _check_optuna():

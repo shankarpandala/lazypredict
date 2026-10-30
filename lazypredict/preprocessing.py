@@ -16,6 +16,7 @@ from sklearn.preprocessing import (
 )
 
 from lazypredict.config import VALID_ENCODERS
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -23,8 +24,9 @@ logger = logging.getLogger("lazypredict")
 try:
     from category_encoders import BinaryEncoder, TargetEncoder
     CATEGORY_ENCODERS_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     CATEGORY_ENCODERS_AVAILABLE = False
+    warn_if_broken("category_encoders", exc)
 
 # ---------------------------------------------------------------------------
 # Default preprocessing pipelines

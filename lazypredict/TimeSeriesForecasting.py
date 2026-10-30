@@ -50,6 +50,7 @@ from lazypredict.ts_preprocessing import (
     detect_seasonal_period,
     recursive_forecast,
 )
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -73,8 +74,9 @@ except Exception:
 # ---------------------------------------------------------------------------
 try:
     import mlflow as _mlflow
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _mlflow = None  # type: ignore[assignment]
+    warn_if_broken("mlflow", exc)
 
 # ---------------------------------------------------------------------------
 # Optional dependencies — graceful degradation
@@ -83,15 +85,17 @@ try:
     import statsmodels  # noqa: F401
 
     _STATSMODELS_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _STATSMODELS_AVAILABLE = False
+    warn_if_broken("statsmodels", exc)
 
 try:
     import pmdarima  # noqa: F401
 
     _PMDARIMA_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _PMDARIMA_AVAILABLE = False
+    warn_if_broken("pmdarima", exc)
 
 try:
     _TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
@@ -102,22 +106,25 @@ try:
     import xgboost  # noqa: F401
 
     _XGBOOST_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _XGBOOST_AVAILABLE = False
+    warn_if_broken("xgboost", exc)
 
 try:
     import lightgbm  # noqa: F401
 
     _LIGHTGBM_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _LIGHTGBM_AVAILABLE = False
+    warn_if_broken("lightgbm", exc)
 
 try:
     import catboost  # noqa: F401
 
     _CATBOOST_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _CATBOOST_AVAILABLE = False
+    warn_if_broken("catboost", exc)
 
 try:
     _TIMESFM_AVAILABLE = importlib.util.find_spec("timesfm") is not None

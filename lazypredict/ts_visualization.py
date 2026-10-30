@@ -11,14 +11,17 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from lazypredict._optional import warn_if_broken
+
 logger = logging.getLogger("lazypredict")
 
 try:
     import matplotlib.pyplot as plt
 
     _MATPLOTLIB_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _MATPLOTLIB_AVAILABLE = False
+    warn_if_broken("matplotlib", exc)
 
 
 def _check_matplotlib():

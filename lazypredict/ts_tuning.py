@@ -15,6 +15,7 @@ from sklearn.model_selection import TimeSeriesSplit
 
 from lazypredict.metrics import compute_forecast_metrics
 from lazypredict.ts_search_spaces import get_ts_search_space
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -24,8 +25,9 @@ try:
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     _OPTUNA_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _OPTUNA_AVAILABLE = False
+    warn_if_broken("optuna", exc)
 
 
 # Valid forecast metrics (lower is better for all except R-Squared)

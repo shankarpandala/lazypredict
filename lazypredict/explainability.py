@@ -12,6 +12,8 @@ import pandas as pd
 from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
 
+from lazypredict._optional import warn_if_broken
+
 logger = logging.getLogger("lazypredict")
 
 # Optional SHAP
@@ -19,8 +21,9 @@ try:
     import shap
 
     _SHAP_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _SHAP_AVAILABLE = False
+    warn_if_broken("shap", exc)
 
 
 def explain_permutation(

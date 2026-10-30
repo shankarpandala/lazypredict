@@ -28,6 +28,7 @@ from lazypredict.integrations.mlflow import (
 )
 from lazypredict.metrics import metric_name
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -45,8 +46,9 @@ except Exception:
 # Optional MLflow
 try:
     import mlflow as _mlflow
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _mlflow = None  # type: ignore[assignment]
+    warn_if_broken("mlflow", exc)
 
 
 def _validate_init_params(

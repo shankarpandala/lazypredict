@@ -11,6 +11,8 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
+from lazypredict._optional import warn_if_broken
+
 logger = logging.getLogger("lazypredict")
 
 # Optional statsmodels for statistical tests
@@ -20,8 +22,9 @@ try:
     from statsmodels.tsa.stattools import acf as sm_acf
 
     _STATSMODELS_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _STATSMODELS_AVAILABLE = False
+    warn_if_broken("statsmodels", exc)
 
 
 def residual_diagnostics(

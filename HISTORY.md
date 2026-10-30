@@ -2,6 +2,21 @@
 title: History
 ---
 
+# 0.3.0 (2026-03-15)
+
+-   First stable release of the 0.3 series: time series forecasting, hyperparameter
+    tuning, explainability, GPU support and the integrations listed in the
+    pre-release notes below
+-   Import `torch` and `timesfm` lazily to avoid OpenMP deadlocks with scikit-learn
+
+# 0.3.0a5 (2026-03-14)
+
+-   Added time series visualization (`LazyForecaster.plot_results()`,
+    `lazypredict.ts_visualization`) and residual diagnostics
+    (`LazyForecaster.diagnose()`, `lazypredict.ts_diagnostics`)
+-   Forecaster tuning refits the tuned models (`tuned_models_`)
+-   Raised test coverage to 67%; fixed flake8 and CI failures
+
 # 0.3.0a4 (2026-03-10)
 
 -   Implemented explainability: `explain()` method with permutation importance and SHAP

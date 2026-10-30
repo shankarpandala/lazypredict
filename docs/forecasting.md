@@ -54,17 +54,20 @@ print(scores)
 | `Ridge_TS` | `MLForecaster` | Ridge regression with lag features |
 | `Lasso_TS` | `MLForecaster` | Lasso regression with lag features |
 | `ElasticNet_TS` | `MLForecaster` | ElasticNet with lag features |
-| `RandomForest_TS` | `MLForecaster` | Random forest with lag features |
-| `ExtraTrees_TS` | `MLForecaster` | Extra trees with lag features |
-| `GradientBoosting_TS` | `MLForecaster` | Gradient boosting with lag features |
-| `AdaBoost_TS` | `MLForecaster` | AdaBoost with lag features |
-| `Bagging_TS` | `MLForecaster` | Bagging regressor with lag features |
-| `KNeighbors_TS` | `MLForecaster` | k-NN regression with lag features |
+| `RandomForestRegressor_TS` | `MLForecaster` | Random forest with lag features |
+| `ExtraTreesRegressor_TS` | `MLForecaster` | Extra trees with lag features |
+| `GradientBoostingRegressor_TS` | `MLForecaster` | Gradient boosting with lag features |
+| `AdaBoostRegressor_TS` | `MLForecaster` | AdaBoost with lag features |
+| `BaggingRegressor_TS` | `MLForecaster` | Bagging regressor with lag features |
+| `KNeighborsRegressor_TS` | `MLForecaster` | k-NN regression with lag features |
 | `SVR_TS` | `MLForecaster` | Support vector regression |
-| `DecisionTree_TS` | `MLForecaster` | Decision tree with lag features |
-| `XGBoost_TS` | `MLForecaster` | XGBoost (requires `lazypredict[boost]`) |
-| `LightGBM_TS` | `MLForecaster` | LightGBM (requires `lazypredict[boost]`) |
-| `CatBoost_TS` | `MLForecaster` | CatBoost (requires `lazypredict[boost]`) |
+| `DecisionTreeRegressor_TS` | `MLForecaster` | Decision tree with lag features |
+| `XGBRegressor_TS` | `MLForecaster` | XGBoost (requires `lazypredict[boost]`) |
+| `LGBMRegressor_TS` | `MLForecaster` | LightGBM (requires `lazypredict[boost]`) |
+| `CatBoostRegressor_TS` | `MLForecaster` | CatBoost (requires `lazypredict[boost]`) |
+
+Pass any of these names (or a list of them) as `forecasters=`; unknown names
+raise a `ValueError` that suggests the closest valid name.
 
 ### Deep Learning Models (require `pip install lazypredict[deeplearning]`)
 
@@ -79,8 +82,9 @@ print(scores)
 |------|-------|-------------|
 | `TimesFM` | `TimesFMForecaster` | Google TimesFM 2.5 pretrained model |
 
-!!! note "Python version restriction"
-    TimesFM requires Python 3.10 or 3.11.
+!!! note
+    `pip install lazypredict[foundation]` installs `timesfm[torch]`; TimesFM 2.5
+    is loaded through its PyTorch implementation.
 
 ---
 
@@ -154,13 +158,24 @@ scores, predictions = fcst.fit(y_train, y_test, X_train, X_test)
 
 ## Auto Seasonal Period Detection
 
-By default the seasonal period is auto-detected via autocorrelation. Override manually:
+By default the seasonal period is auto-detected via autocorrelation: the series
+is detrended, and a lag counts as a season only if its autocorrelation is a
+clear, statistically significant peak (Bartlett's standard error, 3 sigma); the
+shortest qualifying lag wins over its multiples. Series without seasonality
+(trends, random walks, white noise) are reported as non-seasonal.
+
+Detection needs a few full cycles of data. For short series, or when you know
+the period, set it explicitly:
 
 ```python
 fcst = LazyForecaster(seasonal_period=12)   # monthly data with yearly cycle
 ```
 
 Set `seasonal_period=1` to disable seasonal models.
+
+The exogenous arrays must have one row per value of `y_train` / `y_test`, and
+`X_train` and `X_test` must be passed together; targets with missing values are
+rejected, so fill or drop them first.
 
 ---
 
@@ -231,12 +246,16 @@ scores, pred_df = fcst.fit(y_train, y_test)
 # Simple average of all model predictions
 avg = fcst.ensemble(method="simple_average")
 
-# Inverse-error weighted average (lower error = higher weight)
-weighted = fcst.ensemble(method="weighted_average", y_true=y_test)
+# Inverse-error weighted average (lower validation RMSE = higher weight)
+weighted = fcst.ensemble(method="weighted_average")
 
-# Stacking (linear meta-learner on top)
-stacked = fcst.ensemble(method="stacking", y_true=y_test)
+# Stacking (Ridge meta-learner on top)
+stacked = fcst.ensemble(method="stacking")
 ```
+
+Weights and the stacking meta-model are learned on a validation window held
+out from the end of `y_train`, so `y_test` stays untouched for evaluation.
+(`y_true=` is no longer needed and emits a `FutureWarning`.)
 
 ---
 
@@ -307,7 +326,7 @@ scores, predictions = fcst.fit(y_train, y_test)
 
 GPU-accelerated forecasting models:
 
-- XGBoost_TS, LightGBM_TS, CatBoost_TS
+- XGBRegressor_TS, LGBMRegressor_TS, CatBoostRegressor_TS
 - LSTM_TS, GRU_TS (PyTorch CUDA)
 - TimesFM (PyTorch CUDA)
 

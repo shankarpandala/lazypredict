@@ -15,7 +15,7 @@ version: 0.3.0
 date-released: "2026-03-15"
 license: MIT
 repository-code: "https://github.com/shankarpandala/lazypredict"
-url: "https://lazypredict.readthedocs.io"
+url: "https://shankarpandala.github.io/lazypredict/"
 keywords:
   - machine-learning
   - automated-machine-learning

@@ -32,6 +32,15 @@ XGBoost, LightGBM, and CatBoost (all support GPU acceleration):
 pip install lazypredict[boost]
 ```
 
+### Categorical encoders
+
+Target and binary encoding (`categorical_encoder="target"` / `"binary"`) via
+`category-encoders`:
+
+```console
+pip install lazypredict[encoders]
+```
+
 ### Time series forecasting
 
 Statistical models (Holt-Winters, SARIMAX, Theta):
@@ -46,7 +55,7 @@ Add deep learning models (LSTM, GRU via PyTorch):
 pip install lazypredict[timeseries,deeplearning]
 ```
 
-Add Google TimesFM foundation model (Python 3.10–3.11 only):
+Add the Google TimesFM foundation model (installs `timesfm[torch]`):
 
 ```console
 pip install lazypredict[timeseries,foundation]

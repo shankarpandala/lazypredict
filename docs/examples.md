@@ -234,8 +234,9 @@ model_dictionary = reg.provide_models(X_train, X_test, y_train, y_test)
 # Access specific model
 random_forest = model_dictionary['RandomForestRegressor']
 
-# Make predictions with specific model
-predictions = random_forest.predict(X_test)
+# Make predictions with a specific model. The pipelines expect a DataFrame with
+# the training columns; reg.predict() also converts NumPy input for you.
+predictions = reg.predict(X_test)["RandomForestRegressor"]
 ```
 
 ## Model Timeout
@@ -446,6 +447,7 @@ Run only a subset of models:
 
 ```python
 fcst = LazyForecaster(
+    # Holt and AutoARIMA need lazypredict[timeseries], LSTM_TS lazypredict[deeplearning]
     forecasters=["Holt", "AutoARIMA", "Ridge_TS", "LSTM_TS"],
     verbose=0,
     ignore_warnings=True,

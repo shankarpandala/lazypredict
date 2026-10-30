@@ -168,8 +168,9 @@ def _resolve_estimators(
             hints.append(f"{name!r} (did you mean {close[0]!r}?)" if close else repr(name))
         raise ValueError(
             f"Unknown {kind} name(s): {', '.join(hints)}. Names are case-sensitive; "
-            "models from optional packages (xgboost, lightgbm, catboost, ...) are "
-            f"only available when those packages are installed. Available: {sorted(by_name)}"
+            "models from optional packages (xgboost, lightgbm, catboost, statsmodels, "
+            "pmdarima, torch, ...) are only available when those packages are "
+            f"installed. Available: {sorted(by_name)}"
         )
     return list(resolved.items())
 

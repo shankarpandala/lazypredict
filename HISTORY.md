@@ -98,6 +98,31 @@ support) are released as part of 0.4.0.
 -   One-column DataFrame targets, `functools.partial` custom metrics and
     case-insensitive `sort_by` work; options are validated (#603)
 
+## Fixes from the pre-release review
+
+-   Holt-Winters models selected by name are skipped with a reason in `errors`
+    when there is no seasonal period, instead of raising "unknown name" (#615)
+-   `timeout=float("inf")` means no limit, and the SIGALRM handler is always
+    restored (#616); `n_jobs=0` is rejected (#617); ensembles work for a
+    one-step test horizon (#618)
+-   Seasonal-period detection finds seasonality from three cycles and no longer
+    reports periods for curved trends (#623)
+-   The direct and multi-output strategies use every future exogenous row
+    (#624); the stacking ensemble no longer depends on the series' units (#625)
+-   Equal numeric category codes match across splits (1 vs 1.0) (#620); object
+    NumPy arrays keep numeric columns numeric, and integer column labels work
+    (#621)
+-   The FLAML backend reports defaults as a valid result, keeps CatBoost and
+    LightGBM parameters, and the `flaml` extra installs `flaml[automl]` (#622)
+-   MLflow tracking problems no longer change benchmark results, and the
+    estimator's hyperparameters are logged (#626)
+-   `explain(method="shap")` explains classifiers through their probabilities
+    (#627)
+-   Forecaster tuning works for every horizon strategy and metric (#628)
+-   Smaller fixes: one-column targets, DataFrames after a NumPy fit, the CLI
+    exit status and seed, forecast indexes, `sort_by` validation, the publish
+    workflow's re-runs and smoke test (#619, #629); documentation (#630)
+
 ## Documentation
 
 -   Fixed examples and API references, regenerated the README result tables

@@ -209,6 +209,7 @@ Run only a subset of models by name:
 
 ```python
 fcst = LazyForecaster(
+    # Holt and AutoARIMA need lazypredict[timeseries], LSTM_TS lazypredict[deeplearning]
     forecasters=["Naive", "Holt", "AutoARIMA", "Ridge_TS", "LSTM_TS"],
     verbose=0,
 )

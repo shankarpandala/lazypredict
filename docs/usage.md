@@ -27,7 +27,7 @@ models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 print(models)
 ```
 
-The returned `models` DataFrame is sorted by Accuracy and includes:
+The returned `models` DataFrame is sorted by Balanced Accuracy and includes:
 Accuracy, Balanced Accuracy, ROC AUC, F1 Score, and Time Taken.
 
 ---

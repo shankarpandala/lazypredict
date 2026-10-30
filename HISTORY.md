@@ -47,6 +47,13 @@ support) are released as part of 0.4.0.
     declared dependency floors; mypy is blocking (#580)
 -   The docs preview no longer fails for pull requests from forks, and the API
     reference renders NumPy-style parameter sections (#579)
+-   An optional library that is installed but fails to load, such as XGBoost or
+    LightGBM on macOS without `libomp`, is skipped with a warning instead of
+    making `import lazypredict` fail (#611)
+-   Merging a pull request no longer cancels the docs deployment, and PR
+    previews are removed when the PR is closed (#612)
+-   Running the publish workflow manually for a pushed tag creates the GitHub
+    release once the upload to PyPI has succeeded (#613)
 
 ## Fixes: LazyClassifier and LazyRegressor
 

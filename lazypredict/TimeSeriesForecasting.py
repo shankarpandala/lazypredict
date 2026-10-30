@@ -235,6 +235,8 @@ class SimpleExpSmoothingForecaster(ForecasterWrapper):
 
     Uses ``statsmodels.tsa.holtwinters.SimpleExpSmoothing`` with optimised
     smoothing parameters.  Suitable for series without trend or seasonality.
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
@@ -257,6 +259,8 @@ class HoltForecaster(ForecasterWrapper):
     """Holt's linear trend method (double exponential smoothing).
 
     Captures level and trend components but ignores seasonality.
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
@@ -291,6 +295,8 @@ class HoltWintersForecaster(ForecasterWrapper):
     label_suffix : str, optional (default="")
         Suffix appended to the model name for display.
 
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
@@ -343,6 +349,8 @@ class ThetaForecaster(ForecasterWrapper):
         Seasonal period passed to ``ThetaModel``.  ``None`` defaults to 1
         (no seasonality).
 
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
@@ -375,6 +383,8 @@ class SARIMAXForecaster(ForecasterWrapper):
     seasonal_period : int or None, optional (default=None)
         Seasonal period.  When <= 1 the seasonal component is disabled.
 
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
@@ -416,6 +426,8 @@ class AutoARIMAForecaster(ForecasterWrapper):
     Performs a stepwise search over ARIMA orders to minimise information
     criteria.  Supports exogenous features.
 
+    Notes
+    -----
     Requires ``pmdarima``.
     """
 
@@ -552,6 +564,8 @@ class _TorchRNNForecaster(ForecasterWrapper):
     random_state : int, optional (default=42)
         Seed for reproducibility.
 
+    Notes
+    -----
     Requires ``torch``.
     """
 
@@ -704,6 +718,8 @@ class LSTMForecaster(_TorchRNNForecaster):
     """Single-layer LSTM forecaster.
 
     See :class:`_TorchRNNForecaster` for parameter details.
+    Notes
+    -----
     Requires ``torch``.
     """
 
@@ -714,6 +730,8 @@ class GRUForecaster(_TorchRNNForecaster):
     """Single-layer GRU forecaster.
 
     See :class:`_TorchRNNForecaster` for parameter details.
+    Notes
+    -----
     Requires ``torch``.
     """
 
@@ -746,6 +764,8 @@ class TimesFMForecaster(ForecasterWrapper):
         from Hugging Face (``google/timesfm-2.5-200m-pytorch``).
         Use this when you are offline or behind a firewall.
 
+    Notes
+    -----
     Requires ``timesfm`` and ``torch`` (Python 3.10-3.11 only).
     """
 

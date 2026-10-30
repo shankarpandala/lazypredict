@@ -20,10 +20,10 @@ jobs:
     if: github.event_name == 'push' || (github.event.action != 'closed' && github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -33,22 +33,27 @@ jobs:
           pip install -r docs/requirements.txt
       - name: Build documentation
         run: mkdocs build --strict
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: documentation
           path: site/
 
   preview:
     # Deploy every (non-draft) PR to a preview path on gh-pages and
-    # clean it up when the PR is closed.
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    # clean it up when the PR is closed. Pull requests from forks get a
+    # read-only GITHUB_TOKEN and cannot push to gh-pages, so they only run
+    # the `build` job above.
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.draft == false
+      && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event.action != 'closed'
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: github.event.action != 'closed'
         with:
           python-version: '3.12'
@@ -74,10 +79,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'

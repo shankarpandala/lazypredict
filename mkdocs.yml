@@ -5,7 +5,7 @@ site_url: https://shankarpandala.github.io/lazypredict/
 
 repo_name: shankarpandala/lazypredict
 repo_url: https://github.com/shankarpandala/lazypredict
-edit_uri: edit/master/docs/
+edit_uri: edit/dev/docs/
 
 copyright: Copyright &copy; 2022 - 2026 Shankar Rao Pandala
 
@@ -62,7 +62,7 @@ plugins:
         python:
           paths: [.]
           options:
-            docstring_style: google
+            docstring_style: numpy
             show_source: true
             show_root_heading: true
             show_root_full_path: false

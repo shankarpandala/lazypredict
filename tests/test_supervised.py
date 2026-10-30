@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 from lazypredict.Supervised import LazyClassifier, LazyRegressor, get_card_split, INTEL_EXTENSION_AVAILABLE
+from lazypredict.exceptions import TimeoutException
 from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
@@ -787,10 +788,10 @@ def test_timeout_classifier():
     )
     models, _ = clf.fit(X_train, X_test, y_train, y_test)
 
-    # With such a short timeout, at least some models should complete
-    # (LogisticRegression is fast, SVC might timeout)
-    assert len(models) >= 0  # Some models might complete
+    # Every model either finished in time or is reported as timed out.
     assert isinstance(models, pd.DataFrame)
+    for name in ("LogisticRegression", "SVC"):
+        assert name in models.index or isinstance(clf.errors.get(name), TimeoutException)
 
 
 def test_timeout_regressor():

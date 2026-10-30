@@ -18,7 +18,8 @@ from lazypredict.config import (
     get_gpu_model_params,
     is_gpu_available,
 )
-from lazypredict.exceptions import ModelFitError  # noqa: F401
+from lazypredict._timeout import time_limit
+from lazypredict.exceptions import ModelFitError, TimeoutException  # noqa: F401
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
 
@@ -359,7 +360,7 @@ class LazyEstimator:
             for idx, (name, model) in enumerate(
                 progress_bar(estimator_list, disable=(self.verbose == 0))
             ):
-                start = time.time()
+                start = time.perf_counter()
                 mlflow_active_run = None
                 try:
                     if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
@@ -387,17 +388,15 @@ class LazyEstimator:
                         ]
                     )
 
-                    pipe.fit(X_train, y_train)
-                    fit_time = time.time() - start
-
+                    with time_limit(self.timeout):
+                        pipe.fit(X_train, y_train)
+                    fit_time = time.perf_counter() - start
                     if self.timeout and fit_time > self.timeout:
-                        logger.info(
-                            "%s exceeded timeout (%.2fs > %ss), skipping...",
-                            name, fit_time, self.timeout,
+                        # The limit could not be enforced preemptively
+                        # (Windows, worker thread, or a long C call).
+                        raise TimeoutException(
+                            f"Training took {fit_time:.2f}s, exceeding timeout={self.timeout}s"
                         )
-                        if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                            _mlflow.end_run()
-                        continue
 
                     self.models[name] = pipe
 
@@ -409,7 +408,7 @@ class LazyEstimator:
                     # Test-set metrics
                     metrics = self._compute_metrics(pipe, X_test, y_test, X_train)
                     metrics["name"] = name
-                    metrics["time"] = time.time() - start
+                    metrics["time"] = time.perf_counter() - start
                     metrics.update(cv_metrics)
 
                     # MLflow logging
@@ -451,7 +450,9 @@ class LazyEstimator:
                     if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
                         _mlflow.end_run()
                     self.errors[name] = exc
-                    if not self.ignore_warnings:
+                    if isinstance(exc, TimeoutException):
+                        logger.info("%s skipped: %s", name, exc)
+                    elif not self.ignore_warnings:
                         logger.warning("%s model failed to execute: %s", name, exc)
 
                     if self.progress_callback is not None:

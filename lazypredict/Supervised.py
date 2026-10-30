@@ -8,9 +8,7 @@ perform best on a given dataset.
 # Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
 import logging
-import signal
 import warnings
-from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -42,7 +40,8 @@ from lazypredict.config import (
     REMOVED_REGRESSORS,
     VALID_ENCODERS,
 )
-from lazypredict.exceptions import TimeoutException
+from lazypredict._timeout import time_limit  # noqa: F401  (backward compatibility)
+from lazypredict.exceptions import TimeoutException  # noqa: F401
 from lazypredict.integrations.mlflow import (  # noqa: F401
     MLFLOW_AVAILABLE,
     is_mlflow_tracking_enabled,
@@ -163,34 +162,6 @@ removed_classifiers = list(_REMOVED_CLASSIFIERS)
 removed_regressors = list(_REMOVED_REGRESSORS)
 
 
-@contextmanager
-def time_limit(seconds: int):
-    """Context manager to limit execution time of a code block.
-
-    Parameters
-    ----------
-    seconds : int
-        Maximum time in seconds for the code block to execute.
-
-    Raises
-    ------
-    TimeoutException
-        If the code block exceeds the time limit.
-    """
-    def signal_handler(signum, frame):
-        raise TimeoutException(f"Timed out after {seconds} seconds")
-
-    if hasattr(signal, "SIGALRM"):
-        signal.signal(signal.SIGALRM, signal_handler)
-        signal.alarm(seconds)
-        try:
-            yield
-        finally:
-            signal.alarm(0)
-    else:
-        yield
-
-
 # ---------------------------------------------------------------------------
 # LazyClassifier
 # ---------------------------------------------------------------------------
@@ -218,7 +189,12 @@ class LazyClassifier(LazyEstimator):
     cv : int or None, optional (default=None)
         Number of folds for cross-validation.  If None, uses train/test split only.
     timeout : int or float or None, optional (default=None)
-        Maximum seconds for each model.  Models exceeding this are skipped.
+        Maximum training time in seconds for each model. On POSIX systems,
+        when ``fit()`` runs in the main thread, training is interrupted once
+        the limit is reached (code inside C extensions is interrupted when it
+        returns to Python); elsewhere the model is discarded after it
+        finishes. Timed-out models are listed in ``errors`` as
+        ``TimeoutException``.
     categorical_encoder : str, optional (default='onehot')
         Encoder for categorical features: ``'onehot'``, ``'ordinal'``,
         ``'target'``, or ``'binary'``.
@@ -482,7 +458,12 @@ class LazyRegressor(LazyEstimator):
     cv : int or None, optional (default=None)
         Number of folds for cross-validation.  If None, uses train/test split only.
     timeout : int or float or None, optional (default=None)
-        Maximum seconds for each model.  Models exceeding this are skipped.
+        Maximum training time in seconds for each model. On POSIX systems,
+        when ``fit()`` runs in the main thread, training is interrupted once
+        the limit is reached (code inside C extensions is interrupted when it
+        returns to Python); elsewhere the model is discarded after it
+        finishes. Timed-out models are listed in ``errors`` as
+        ``TimeoutException``.
     categorical_encoder : str, optional (default='onehot')
         Encoder for categorical features: ``'onehot'``, ``'ordinal'``,
         ``'target'``, or ``'binary'``.

@@ -136,3 +136,22 @@ def test_integer_column_labels_are_not_positions():
     predictions = clf.predict(X.iloc[150:])
     assert len(predictions["LogisticRegression"]) == 50
     assert list(X.columns) == [1, 2, 3]
+
+
+def test_one_column_dataframe_target_with_predictions():
+    # Issue #629: (n, 1) predictions made fit() fail after training every model.
+    X, y = load_diabetes(return_X_y=True, as_frame=True)
+    y = y.to_frame()
+    reg = LazyRegressor(regressors=["LinearRegression", "KNeighborsRegressor"], predictions=True)
+    scores, predictions = reg.fit(X.iloc[:300], X.iloc[300:], y.iloc[:300], y.iloc[300:])
+    assert len(scores) == 2 and predictions.shape == (len(X) - 300, 2)
+
+
+def test_dataframe_after_numpy_fit_is_matched_by_position(frames):
+    # Issue #629: the pipelines expect feature_i names after a NumPy fit.
+    X_train, X_test, y_train, y_test = frames
+    clf = LazyClassifier(classifiers=["LogisticRegression"])
+    clf.fit(X_train.to_numpy(), X_test.to_numpy(), y_train, y_test)
+    from_frame = clf.predict(X_test)["LogisticRegression"]
+    from_array = clf.predict(X_test.to_numpy())["LogisticRegression"]
+    np.testing.assert_array_equal(from_frame, from_array)

@@ -104,6 +104,10 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # A re-run after a partial upload adds only the missing files;
+          # verify-version already ties the files to the tag.
+          skip-existing: true
 
   attach-to-release:
     needs: publish-pypi

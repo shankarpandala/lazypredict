@@ -319,6 +319,11 @@ class LazyEstimator:
         X_train, X_test, y_train, y_test = _auto_convert_inputs(
             X_train, X_test, y_train, y_test
         )
+        # One-column targets such as df[["price"]] are used as vectors.
+        if np.ndim(y_train) == 2 and np.shape(y_train)[1] == 1:
+            y_train = np.ravel(y_train)
+        if np.ndim(y_test) == 2 and np.shape(y_test)[1] == 1:
+            y_test = np.ravel(y_test)
 
         # Dataset size warnings
         if hasattr(X_train, "shape"):
@@ -668,7 +673,17 @@ class LazyEstimator:
     def _to_frame(self, X: Any) -> pd.DataFrame:
         """Convert array-like input to a DataFrame with the training column names."""
         if isinstance(X, pd.DataFrame):
-            return with_string_column_names(X)
+            X = with_string_column_names(X)
+            fitted = self._feature_columns
+            if (
+                fitted is not None
+                and len(X.columns) == len(fitted)
+                and list(X.columns) != list(fitted)
+                and all(column == f"feature_{i}" for i, column in enumerate(fitted))
+            ):
+                # Fitted on arrays: columns are matched by position, as in fit().
+                X = X.set_axis(fitted, axis=1)
+            return X
         X = np.asarray(X)
         columns = self._feature_columns
         if columns is None and self.models:

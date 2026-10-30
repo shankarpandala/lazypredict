@@ -69,9 +69,10 @@ support) are released as part of 0.4.0.
 -   `timeout` interrupts slow models (on POSIX, in the main thread) and lists
     them in `errors` (#590)
 -   The CLI exits with status 2 when it fails (#592)
--   `tune=True` no longer crashes `fit()`; the scikit-learn and FLAML backends
-    work for every model with a search space; tuning is seeded, uses `cv`, and
-    exposes `tuned_params_` and `tuned_models_` (#604, #605)
+-   `tune=True` no longer crashes `fit()`; the scikit-learn backend works for
+    every model with a search space and the FLAML backend for the models FLAML
+    has a learner for; tuning is seeded, uses `cv`, and exposes `tuned_params_`
+    and `tuned_models_` (#604, #605)
 -   Adjusted R² is `NaN` instead of dividing by zero or inverting the ranking on
     small test sets; regressors are ranked by adjusted R², then R² (#606)
 -   `explain(method="shap")` returns SHAP values (#607)

@@ -302,7 +302,8 @@ def plot_error_distribution(
         error_data.append(abs_errors)
         labels.append(name)
 
-    bp = ax.boxplot(error_data, patch_artist=True, tick_labels=labels)
+    bp = ax.boxplot(error_data, patch_artist=True)
+    ax.set_xticks(range(1, len(labels) + 1), labels)  # tick_labels= needs matplotlib >= 3.9
     colors = plt.cm.Set2(np.linspace(0, 1, len(error_data)))
     for patch, color in zip(bp["boxes"], colors):
         patch.set_facecolor(color)

@@ -58,12 +58,17 @@ def main(task, input_file, target, test_size, random_state):
 
     if task == "classification":
         from lazypredict.Supervised import LazyClassifier
-        model = LazyClassifier(verbose=0, ignore_warnings=True)
+        model = LazyClassifier(verbose=0, ignore_warnings=True, random_state=random_state)
     else:
         from lazypredict.Supervised import LazyRegressor
-        model = LazyRegressor(verbose=0, ignore_warnings=True)
+        model = LazyRegressor(verbose=0, ignore_warnings=True, random_state=random_state)
 
     scores, _ = model.fit(X_train, X_test, y_train, y_test)
+    if scores.empty:
+        name, error = next(iter(model.errors.items()), ("", "no model was selected"))
+        raise click.ClickException(
+            f"No model could be trained ({len(model.errors)} failed); {name}: {error}"
+        )
     click.echo(scores.to_string())
 
 

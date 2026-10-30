@@ -1224,6 +1224,10 @@ class LazyForecaster:
             )
         self._validate_tuning_and_season(tune_top_k, tune_trials, seasonal_period, n_jobs)
         sort_by = self._canonical_sort_by(sort_by, custom_metric)
+        if sort_by in self._cv_column_names() and not cv:
+            raise ValueError(
+                f"sort_by={sort_by!r} needs cross-validation: set cv or sort by a test metric"
+            )
 
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -1470,6 +1474,7 @@ class LazyForecaster:
         self._last_predictions = {}
         self._validation_cache = None
 
+        test_index = y_test.index if isinstance(y_test, (pd.Series, pd.DataFrame)) else None
         y_train, y_test, X_train, X_test = self._convert_and_validate_inputs(
             y_train, y_test, X_train, X_test
         )
@@ -1494,7 +1499,8 @@ class LazyForecaster:
         self._auto_tune(scores, all_forecasters, y_train, X_train, seasonal_period)
 
         if self.predictions:
-            return scores, pd.DataFrame.from_dict(predictions_dict)
+            # Forecast rows keep y_test's index, e.g. its dates.
+            return scores, pd.DataFrame(predictions_dict, index=test_index)
         return scores, pd.DataFrame()
 
     def _convert_and_validate_inputs(self, y_train, y_test, X_train, X_test):

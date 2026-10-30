@@ -109,6 +109,7 @@ def _resolve_estimators(
     selection: Union[str, List[Any]],
     available: List[Tuple[str, Any]],
     kind: str,
+    allow_classes: bool = True,
 ) -> List[Tuple[str, Any]]:
     """Resolve a user's model selection into ``(name, class)`` pairs.
 
@@ -121,6 +122,8 @@ def _resolve_estimators(
         Models that can be selected by name.
     kind : str
         Singular noun used in error messages, e.g. ``"classifier"``.
+    allow_classes : bool, optional (default=True)
+        Whether estimator classes may be passed besides names.
 
     Raises
     ------
@@ -141,13 +144,15 @@ def _resolve_estimators(
                 resolved[item] = by_name[item]
             else:
                 unknown.append(item)
-        elif isinstance(item, type):
+        elif allow_classes and isinstance(item, type):
             resolved[item.__name__] = item
-        else:
+        elif allow_classes:
             raise ValueError(
                 f"Invalid {kind} {item!r}: pass estimator classes or their names, "
                 "not instances."
             )
+        else:
+            raise ValueError(f"Invalid {kind} {item!r}: pass {kind} names.")
 
     if unknown:
         hints = []

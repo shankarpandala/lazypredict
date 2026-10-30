@@ -40,7 +40,9 @@ from lazypredict.config import (
     get_gpu_model_params,
     is_gpu_available,
 )
-from lazypredict.exceptions import InsufficientDataError
+from lazypredict._base import _resolve_estimators
+from lazypredict._timeout import time_limit
+from lazypredict.exceptions import InsufficientDataError, TimeoutException
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow, start_run
 from lazypredict.metrics import compute_forecast_metrics
 from lazypredict.ts_preprocessing import (
@@ -1190,6 +1192,7 @@ class LazyForecaster:
 
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
+        self._last_predictions: Dict[str, np.ndarray] = {}
         self.mlflow_enabled = setup_mlflow()
 
         if self.use_gpu:
@@ -1235,7 +1238,7 @@ class LazyForecaster:
         horizon, seasonal_period, results, predictions_dict,
     ):
         """Fit, predict, and score a single forecaster model."""
-        start = time.time()
+        start = time.perf_counter()
         mlflow_active_run = None
         try:
             if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
@@ -1243,26 +1246,23 @@ class LazyForecaster:
                 _mlflow.log_param("model_name", fname)
 
             wrapper_copy = copy.deepcopy(wrapper)
-            wrapper_copy.fit(y_train, X_train)
-            fit_time = time.time() - start
-
+            with time_limit(self.timeout):
+                wrapper_copy.fit(y_train, X_train)
+            fit_time = time.perf_counter() - start
             if self.timeout and fit_time > self.timeout:
-                logger.info(
-                    "%s exceeded timeout (%.2fs > %ss), skipping...",
-                    fname, fit_time, self.timeout,
+                # The limit could not be enforced preemptively.
+                raise TimeoutException(
+                    f"Training took {fit_time:.2f}s, exceeding timeout={self.timeout}s"
                 )
-                self._end_mlflow_run(mlflow_active_run)
-                return None
 
             y_pred = wrapper_copy.predict(horizon, X_test)
-            self.models[fname] = wrapper_copy
 
             sp = seasonal_period or 1
             metrics = compute_forecast_metrics(
                 y_test, y_pred, y_train, seasonal_period=sp
             )
             metrics["name"] = fname
-            metrics["time"] = time.time() - start
+            metrics["time"] = time.perf_counter() - start
 
             if self.cv:
                 cv_metrics = self._run_ts_cv(
@@ -1273,6 +1273,8 @@ class LazyForecaster:
             self._compute_custom_metric(metrics, y_test, y_pred, fname)
             self._log_mlflow_metrics(mlflow_active_run, metrics)
 
+            # Only models that produced scores are kept.
+            self.models[fname] = wrapper_copy
             results.append(metrics)
             if self.verbose > 0:
                 self._log_verbose(fname, metrics)
@@ -1285,7 +1287,9 @@ class LazyForecaster:
         except Exception as exc:
             self._end_mlflow_run(mlflow_active_run)
             self.errors[fname] = exc
-            if not self.ignore_warnings:
+            if isinstance(exc, TimeoutException):
+                logger.info("%s skipped: %s", fname, exc)
+            elif not self.ignore_warnings:
                 logger.warning("%s model failed: %s", fname, exc)
             return None
 
@@ -1344,6 +1348,13 @@ class LazyForecaster:
         predictions : pd.DataFrame
             Per-model predictions (empty if ``self.predictions`` is False).
         """
+        # Results of a previous fit() must not leak into this one.
+        self.models = {}
+        self.errors = {}
+        self.tuned_scores_ = None
+        self.tuned_models_ = {}
+        self._last_predictions = {}
+
         y_train, y_test, X_train, X_test = self._convert_and_validate_inputs(
             y_train, y_test, X_train, X_test
         )
@@ -1399,11 +1410,9 @@ class LazyForecaster:
             use_gpu=self.use_gpu,
             foundation_model_path=self.foundation_model_path,
         )
-        if self.forecasters != "all":
-            selected_names = set(self.forecasters)
-            all_forecasters = [
-                (n, w) for n, w in all_forecasters if n in selected_names
-            ]
+        all_forecasters = _resolve_estimators(
+            self.forecasters, all_forecasters, "forecaster", allow_classes=False
+        )
         if self.max_models is not None:
             all_forecasters = all_forecasters[: self.max_models]
         return all_forecasters
@@ -1486,9 +1495,7 @@ class LazyForecaster:
             Ensembled predictions.
         """
         if not self._last_predictions:
-            raise ValueError(
-                "No predictions available. Call fit() with predictions=True first."
-            )
+            raise ValueError("No predictions available. Call fit() first.")
 
         preds = self._last_predictions
         handlers = {

@@ -41,7 +41,7 @@ from lazypredict.config import (
     is_gpu_available,
 )
 from lazypredict.exceptions import InsufficientDataError
-from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
+from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow, start_run
 from lazypredict.metrics import compute_forecast_metrics
 from lazypredict.ts_preprocessing import (
     create_lag_features,
@@ -1218,9 +1218,7 @@ class LazyForecaster:
         mlflow_active_run = None
         try:
             if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                mlflow_active_run = _mlflow.start_run(
-                    run_name=f"LazyForecaster-{fname}"
-                )
+                mlflow_active_run = start_run(_mlflow, run_name=f"LazyForecaster-{fname}")
                 _mlflow.log_param("model_name", fname)
 
             wrapper_copy = copy.deepcopy(wrapper)
@@ -1295,7 +1293,7 @@ class LazyForecaster:
         if not (mlflow_active_run and _mlflow is not None):
             return
         for key, val in metrics.items():
-            if isinstance(val, (int, float)) and val is not None:
+            if isinstance(val, (int, float, np.number)) and np.isfinite(val):
                 _mlflow.log_metric(key, val)
 
     def fit(

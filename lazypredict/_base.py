@@ -20,7 +20,12 @@ from lazypredict.config import (
 )
 from lazypredict._timeout import time_limit
 from lazypredict.exceptions import ModelFitError, TimeoutException  # noqa: F401
-from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
+from lazypredict.integrations.mlflow import (
+    MLFLOW_AVAILABLE,
+    log_sklearn_model,
+    setup_mlflow,
+    start_run,
+)
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
 
 logger = logging.getLogger("lazypredict")
@@ -364,8 +369,8 @@ class LazyEstimator:
                 mlflow_active_run = None
                 try:
                     if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                        mlflow_active_run = _mlflow.start_run(
-                            run_name=f"{self.__class__.__name__}-{name}"
+                        mlflow_active_run = start_run(
+                            _mlflow, run_name=f"{self.__class__.__name__}-{name}"
                         )
                         _mlflow.log_param("model_name", name)
 
@@ -614,16 +619,12 @@ class LazyEstimator:
         if _mlflow is None:
             return
         for key, val in metrics.items():
-            if isinstance(val, (int, float, np.number)) and not np.isnan(val):
+            if isinstance(val, (int, float, np.number)) and np.isfinite(val):
                 _mlflow.log_metric(key, val)
         _mlflow.log_metric("training_time", metrics.get("time", 0))
         try:
             signature = _mlflow.models.infer_signature(X_train, pipe.predict(X_train))
-            _mlflow.sklearn.log_model(
-                pipe, f"{name}_model",
-                signature=signature,
-                registered_model_name=f"lazy_{self._estimator_step_name()}_{name}",
-            )
+            log_sklearn_model(_mlflow, pipe, f"{name}_model", signature=signature)
         except Exception as mlflow_exc:
             if not self.ignore_warnings:
                 logger.warning("Failed to log model %s to MLflow: %s", name, mlflow_exc)

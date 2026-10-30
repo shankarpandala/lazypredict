@@ -2,7 +2,8 @@
 
 Each function takes an Optuna ``trial`` and returns a dict of hyperparameters
 to pass to the model constructor.  Models not listed here are skipped during
-tuning (they have no meaningful hyperparameters or are too niche).
+tuning (they have no meaningful hyperparameters, are too niche, or tune their
+own regularisation, like ``LassoCV``).
 """
 
 from typing import Callable, Dict, Optional
@@ -121,6 +122,7 @@ def _lgbm_space(trial) -> dict:
         "max_depth": trial.suggest_int("max_depth", 2, 15),
         "num_leaves": trial.suggest_int("num_leaves", 15, 127),
         "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+        "subsample_freq": 1,  # LightGBM only bags rows when subsample_freq > 0
         "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
         "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
         "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
@@ -133,14 +135,13 @@ def _catboost_space(trial) -> dict:
         "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
         "depth": trial.suggest_int("depth", 2, 10),
         "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1e-3, 10.0, log=True),
+        "bootstrap_type": "Bayesian",  # required for bagging_temperature
         "bagging_temperature": trial.suggest_float("bagging_temperature", 0.0, 10.0),
     }
 
 
-def _passive_aggressive_space(trial) -> dict:
-    return {
-        "C": trial.suggest_float("C", 1e-4, 10.0, log=True),
-    }
+def _logistic_regression_space(trial) -> dict:
+    return {"C": trial.suggest_float("C", 1e-3, 100.0, log=True)}
 
 
 def _huber_space(trial) -> dict:
@@ -176,13 +177,10 @@ SEARCH_SPACES: Dict[str, Callable] = {
     "Ridge": _ridge_space,
     "RidgeClassifier": _ridge_space,
     "Lasso": _lasso_space,
-    "LassoCV": _lasso_space,
     "ElasticNet": _elasticnet_space,
-    "ElasticNetCV": _elasticnet_space,
+    "LogisticRegression": _logistic_regression_space,
     "SGDClassifier": _sgd_space,
     "SGDRegressor": _sgd_space,
-    "PassiveAggressiveClassifier": _passive_aggressive_space,
-    "PassiveAggressiveRegressor": _passive_aggressive_space,
     "HuberRegressor": _huber_space,
     # KNN
     "KNeighborsClassifier": _knn_space,

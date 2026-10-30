@@ -200,6 +200,9 @@ class LazyEstimator:
         _validate_init_params(cv, timeout, categorical_encoder, custom_metric, n_jobs)
         if max_models is not None and (not isinstance(max_models, int) or max_models < 1):
             raise ValueError(f"max_models must be a positive integer, got {max_models!r}")
+        for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
+            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                raise ValueError(f"{option} must be a positive integer, got {value!r}")
         if tune_backend not in ("optuna", "sklearn", "flaml"):
             raise ValueError(f"tune_backend must be 'optuna', 'sklearn', or 'flaml', got {tune_backend!r}")
         self.verbose = verbose
@@ -222,6 +225,8 @@ class LazyEstimator:
         self.tune_timeout = tune_timeout
         self.tune_backend = tune_backend
         self.tuned_scores_: Optional[Any] = None
+        self.tuned_params_: Dict[str, Dict[str, Any]] = {}
+        self.tuned_models_: Dict[str, Pipeline] = {}
         self._feature_columns: Optional[List[Any]] = None
         self.mlflow_enabled = setup_mlflow()
 
@@ -295,6 +300,8 @@ class LazyEstimator:
         self.models = {}
         self.errors = {}
         self.tuned_scores_ = None
+        self.tuned_params_ = {}
+        self.tuned_models_ = {}
 
         # Auto-convert PySpark/Dask DataFrames
         X_train, X_test, y_train, y_test = _auto_convert_inputs(
@@ -374,18 +381,7 @@ class LazyEstimator:
                         )
                         _mlflow.log_param("model_name", name)
 
-                    model_kwargs = get_gpu_model_params(model, self.use_gpu)
-                    if "random_state" in model().get_params():
-                        model_kwargs["random_state"] = self.random_state
-                    # Suppress verbose output for boosting libraries by default
-                    module = getattr(model, "__module__", "") or ""
-                    if "catboost" in module:
-                        model_kwargs.setdefault("verbose", 0)
-                    if "lightgbm" in module:
-                        model_kwargs.setdefault("verbose", -1)
-                        model_kwargs.setdefault("verbosity", -1)
-                    if "xgboost" in module:
-                        model_kwargs.setdefault("verbosity", 0)
+                    model_kwargs = self._model_kwargs(model)
                     pipe = Pipeline(
                         steps=[
                             ("preprocessor", clone(preprocessor)),
@@ -497,7 +493,11 @@ class LazyEstimator:
         preprocessor: Any,
         estimator_list: List,
     ) -> pd.DataFrame:
-        """Run top-k tuning after initial fit."""
+        """Tune the top-k models and refit them with their best parameters.
+
+        Fills ``tuned_params_`` and ``tuned_models_`` (pipelines refitted on
+        the training data) and returns the ``tuned_scores_`` table.
+        """
         from lazypredict.tuning import tune_top_k
 
         scoring = self._tune_scoring()
@@ -505,7 +505,7 @@ class LazyEstimator:
             "Tuning top %d models with %s backend (%d trials each)...",
             self.tune_top_k, self.tune_backend, self.tune_trials,
         )
-        return tune_top_k(
+        tuned = tune_top_k(
             scores_df=scores,
             models=self.models,
             estimator_list=estimator_list,
@@ -520,7 +520,47 @@ class LazyEstimator:
             n_jobs=self.n_jobs,
             backend=self.tune_backend,
             use_gpu=self.use_gpu,
+            cv=self.cv or 5,
         )
+
+        name_to_class = dict(estimator_list)
+        step_name = self._estimator_step_name()
+        for name, row in tuned.iterrows():
+            if row["Status"] != "tuned":
+                continue
+            params = dict(row["Best Params"])
+            model_class = name_to_class[name]
+            try:
+                pipe = Pipeline(steps=[
+                    ("preprocessor", clone(preprocessor)),
+                    (step_name, model_class(**{**self._model_kwargs(model_class), **params})),
+                ])
+                with warnings.catch_warnings():
+                    if self.ignore_warnings:
+                        warnings.simplefilter("ignore")
+                    pipe.fit(X_train, y_train)
+            except Exception as exc:
+                logger.warning("Refitting tuned %s failed: %s", name, exc)
+                continue
+            self.tuned_params_[name] = params
+            self.tuned_models_[name] = pipe
+        return tuned
+
+    def _model_kwargs(self, model_class: Any) -> Dict[str, Any]:
+        """Seed, GPU and verbosity keyword arguments for a model class."""
+        model_kwargs = get_gpu_model_params(model_class, self.use_gpu)
+        if "random_state" in model_class().get_params():
+            model_kwargs["random_state"] = self.random_state
+        # Suppress verbose output for boosting libraries by default
+        module = getattr(model_class, "__module__", "") or ""
+        if "catboost" in module:
+            model_kwargs.setdefault("verbose", 0)
+        if "lightgbm" in module:
+            model_kwargs.setdefault("verbose", -1)
+            model_kwargs.setdefault("verbosity", -1)
+        if "xgboost" in module:
+            model_kwargs.setdefault("verbosity", 0)
+        return model_kwargs
 
     # -- Explainability -------------------------------------------------------
 

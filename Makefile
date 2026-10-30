@@ -72,13 +72,13 @@ docs: ## build Material for MkDocs documentation site
 servedocs: ## serve the docs locally with live reload
 	mkdocs serve
 
-release: dist ## package and upload a release
+release: dist ## manual fallback: upload dist/ to PyPI (normally done by publish.yml)
 	twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
+	python -m build
+	twine check --strict dist/*
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
-	python setup.py install
+	pip install .

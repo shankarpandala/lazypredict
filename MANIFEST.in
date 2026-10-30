@@ -1,13 +1,12 @@
 include AUTHORS.md
+include CITATION.cff
 include CONTRIBUTING.md
 include HISTORY.md
 include LICENSE
 include README.md
-include requirements.txt
-include requirements_dev.txt
+include mkdocs.yml
 
-recursive-include tests *
-recursive-exclude * __pycache__
-recursive-exclude * *.py[co]
-
-recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
+recursive-include docs *.md *.txt
+recursive-include examples *.py
+recursive-include recipe *.yaml
+recursive-include tests *.py

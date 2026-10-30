@@ -1793,11 +1793,13 @@ class LazyForecaster:
         horizon: int,
         model_name: Optional[str] = None,
         X_test: Optional[Union[pd.DataFrame, np.ndarray]] = None,
+        X_history: Optional[Union[pd.DataFrame, np.ndarray]] = None,
     ) -> Union[Dict[str, np.ndarray], np.ndarray]:
         """Produce forecasts from previously fitted models.
 
-        Each model is re-fit on ``y_history`` before predicting so that the
-        most recent observations are used.
+        A copy of each model is re-fit on ``y_history`` before predicting so
+        that the most recent observations are used; the models stored in
+        :attr:`models` are left untouched.
 
         Parameters
         ----------
@@ -1810,7 +1812,11 @@ class LazyForecaster:
             returned.  Otherwise all fitted models are used and a ``dict``
             mapping model names to arrays is returned.
         X_test : array-like or None, optional
-            Exogenous features for the forecast period.
+            Exogenous features for the ``horizon`` forecast steps.
+        X_history : array-like or None, optional
+            Exogenous features aligned with ``y_history``. Required, together
+            with ``X_test``, when the models were fitted with exogenous
+            variables.
 
         Returns
         -------
@@ -1821,25 +1827,40 @@ class LazyForecaster:
         Raises
         ------
         ValueError
-            If no models have been fitted or ``model_name`` is not found.
+            If no models have been fitted, ``model_name`` is not found, or the
+            exogenous inputs are missing or misaligned.
         """
         if len(self.models) == 0:
             raise ValueError(
                 "No models fitted yet. Call fit() first."
             )
-        if model_name is not None:
-            if model_name not in self.models:
-                raise ValueError(
-                    f"Model '{model_name}' not found. "
-                    f"Available: {list(self.models.keys())}"
-                )
-            wrapper = self.models[model_name]
-            wrapper.fit(np.asarray(y_history, dtype=float))
-            return wrapper.predict(horizon, X_test)
+        if model_name is not None and model_name not in self.models:
+            raise ValueError(
+                f"Model '{model_name}' not found. "
+                f"Available: {list(self.models.keys())}"
+            )
+        if not isinstance(horizon, (int, np.integer)) or horizon < 1:
+            raise ValueError(f"horizon must be a positive integer, got {horizon!r}")
+        y_history = self._as_series(y_history, "y_history")
+        if (X_history is None) != (X_test is None):
+            raise ValueError("X_history and X_test must be passed together.")
+        if X_history is None and getattr(self, "_last_X_train", None) is not None:
+            raise ValueError(
+                "The models were fitted with exogenous variables: pass X_history "
+                "(aligned with y_history) and X_test (one row per forecast step)."
+            )
+        if X_history is not None:
+            X_history = self._as_exog(X_history, "X_history", len(y_history), "y_history")
+            X_test = self._as_exog(X_test, "X_test", horizon, "the forecast horizon")
+
+        names = [model_name] if model_name is not None else list(self.models)
         result = {}
-        for name, wrapper in self.models.items():
-            wrapper.fit(np.asarray(y_history, dtype=float))
-            result[name] = wrapper.predict(horizon, X_test)
+        for name in names:
+            wrapper = copy.deepcopy(self.models[name])
+            wrapper.fit(y_history, X_history)
+            result[name] = np.asarray(wrapper.predict(horizon, X_test), dtype=float)
+        if model_name is not None:
+            return result[model_name]
         return result
 
     def save_models(self, path: str) -> None:

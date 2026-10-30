@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://shankarpandala.github.io/lazypredict/
+    about: Usage guides, API reference and examples.

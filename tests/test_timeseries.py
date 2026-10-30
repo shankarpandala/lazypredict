@@ -972,7 +972,7 @@ class TestLazyForecasterRefactoredMethods:
         )
         scores, preds = forecaster.fit(y_train, y_test)
 
-        ens_pred = forecaster.ensemble(method="stacking", y_true=y_test)
+        ens_pred = forecaster.ensemble(method="stacking")
         assert len(ens_pred) == len(y_test)
 
 

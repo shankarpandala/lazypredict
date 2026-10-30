@@ -11,11 +11,11 @@ authors:
   - family-names: Pandala
     given-names: Shankar Rao
     orcid: "https://orcid.org/0009-0006-2234-6944"
-version: 0.3.0
-date-released: "2026-03-15"
+version: 0.4.0
+date-released: "2026-10-30"
 license: MIT
 repository-code: "https://github.com/shankarpandala/lazypredict"
-url: "https://lazypredict.readthedocs.io"
+url: "https://shankarpandala.github.io/lazypredict/"
 keywords:
   - machine-learning
   - automated-machine-learning

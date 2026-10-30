@@ -1,5 +1,6 @@
 """Base class for LazyClassifier and LazyRegressor — shared logic lives here."""
 
+import difflib
 import logging
 import time
 import warnings
@@ -7,6 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
@@ -16,8 +18,15 @@ from lazypredict.config import (
     get_gpu_model_params,
     is_gpu_available,
 )
-from lazypredict.exceptions import ModelFitError  # noqa: F401
-from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
+from lazypredict._timeout import time_limit
+from lazypredict.exceptions import ModelFitError, TimeoutException  # noqa: F401
+from lazypredict.integrations.mlflow import (
+    MLFLOW_AVAILABLE,
+    log_sklearn_model,
+    setup_mlflow,
+    start_run,
+)
+from lazypredict.metrics import metric_name
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
 
 logger = logging.getLogger("lazypredict")
@@ -97,6 +106,68 @@ def _validate_fit_inputs(
         raise ValueError("X_test is empty")
 
 
+def _resolve_estimators(
+    selection: Union[str, List[Any]],
+    available: List[Tuple[str, Any]],
+    kind: str,
+    allow_classes: bool = True,
+) -> List[Tuple[str, Any]]:
+    """Resolve a user's model selection into ``(name, class)`` pairs.
+
+    Parameters
+    ----------
+    selection : "all", str or list
+        ``"all"``, a single model name, or a list mixing model names and
+        estimator classes.
+    available : list of (str, type)
+        Models that can be selected by name.
+    kind : str
+        Singular noun used in error messages, e.g. ``"classifier"``.
+    allow_classes : bool, optional (default=True)
+        Whether estimator classes may be passed besides names.
+
+    Raises
+    ------
+    ValueError
+        If a name is unknown or an element is neither a name nor a class.
+    """
+    if isinstance(selection, str):
+        if selection == "all":
+            return list(available)
+        selection = [selection]
+
+    by_name = dict(available)
+    resolved: Dict[str, Any] = {}
+    unknown: List[str] = []
+    for item in selection:
+        if isinstance(item, str):
+            if item in by_name:
+                resolved[item] = by_name[item]
+            else:
+                unknown.append(item)
+        elif allow_classes and isinstance(item, type):
+            resolved[item.__name__] = item
+        elif allow_classes:
+            raise ValueError(
+                f"Invalid {kind} {item!r}: pass estimator classes or their names, "
+                "not instances."
+            )
+        else:
+            raise ValueError(f"Invalid {kind} {item!r}: pass {kind} names.")
+
+    if unknown:
+        hints = []
+        for name in unknown:
+            close = difflib.get_close_matches(name, list(by_name), n=1)
+            hints.append(f"{name!r} (did you mean {close[0]!r}?)" if close else repr(name))
+        raise ValueError(
+            f"Unknown {kind} name(s): {', '.join(hints)}. Names are case-sensitive; "
+            "models from optional packages (xgboost, lightgbm, catboost, ...) are "
+            f"only available when those packages are installed. Available: {sorted(by_name)}"
+        )
+    return list(resolved.items())
+
+
 def _auto_convert_inputs(*args):
     """Auto-convert PySpark/Dask inputs to pandas/numpy."""
     from lazypredict.distributed import auto_convert_dataframe
@@ -135,6 +206,9 @@ class LazyEstimator:
         _validate_init_params(cv, timeout, categorical_encoder, custom_metric, n_jobs)
         if max_models is not None and (not isinstance(max_models, int) or max_models < 1):
             raise ValueError(f"max_models must be a positive integer, got {max_models!r}")
+        for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
+            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                raise ValueError(f"{option} must be a positive integer, got {value!r}")
         if tune_backend not in ("optuna", "sklearn", "flaml"):
             raise ValueError(f"tune_backend must be 'optuna', 'sklearn', or 'flaml', got {tune_backend!r}")
         self.verbose = verbose
@@ -157,6 +231,9 @@ class LazyEstimator:
         self.tune_timeout = tune_timeout
         self.tune_backend = tune_backend
         self.tuned_scores_: Optional[Any] = None
+        self.tuned_params_: Dict[str, Dict[str, Any]] = {}
+        self.tuned_models_: Dict[str, Pipeline] = {}
+        self._feature_columns: Optional[List[Any]] = None
         self.mlflow_enabled = setup_mlflow()
 
         if self.use_gpu:
@@ -176,6 +253,9 @@ class LazyEstimator:
     def _estimator_step_name(self) -> str:
         raise NotImplementedError
 
+    def _validate_target(self, y_train: Any) -> None:
+        """Reject targets the estimator type cannot handle (optional hook)."""
+
     def _compute_metrics(
         self, pipe: Pipeline, X_test: pd.DataFrame, y_test: Any, X_train: pd.DataFrame
     ) -> Dict[str, Any]:
@@ -184,7 +264,7 @@ class LazyEstimator:
     def _build_scores_dataframe(self, results: List[Dict[str, Any]]) -> pd.DataFrame:
         raise NotImplementedError
 
-    def _cv_scoring(self) -> Optional[Dict[str, str]]:
+    def _cv_scoring(self, y_train: Any, pipe: Pipeline) -> Optional[Dict[str, str]]:
         raise NotImplementedError
 
     def _process_cv_results(
@@ -220,7 +300,15 @@ class LazyEstimator:
             Metrics for every model.
         predictions : pandas.DataFrame
             Only returned when ``self.predictions`` is True.
+            Prediction rows preserve the index of ``X_test``.
         """
+        # Results of a previous fit() must not leak into this one.
+        self.models = {}
+        self.errors = {}
+        self.tuned_scores_ = None
+        self.tuned_params_ = {}
+        self.tuned_models_ = {}
+
         # Auto-convert PySpark/Dask DataFrames
         X_train, X_test, y_train, y_test = _auto_convert_inputs(
             X_train, X_test, y_train, y_test
@@ -243,7 +331,9 @@ class LazyEstimator:
                 )
 
         _validate_fit_inputs(X_train, X_test, y_train, y_test)
+        self._validate_target(y_train)
         X_train, X_test = prepare_dataframes(X_train, X_test)
+        self._feature_columns = list(X_train.columns)
         preprocessor = build_preprocessor(X_train, self.categorical_encoder)
 
         estimator_list = self._get_estimator_list()
@@ -288,45 +378,32 @@ class LazyEstimator:
             for idx, (name, model) in enumerate(
                 progress_bar(estimator_list, disable=(self.verbose == 0))
             ):
-                start = time.time()
+                start = time.perf_counter()
                 mlflow_active_run = None
                 try:
                     if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                        mlflow_active_run = _mlflow.start_run(
-                            run_name=f"{self.__class__.__name__}-{name}"
+                        mlflow_active_run = start_run(
+                            _mlflow, run_name=f"{self.__class__.__name__}-{name}"
                         )
                         _mlflow.log_param("model_name", name)
 
-                    model_kwargs = get_gpu_model_params(model, self.use_gpu)
-                    if "random_state" in model().get_params():
-                        model_kwargs["random_state"] = self.random_state
-                    # Suppress verbose output for boosting libraries by default
-                    module = getattr(model, "__module__", "") or ""
-                    if "catboost" in module:
-                        model_kwargs.setdefault("verbose", 0)
-                    if "lightgbm" in module:
-                        model_kwargs.setdefault("verbose", -1)
-                        model_kwargs.setdefault("verbosity", -1)
-                    if "xgboost" in module:
-                        model_kwargs.setdefault("verbosity", 0)
+                    model_kwargs = self._model_kwargs(model)
                     pipe = Pipeline(
                         steps=[
-                            ("preprocessor", preprocessor),
+                            ("preprocessor", clone(preprocessor)),
                             (step_name, model(**model_kwargs)),
                         ]
                     )
 
-                    pipe.fit(X_train, y_train)
-                    fit_time = time.time() - start
-
+                    with time_limit(self.timeout):
+                        pipe.fit(X_train, y_train)
+                    fit_time = time.perf_counter() - start
                     if self.timeout and fit_time > self.timeout:
-                        logger.info(
-                            "%s exceeded timeout (%.2fs > %ss), skipping...",
-                            name, fit_time, self.timeout,
+                        # The limit could not be enforced preemptively
+                        # (Windows, worker thread, or a long C call).
+                        raise TimeoutException(
+                            f"Training took {fit_time:.2f}s, exceeding timeout={self.timeout}s"
                         )
-                        if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                            _mlflow.end_run()
-                        continue
 
                     self.models[name] = pipe
 
@@ -338,7 +415,7 @@ class LazyEstimator:
                     # Test-set metrics
                     metrics = self._compute_metrics(pipe, X_test, y_test, X_train)
                     metrics["name"] = name
-                    metrics["time"] = time.time() - start
+                    metrics["time"] = time.perf_counter() - start
                     metrics.update(cv_metrics)
 
                     # MLflow logging
@@ -352,13 +429,13 @@ class LazyEstimator:
                             custom_val = self.custom_metric(y_test, y_pred)
                             metrics["custom_metric"] = custom_val
                             if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                                _mlflow.log_metric(self.custom_metric.__name__, custom_val)
+                                _mlflow.log_metric(metric_name(self.custom_metric), custom_val)
                         except Exception as custom_exc:
-                            metrics["custom_metric"] = None
+                            metrics["custom_metric"] = np.nan
                             if not self.ignore_warnings:
                                 logger.warning(
                                     "Custom metric %s failed for %s: %s",
-                                    self.custom_metric.__name__, name, custom_exc,
+                                    metric_name(self.custom_metric), name, custom_exc,
                                 )
 
                     results.append(metrics)
@@ -380,7 +457,9 @@ class LazyEstimator:
                     if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
                         _mlflow.end_run()
                     self.errors[name] = exc
-                    if not self.ignore_warnings:
+                    if isinstance(exc, TimeoutException):
+                        logger.info("%s skipped: %s", name, exc)
+                    elif not self.ignore_warnings:
                         logger.warning("%s model failed to execute: %s", name, exc)
 
                     if self.progress_callback is not None:
@@ -399,7 +478,10 @@ class LazyEstimator:
             self.tuned_scores_ = self._run_tuning(scores, X_train, y_train, preprocessor, estimator_list)
 
         if self.predictions:
-            predictions_df = pd.DataFrame.from_dict(predictions_dict)
+            prediction_index = X_test.index if isinstance(X_test, pd.DataFrame) else None
+            predictions_df = pd.DataFrame(
+                predictions_dict, index=prediction_index if predictions_dict else None
+            )
             return scores, predictions_df
         return scores, pd.DataFrame()
 
@@ -417,7 +499,11 @@ class LazyEstimator:
         preprocessor: Any,
         estimator_list: List,
     ) -> pd.DataFrame:
-        """Run top-k tuning after initial fit."""
+        """Tune the top-k models and refit them with their best parameters.
+
+        Fills ``tuned_params_`` and ``tuned_models_`` (pipelines refitted on
+        the training data) and returns the ``tuned_scores_`` table.
+        """
         from lazypredict.tuning import tune_top_k
 
         scoring = self._tune_scoring()
@@ -425,7 +511,7 @@ class LazyEstimator:
             "Tuning top %d models with %s backend (%d trials each)...",
             self.tune_top_k, self.tune_backend, self.tune_trials,
         )
-        return tune_top_k(
+        tuned = tune_top_k(
             scores_df=scores,
             models=self.models,
             estimator_list=estimator_list,
@@ -440,7 +526,47 @@ class LazyEstimator:
             n_jobs=self.n_jobs,
             backend=self.tune_backend,
             use_gpu=self.use_gpu,
+            cv=self.cv or 5,
         )
+
+        name_to_class = dict(estimator_list)
+        step_name = self._estimator_step_name()
+        for name, row in tuned.iterrows():
+            if row["Status"] != "tuned":
+                continue
+            params = dict(row["Best Params"])
+            model_class = name_to_class[name]
+            try:
+                pipe = Pipeline(steps=[
+                    ("preprocessor", clone(preprocessor)),
+                    (step_name, model_class(**{**self._model_kwargs(model_class), **params})),
+                ])
+                with warnings.catch_warnings():
+                    if self.ignore_warnings:
+                        warnings.simplefilter("ignore")
+                    pipe.fit(X_train, y_train)
+            except Exception as exc:
+                logger.warning("Refitting tuned %s failed: %s", name, exc)
+                continue
+            self.tuned_params_[name] = params
+            self.tuned_models_[name] = pipe
+        return tuned
+
+    def _model_kwargs(self, model_class: Any) -> Dict[str, Any]:
+        """Seed, GPU and verbosity keyword arguments for a model class."""
+        model_kwargs = get_gpu_model_params(model_class, self.use_gpu)
+        if "random_state" in model_class().get_params():
+            model_kwargs["random_state"] = self.random_state
+        # Suppress verbose output for boosting libraries by default
+        module = getattr(model_class, "__module__", "") or ""
+        if "catboost" in module:
+            model_kwargs.setdefault("verbose", 0)
+        if "lightgbm" in module:
+            model_kwargs.setdefault("verbose", -1)
+            model_kwargs.setdefault("verbosity", -1)
+        if "xgboost" in module:
+            model_kwargs.setdefault("verbosity", 0)
+        return model_kwargs
 
     # -- Explainability -------------------------------------------------------
 
@@ -477,10 +603,7 @@ class LazyEstimator:
             raise ValueError("No models fitted. Call fit() first.")
 
         X_test, y_test = _auto_convert_inputs(X_test, y_test)
-
-        if isinstance(X_test, np.ndarray):
-            cols = [f"feature_{i}" for i in range(X_test.shape[1])]
-            X_test = pd.DataFrame(X_test, columns=cols)
+        X_test = self._to_frame(X_test)
 
         if method == "permutation":
             from lazypredict.explainability import explain_permutation
@@ -510,20 +633,22 @@ class LazyEstimator:
         """Run cross-validation and return metric dict."""
         from sklearn.model_selection import cross_validate
 
-        scoring = self._cv_scoring()
+        scoring = self._cv_scoring(y_train, pipe)
         if scoring is None:
             return {}
         try:
+            # error_score=nan: a scorer that cannot be computed for this model
+            # (e.g. ROC AUC without predict_proba) only blanks its own column.
             cv_results = cross_validate(
                 pipe, X_train, y_train,
                 cv=self.cv, scoring=scoring,
-                n_jobs=self.n_jobs, error_score="raise",
+                n_jobs=self.n_jobs, error_score=np.nan,
             )
             return self._process_cv_results(cv_results, X_train)
         except Exception as cv_exc:
             if not self.ignore_warnings:
                 logger.warning("Cross-validation failed for %s: %s", name, cv_exc)
-            return {key: None for key in self._cv_column_names()}
+            return {key: np.nan for key in self._cv_column_names()}
 
     def _cv_column_names(self) -> List[str]:
         """Return the CV column names for null-filling on failure."""
@@ -540,19 +665,29 @@ class LazyEstimator:
         if _mlflow is None:
             return
         for key, val in metrics.items():
-            if isinstance(val, (int, float)) and val is not None:
+            if isinstance(val, (int, float, np.number)) and np.isfinite(val):
                 _mlflow.log_metric(key, val)
         _mlflow.log_metric("training_time", metrics.get("time", 0))
         try:
             signature = _mlflow.models.infer_signature(X_train, pipe.predict(X_train))
-            _mlflow.sklearn.log_model(
-                pipe, f"{name}_model",
-                signature=signature,
-                registered_model_name=f"lazy_{self._estimator_step_name()}_{name}",
-            )
+            log_sklearn_model(_mlflow, pipe, f"{name}_model", signature=signature)
         except Exception as mlflow_exc:
             if not self.ignore_warnings:
                 logger.warning("Failed to log model %s to MLflow: %s", name, mlflow_exc)
+
+    def _to_frame(self, X: Any) -> pd.DataFrame:
+        """Convert array-like input to a DataFrame with the training column names."""
+        if isinstance(X, pd.DataFrame):
+            return X
+        X = np.asarray(X)
+        columns = self._feature_columns
+        if columns is None and self.models:
+            # Models loaded with load_models(): ask the fitted pipeline.
+            first = next(iter(self.models.values()))
+            columns = getattr(first, "feature_names_in_", None)
+        if columns is None or len(columns) != X.shape[1]:
+            columns = [f"feature_{i}" for i in range(X.shape[1])]
+        return pd.DataFrame(X, columns=columns)
 
     def provide_models(
         self,
@@ -591,9 +726,7 @@ class LazyEstimator:
         if len(self.models) == 0:
             raise ValueError("No models have been fitted yet. Please call fit() first.")
 
-        if isinstance(X_test, np.ndarray):
-            cols = [f"feature_{i}" for i in range(X_test.shape[1])]
-            X_test = pd.DataFrame(X_test, columns=cols)
+        X_test = self._to_frame(X_test)
 
         if model_name is not None:
             if model_name not in self.models:
@@ -601,7 +734,7 @@ class LazyEstimator:
                     f"Model '{model_name}' not found. "
                     f"Available models: {list(self.models.keys())}"
                 )
-            return self.models[model_name].predict(X_test)
+            return np.asarray(self.models[model_name].predict(X_test))
 
         return {name: model.predict(X_test) for name, model in self.models.items()}
 

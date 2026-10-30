@@ -364,15 +364,19 @@ For improved performance on Intel CPUs, install Intel Extension for Scikit-learn
 pip install scikit-learn-intelex
 ```
 
-Lazy Predict will automatically detect and use it for acceleration:
+Patch scikit-learn **before** importing lazypredict, so that the accelerated
+estimators are the ones lazypredict collects:
 
 ```python
-# No code changes needed - acceleration is automatic
-clf = LazyClassifier(verbose=0)
-models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+from sklearnex import patch_sklearn
+patch_sklearn()
 
-# You'll see "Intel(R) Extension for Scikit-learn enabled" in verbose output
+from lazypredict.Supervised import LazyClassifier
 ```
+
+!!! note "Changed in 0.4.0"
+    Earlier versions called `patch_sklearn()` automatically on `import lazypredict`,
+    which changed scikit-learn for the whole Python process. The patch is now opt-in.
 
 ## Time Series Forecasting
 

@@ -89,7 +89,7 @@ local development.
     pytest
     ```
 
-    You can also run the full test matrix across Python versions with tox:
+    You can also run the test suite on every supported Python version with tox:
 
     ```shell
     pip install tox
@@ -114,7 +114,7 @@ Before you submit a pull request, check that it meets these guidelines:
 2.  If the pull request adds functionality, the docs should be updated.
     Put your new functionality into a function with a docstring, and add
     the feature to the list in README.md.
-3.  The pull request should work for Python 3.9 through 3.14. GitHub
+3.  The pull request should work for Python 3.10 through 3.14. GitHub
     Actions CI will automatically run the tests for all supported
     Python versions.
 
@@ -132,15 +132,42 @@ To run tests with coverage:
 pytest --cov=lazypredict --cov-report=term-missing
 ```
 
-# Deploying
+# Releasing
 
-A reminder for the maintainers on how to deploy. Make sure all your
-changes are committed (including an entry in HISTORY.md). Then run:
+Releases are cut from `dev` and published to PyPI by
+`.github/workflows/publish.yml`, which runs when a GitHub release is
+**published** (pushing a tag on its own does not publish anything).
 
-```shell
-bump2version patch  # possible: major / minor / patch
-git push
-git push --tags
-```
+1.  Bump the version. `lazypredict/__init__.py` is the single source of
+    truth (`pyproject.toml` reads it); `recipe/meta.yaml`, `CITATION.cff`
+    and `.bumpversion.cfg` must carry the same string, which
+    `tests/test_version.py` enforces:
 
-GitHub Actions will then build and deploy to PyPI if tests pass.
+    ```shell
+    pip install bump-my-version
+    bump-my-version bump minor        # or: patch / major
+    ```
+
+    For a pre-release, pass the exact version instead, e.g.
+    `bump-my-version bump --new-version 0.5.0a1`; `bump-my-version bump pre_n`
+    then goes to `0.5.0a2`, and `--new-version 0.5.0` finalizes it.
+
+2.  Move the "Unreleased" notes in `HISTORY.md` under the new version and
+    update `date-released` in `CITATION.cff`.
+
+3.  Open a pull request into `dev`, wait for CI to pass, and merge it.
+
+4.  On GitHub, draft a new release **on the merged commit** with tag
+    `v<version>` (for example `v0.4.0`; tick "Set as a pre-release" for
+    `a`/`b`/`rc` versions) and publish it.
+
+The publish workflow first checks that the tag matches
+`lazypredict.__version__` and fails before building anything if it does
+not, then runs the tests, builds and smoke-tests the sdist and wheel,
+uploads them to PyPI via Trusted Publishing and attaches them to the
+GitHub release. If an upload fails for a transient reason, re-run it from
+the Actions tab (`Publish to PyPI` > `Run workflow`, entering the tag).
+
+The conda-forge feedstock picks up new PyPI releases automatically through
+the conda-forge autotick bot; `recipe/meta.yaml` is only used by CI to check
+that the package still builds with conda.

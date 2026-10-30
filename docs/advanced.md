@@ -29,7 +29,20 @@ clf = LazyClassifier(
     tune_backend="optuna",  # "optuna", "sklearn", or "flaml"
 )
 models, predictions = clf.fit(X_train, X_test, y_train, y_test)
+
+# One row per tuned model: "Best Score" (mean cross-validated score on the
+# training data, higher is better), "Best Params" (a dict) and "Status"
+print(clf.tuned_scores_)
+
+clf.tuned_params_["RandomForestClassifier"]   # best hyperparameters
+clf.tuned_models_["RandomForestClassifier"]   # pipeline refitted with them
 ```
+
+Tuning is reproducible for a given `random_state`, uses `cv` folds (5 when `cv`
+is not set), and a model that cannot be tuned is reported in the `Status`
+column instead of aborting the others. Models without a search space (for
+example `LassoCV`, which tunes its own regularisation) are listed as
+`"no search space"`.
 
 ### Time Series
 
@@ -45,30 +58,36 @@ fcst = LazyForecaster(
 )
 scores, predictions = fcst.fit(y_train, y_test)
 
-# Access tuning results
+# "Best RMSE" (mean temporal-CV error, lower is better), "Best Params", "Status"
 print(fcst.tuned_scores_)
+fcst.tuned_models_["Ridge_TS"]   # forecaster refitted with the best parameters
 ```
 
 ### Using the Tuning API Directly
 
 ```python
-from lazypredict.tuning import tune_model_optuna, tune_model_sklearn
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.pipeline import Pipeline
 
-# Build a fitted pipeline first
-pipeline = Pipeline([("model", RandomForestClassifier())])
-pipeline.fit(X_train, y_train)
+from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
+from lazypredict.tuning import tune_supervised_optuna
 
-# Tune with Optuna
-best_params = tune_model_optuna(
-    model_class=RandomForestClassifier,
-    X_train=X_train,
-    y_train=y_train,
+X_train_df, X_test_df = prepare_dataframes(X_train, X_test)
+preprocessor = build_preprocessor(X_train_df, categorical_encoder="onehot")
+
+best_params, best_score = tune_supervised_optuna(
+    "RandomForestClassifier",
+    RandomForestClassifier,
+    X_train_df,
+    y_train,
+    preprocessor,
     scoring="balanced_accuracy",
+    cv=5,
     n_trials=100,
 )
 ```
+
+`tune_supervised_sklearn` (RandomizedSearchCV) and `tune_supervised_flaml`
+take the same leading arguments.
 
 ---
 
@@ -87,38 +106,27 @@ pip install lazypredict[interpret]  # InterpretML (EBM)
 
 ```python
 from lazypredict.Supervised import LazyRegressor
-from lazypredict.explainability import explain_permutation
 
 reg = LazyRegressor(verbose=0, ignore_warnings=True)
 models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 
-# Get fitted pipeline objects
-model_dict = reg.provide_models(X_train, X_test, y_train, y_test)
-
-# Compute permutation importance for all models
-importance_df = explain_permutation(
-    models=model_dict,
-    X_test=X_test,
-    y_test=y_test,
-    n_repeats=10,
-    random_state=42,
-)
+# Features as rows, models as columns
+importance_df = reg.explain(X_test, y_test, method="permutation", n_repeats=10)
 print(importance_df)
 ```
 
 ### SHAP Values
 
 ```python
-from lazypredict.explainability import explain_shap
-
-# Get SHAP values for a single model
-shap_df = explain_shap(
-    model=model_dict["RandomForestRegressor"],
-    X_test=X_test,
-    feature_names=feature_names,
-)
-print(shap_df)
+# {model name: SHAP values for the transformed features}
+shap_values = reg.explain(X_test, y_test, method="shap", max_samples=100)
+shap_values["RandomForestRegressor"].shape   # (n_samples, n_features)
 ```
+
+Binary classifiers return the values of the positive class; multiclass
+classifiers return an array of shape `(n_samples, n_features, n_classes)`.
+The lower-level `lazypredict.explainability.explain_shap(models, X_test,
+step_name="regressor")` takes the dict of fitted pipelines (`reg.models`).
 
 ### InterpretML (EBM)
 
@@ -196,12 +204,22 @@ scores, pred_df = fcst.fit(y_train, y_test)
 # Simple average
 avg_pred = fcst.ensemble(method="simple_average")
 
-# Inverse-error weighted (lower RMSE = higher weight)
-weighted_pred = fcst.ensemble(method="weighted_average", y_true=y_test)
+# Inverse-error weighted (lower validation RMSE = higher weight)
+weighted_pred = fcst.ensemble(method="weighted_average")
 
-# Stacking (linear regression meta-model)
-stacked_pred = fcst.ensemble(method="stacking", y_true=y_test)
+# Stacking (Ridge meta-model)
+stacked_pred = fcst.ensemble(method="stacking")
 ```
+
+Weights and the stacking meta-model are learned on a validation window held
+out from the end of the **training** series (each model is refitted on the
+rest of `y_train`), never on `y_test`, so the ensemble can be evaluated on
+`y_test` like any single model.
+
+!!! note "Changed in 0.4.0"
+    `ensemble()` no longer needs `y_true`; passing it emits a `FutureWarning`.
+    Earlier versions fitted the stacking model on `y_test`, which leaked the
+    test values into the forecast being evaluated.
 
 ### Direct Ensemble Functions
 
@@ -225,8 +243,10 @@ avg = ensemble_simple_average(predictions)
 scores_dict = {"Holt": 3.2, "Ridge_TS": 1.8, "LSTM_TS": 2.5}
 weighted = ensemble_weighted_average(predictions, scores=scores_dict)
 
-# Stacking
-stacked = ensemble_stacking(predictions, y_true=y_test)
+# Stacking: fit the meta-model on the same models' forecasts of a
+# validation period (val_predictions vs. y_val), then apply it to the
+# forecasts being combined
+stacked = ensemble_stacking(val_predictions, y_true=y_val, pred_test=predictions)
 ```
 
 ---
@@ -270,21 +290,29 @@ y_pred = multi_output_forecast(
     horizon=20,
     n_lags=10,
 )
+
+# With exogenous variables, also pass X_exog (training period) and
+# X_future (forecast period).
 ```
+
+Both raise a `ValueError` when `y_train` is too short to train for the
+requested horizon.
 
 ---
 
 ## Time Series Diagnostics
 
-Run stationarity and statistical tests on your series.
+Check whether a model's residuals look like white noise.
 
 ```python
-from lazypredict.ts_diagnostics import run_diagnostics
+from lazypredict.ts_diagnostics import residual_diagnostics
 
-report = run_diagnostics(y_train, seasonal_period=12)
-print(report)
-# Returns a dict with: adf_statistic, adf_pvalue, kpss_statistic, kpss_pvalue,
-# ljung_box_statistic, ljung_box_pvalue, is_stationary, has_seasonality
+report = residual_diagnostics(y_test, y_pred, seasonal_period=12)
+# dict with: residuals, mean, std, ljung_box_stat, ljung_box_pvalue,
+# jarque_bera_stat, jarque_bera_pvalue, acf_values, is_white_noise, is_normal
+
+# Or for every fitted forecaster at once:
+diagnostics_df = fcst.diagnose()
 ```
 
 ---
@@ -317,9 +345,9 @@ pandas_df = auto_convert_dataframe(spark_df, name="X_train")
 ### Register Dask Joblib Backend
 
 ```python
-from lazypredict.distributed import register_dask_joblib
+from lazypredict.distributed import register_dask_backend
 
-register_dask_joblib()  # must have a Dask cluster running
+register_dask_backend()  # returns False if dask.distributed is unavailable
 ```
 
 ---
@@ -348,8 +376,8 @@ test_df = spark.read.csv("test.csv", header=True, inferSchema=True)
 
 feature_cols = [c for c in train_df.columns if c != "label"]
 
-clf = LazySparkClassifier(verbose=1, ignore_warnings=True)
-scores = clf.fit(train_df, test_df, feature_cols=feature_cols, label_col="label")
+clf = LazySparkClassifier(verbose=1, ignore_warnings=True, label_col="label")
+scores = clf.fit(train_df, test_df, feature_cols=feature_cols)
 print(scores)
 ```
 
@@ -368,19 +396,22 @@ DecisionTreeRegressor, GeneralizedLinearRegression
 Tune hyperparameters of time series forecasting models directly:
 
 ```python
-from lazypredict.ts_tuning import tune_forecaster_optuna
-from lazypredict.TimeSeriesForecasting import MLForecaster
 from sklearn.linear_model import Ridge
 
-# Tune a specific forecaster wrapper
+from lazypredict.TimeSeriesForecasting import MLForecaster
+from lazypredict.ts_tuning import tune_forecaster_optuna
+
+# Tune a specific forecaster wrapper with expanding-window CV on y_train
 best_params, best_score = tune_forecaster_optuna(
-    forecaster_class=MLForecaster,
-    y_train=y_train,
-    y_val=y_test,
-    estimator_class=Ridge,
+    "Ridge_TS",
+    MLForecaster(Ridge, "Ridge_TS"),
+    y_train,
+    X_train=None,
+    seasonal_period=12,
+    tune_metric="RMSE",
+    cv=3,
     n_trials=50,
     timeout=60,
-    metric="RMSE",
 )
 print(f"Best params: {best_params}, Best RMSE: {best_score:.4f}")
 ```

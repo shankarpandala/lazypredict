@@ -91,6 +91,8 @@ class LazySparkClassifier:
     max_models : int or None, optional (default=None)
         Maximum number of models to train.
 
+    Notes
+    -----
     Requires PySpark (``pip install lazypredict[spark]``).
     """
 
@@ -220,6 +222,8 @@ class LazySparkRegressor:
     max_models : int or None, optional (default=None)
         Maximum number of models to train.
 
+    Notes
+    -----
     Requires PySpark (``pip install lazypredict[spark]``).
     """
 

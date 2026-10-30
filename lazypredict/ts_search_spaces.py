@@ -38,8 +38,9 @@ def _holtwinters_space(trial) -> dict:
 
 
 def _theta_space(trial) -> dict:
+    # statsmodels' ThetaModel requires theta >= 1
     return {
-        "theta": trial.suggest_float("theta", 0.5, 5.0),
+        "theta": trial.suggest_float("theta", 1.0, 5.0),
     }
 
 

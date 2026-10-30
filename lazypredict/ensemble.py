@@ -72,28 +72,36 @@ def ensemble_stacking(
 ) -> np.ndarray:
     """Stack predictions using a Ridge meta-learner.
 
-    Fits a Ridge regression on the training predictions (predictions)
-    to learn optimal combination weights, then applies to test predictions.
+    Fits a Ridge regression that maps the models' *validation* predictions
+    to the true validation values, then applies it to their test
+    predictions.
 
     Parameters
     ----------
     predictions : dict
-        Mapping of model name to in-sample (train fold) predictions.
+        Mapping of model name to out-of-sample predictions for a validation
+        period (not the period being evaluated).
     y_true : np.ndarray
-        True values corresponding to the predictions.
-    pred_test : dict or None
-        Mapping of model name to test predictions. If None, returns
-        the in-sample stacked predictions.
+        True values for that validation period.
+    pred_test : dict
+        Mapping of model name to the predictions to combine. Required:
+        returning the meta-model's fit on the data it was trained on would
+        overstate its accuracy.
 
     Returns
     -------
     np.ndarray
-        Stacked predictions.
+        Stacked predictions for ``pred_test``.
     """
     from sklearn.linear_model import Ridge
 
     if not predictions:
         raise ValueError("No predictions to ensemble.")
+    if pred_test is None:
+        raise ValueError(
+            "pred_test is required: fit the meta-model on validation predictions "
+            "and apply it to separate test predictions."
+        )
 
     names = sorted(predictions.keys())
     X_stack = np.column_stack([predictions[n] for n in names])
@@ -101,8 +109,5 @@ def ensemble_stacking(
     meta = Ridge(alpha=1.0)
     meta.fit(X_stack, y_true)
 
-    if pred_test is not None:
-        X_test_stack = np.column_stack([pred_test[n] for n in names])
-        return meta.predict(X_test_stack)
-
-    return meta.predict(X_stack)
+    X_test_stack = np.column_stack([pred_test[n] for n in names])
+    return np.asarray(meta.predict(X_test_stack))

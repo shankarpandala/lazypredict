@@ -2,6 +2,116 @@
 title: History
 ---
 
+# 0.4.0 (2026-10-30)
+
+The v0.3.1 GitHub release was created on a commit still versioned 0.3.0, so it
+never reached PyPI. Its changes (documentation on Material for MkDocs and GitHub
+Pages, the JOSS paper files, the model-name filtering fix and Python 3.14
+support) are released as part of 0.4.0.
+
+## Breaking changes
+
+-   Python 3.10 or newer is required (3.9 is end-of-life). The minimum versions
+    are now scikit-learn 1.2, pandas 1.5, NumPy 1.23 and click 7.0
+-   `import lazypredict` no longer calls `sklearnex.patch_sklearn()`. To use
+    scikit-learn-intelex, call `patch_sklearn()` yourself before importing
+    lazypredict. `INTEL_EXTENSION_AVAILABLE` only reports whether it is
+    installed
+-   Unknown names in `classifiers=`, `regressors=` and `forecasters=` raise a
+    `ValueError` with a close-match suggestion instead of being ignored, and a
+    single string selects exactly that model
+-   `LazyClassifier` raises a `ValueError` for continuous targets
+-   `LazyForecaster.ensemble()` no longer needs `y_true` (passing it emits a
+    `FutureWarning`); `ensemble_stacking()` requires `pred_test`
+-   `tuned_scores_`: "Best Params" holds dicts and a "Status" column reports
+    each model's outcome; the forecaster table's always-NaN "Best Score" column
+    is gone (its score column is "Best <tune_metric>")
+-   The MLflow integration no longer calls `mlflow.autolog()` or registers a
+    model version for every model; each model is logged in a nested run
+-   Metrics that cannot be computed are `NaN` instead of `None`, so score
+    columns stay numeric
+
+## Release and packaging
+
+-   The publish workflow checks that the release tag matches
+    `lazypredict.__version__`, runs the tests, smoke-tests the built wheel, can
+    be re-run for an existing tag and attaches the files to the GitHub release.
+    The release-please and auto-release workflows, which could not trigger it,
+    are removed (#577)
+-   The conda recipe builds again with conda 26.3.1 and later (#578)
+-   PEP 639 license metadata and a single-sourced version; new `encoders`,
+    `test` and `dev` extras replace `requirements*.txt`; the `foundation` extra
+    installs `timesfm[torch]` (#581)
+-   CI tests the installed package on Python 3.10 and 3.14 for every pull
+    request, the OS × Python 3.10–3.14 matrix on dev and weekly, and the
+    declared dependency floors; mypy is blocking (#580)
+-   The docs preview no longer fails for pull requests from forks, and the API
+    reference renders NumPy-style parameter sections (#579)
+
+## Fixes: LazyClassifier and LazyRegressor
+
+-   pandas `category` columns are encoded instead of silently dropped, and
+    `string` columns no longer rely on deprecated pandas behaviour (#582)
+-   Cross-validation metrics for classifiers without `predict_proba` (#584), and
+    multiclass ROC AUC when the test split lacks a class (#585)
+-   `fit()` starts from a clean state, and every pipeline gets its own
+    preprocessor (#586)
+-   Prediction DataFrames keep the index of `X_test` (#588, contributed by
+    AryanRG in #575)
+-   Mixed NumPy/DataFrame inputs to `fit()`, `predict()` and `explain()` (#589)
+-   `timeout` interrupts slow models (on POSIX, in the main thread) and lists
+    them in `errors` (#590)
+-   The CLI exits with status 2 when it fails (#592)
+-   `tune=True` no longer crashes `fit()`; the scikit-learn and FLAML backends
+    work for every model with a search space; tuning is seeded, uses `cv`, and
+    exposes `tuned_params_` and `tuned_models_` (#604, #605)
+-   Adjusted R² is `NaN` instead of dividing by zero or inverting the ranking on
+    small test sets; regressors are ranked by adjusted R², then R² (#606)
+-   `explain(method="shap")` returns SHAP values (#607)
+-   MLflow logging works inside an active run (#608)
+
+## Fixes: LazyForecaster
+
+-   Tuned hyperparameters are applied to the refitted models, and tuning is
+    reproducible (#594)
+-   The direct and multi-output horizon strategies forecast the right steps;
+    `horizon_strategy` and `n_jobs` are honoured (#595)
+-   AutoARIMA uses exogenous variables and the seasonal period (#596)
+-   Rolling-std features are computed the same way for training and
+    forecasting (#597)
+-   Misaligned exogenous data and NaN targets raise errors (#598)
+-   `predict()` accepts exogenous variables (`X_history`, `X_test`) and no
+    longer overwrites the fitted models (#599)
+-   Seasonal period detection is robust to trends and noise (#600)
+-   Weighted-average and stacking ensembles learn from a validation window of
+    the training data instead of the test data (#601)
+-   Forecasters are selected by exact name, `fit()` starts from a clean state,
+    and `timeout` applies to forecasters (#602)
+-   One-column DataFrame targets, `functools.partial` custom metrics and
+    case-insensitive `sort_by` work; options are validated (#603)
+
+## Documentation
+
+-   Fixed examples and API references, regenerated the README result tables
+    and added the missing 0.3.0 changelog entries (#609)
+-   YAML issue forms and a pull request template; removed stale planning
+    documents (#610)
+
+# 0.3.0 (2026-03-15)
+
+-   First stable release of the 0.3 series: time series forecasting, hyperparameter
+    tuning, explainability, GPU support and the integrations listed in the
+    pre-release notes below
+-   Import `torch` and `timesfm` lazily to avoid OpenMP deadlocks with scikit-learn
+
+# 0.3.0a5 (2026-03-14)
+
+-   Added time series visualization (`LazyForecaster.plot_results()`,
+    `lazypredict.ts_visualization`) and residual diagnostics
+    (`LazyForecaster.diagnose()`, `lazypredict.ts_diagnostics`)
+-   Forecaster tuning refits the tuned models (`tuned_models_`)
+-   Raised test coverage to 67%; fixed flake8 and CI failures
+
 # 0.3.0a4 (2026-03-10)
 
 -   Implemented explainability: `explain()` method with permutation importance and SHAP

@@ -32,6 +32,15 @@ XGBoost, LightGBM, and CatBoost (all support GPU acceleration):
 pip install lazypredict[boost]
 ```
 
+### Categorical encoders
+
+Target and binary encoding (`categorical_encoder="target"` / `"binary"`) via
+`category-encoders`:
+
+```console
+pip install lazypredict[encoders]
+```
+
 ### Time series forecasting
 
 Statistical models (Holt-Winters, SARIMAX, Theta):
@@ -46,7 +55,7 @@ Add deep learning models (LSTM, GRU via PyTorch):
 pip install lazypredict[timeseries,deeplearning]
 ```
 
-Add Google TimesFM foundation model (Python 3.10–3.11 only):
+Add the Google TimesFM foundation model (installs `timesfm[torch]`):
 
 ```console
 pip install lazypredict[timeseries,foundation]
@@ -146,7 +155,19 @@ For improved performance on Intel CPUs:
 pip install scikit-learn-intelex
 ```
 
-Lazy Predict detects and uses it automatically — no code changes needed.
+Patch scikit-learn **before** importing lazypredict, so that the accelerated
+estimators are the ones lazypredict collects:
+
+```python
+from sklearnex import patch_sklearn
+patch_sklearn()
+
+from lazypredict.Supervised import LazyClassifier
+```
+
+!!! note "Changed in 0.4.0"
+    Earlier versions called `patch_sklearn()` automatically on `import lazypredict`,
+    which changed scikit-learn for the whole Python process. The patch is now opt-in.
 
 ---
 

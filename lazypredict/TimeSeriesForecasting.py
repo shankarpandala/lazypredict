@@ -40,9 +40,11 @@ from lazypredict.config import (
     get_gpu_model_params,
     is_gpu_available,
 )
-from lazypredict.exceptions import InsufficientDataError
-from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow
-from lazypredict.metrics import compute_forecast_metrics
+from lazypredict._base import _resolve_estimators
+from lazypredict._timeout import time_limit
+from lazypredict.exceptions import InsufficientDataError, TimeoutException
+from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow, start_run
+from lazypredict.metrics import compute_forecast_metrics, metric_name
 from lazypredict.ts_preprocessing import (
     create_lag_features,
     detect_seasonal_period,
@@ -235,6 +237,8 @@ class SimpleExpSmoothingForecaster(ForecasterWrapper):
 
     Uses ``statsmodels.tsa.holtwinters.SimpleExpSmoothing`` with optimised
     smoothing parameters.  Suitable for series without trend or seasonality.
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
@@ -257,18 +261,28 @@ class HoltForecaster(ForecasterWrapper):
     """Holt's linear trend method (double exponential smoothing).
 
     Captures level and trend components but ignores seasonality.
+
+    Notes
+    -----
     Requires ``statsmodels``.
     """
+
+    def __init__(self):
+        # Tuned settings: smoothing_level, smoothing_trend, damped_trend.
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
+        params = dict(getattr(self, "params", {}))
+        damped_trend = params.pop("damped_trend", False)
         self._model = ExponentialSmoothing(
             y_train,
             trend="add",
+            damped_trend=damped_trend,
             seasonal=None,
             initialization_method="estimated",
-        ).fit(optimized=True)
+        ).fit(optimized=True, **params)
 
     def predict(self, horizon, X_test=None):
         return np.asarray(self._model.forecast(horizon), dtype=float)
@@ -291,6 +305,8 @@ class HoltWintersForecaster(ForecasterWrapper):
     label_suffix : str, optional (default="")
         Suffix appended to the model name for display.
 
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
@@ -303,6 +319,8 @@ class HoltWintersForecaster(ForecasterWrapper):
         self.seasonal = seasonal
         self.seasonal_periods = seasonal_periods
         self._label_suffix = label_suffix
+        # Tuned settings: smoothing_level/trend/seasonal, damped_trend.
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.holtwinters import ExponentialSmoothing
@@ -315,13 +333,16 @@ class HoltWintersForecaster(ForecasterWrapper):
                 f"Need at least 2 * seasonal_periods ({2 * sp}) observations, "
                 f"got {len(y_train)}"
             )
+        params = dict(getattr(self, "params", {}))
+        damped_trend = params.pop("damped_trend", False)
         self._model = ExponentialSmoothing(
             y_train,
             trend="add",
+            damped_trend=damped_trend,
             seasonal=self.seasonal,
             seasonal_periods=sp,
             initialization_method="estimated",
-        ).fit(optimized=True)
+        ).fit(optimized=True, **params)
 
     def predict(self, horizon, X_test=None):
         return np.asarray(self._model.forecast(horizon), dtype=float)
@@ -343,11 +364,15 @@ class ThetaForecaster(ForecasterWrapper):
         Seasonal period passed to ``ThetaModel``.  ``None`` defaults to 1
         (no seasonality).
 
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
     def __init__(self, seasonal_period: Optional[int] = None):
         self.seasonal_period = seasonal_period
+        # Tuned settings: theta (>= 1, statsmodels' default is 2).
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.forecasting.theta import ThetaModel
@@ -356,7 +381,8 @@ class ThetaForecaster(ForecasterWrapper):
         self._model = ThetaModel(y_train, period=period).fit()
 
     def predict(self, horizon, X_test=None):
-        return np.asarray(self._model.forecast(horizon), dtype=float)
+        theta = getattr(self, "params", {}).get("theta", 2.0)
+        return np.asarray(self._model.forecast(horizon, theta=theta), dtype=float)
 
     @property
     def name(self):
@@ -366,7 +392,7 @@ class ThetaForecaster(ForecasterWrapper):
 class SARIMAXForecaster(ForecasterWrapper):
     """Seasonal ARIMA with eXogenous regressors (SARIMAX).
 
-    Uses a default order of ``(1,1,1)`` with seasonal order
+    Uses order ``(1,1,1)`` (or a tuned ``order``) with seasonal order
     ``(1,1,1,sp)`` when a seasonal period is detected.  Supports
     exogenous features via ``X_train`` / ``X_test``.
 
@@ -375,11 +401,15 @@ class SARIMAXForecaster(ForecasterWrapper):
     seasonal_period : int or None, optional (default=None)
         Seasonal period.  When <= 1 the seasonal component is disabled.
 
+    Notes
+    -----
     Requires ``statsmodels``.
     """
 
     def __init__(self, seasonal_period: Optional[int] = None):
         self.seasonal_period = seasonal_period
+        # Tuned settings: order.
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -389,7 +419,7 @@ class SARIMAXForecaster(ForecasterWrapper):
         self._model = SARIMAX(
             y_train,
             exog=X_train,
-            order=(1, 1, 1),
+            order=tuple(getattr(self, "params", {}).get("order", (1, 1, 1))),
             seasonal_order=seasonal_order,
             enforce_stationarity=False,
             enforce_invertibility=False,
@@ -416,23 +446,46 @@ class AutoARIMAForecaster(ForecasterWrapper):
     Performs a stepwise search over ARIMA orders to minimise information
     criteria.  Supports exogenous features.
 
+    Parameters
+    ----------
+    seasonal_period : int or None, optional (default=None)
+        Seasonal period passed to ``auto_arima`` as ``m``. Seasonal models
+        are only searched for periods between 2 and
+        ``MAX_SEASONAL_PERIOD``; pmdarima's seasonal search becomes
+        impractically slow for longer periods.
+
+    Notes
+    -----
     Requires ``pmdarima``.
     """
+
+    MAX_SEASONAL_PERIOD = 24
+
+    def __init__(self, seasonal_period: Optional[int] = None):
+        self.seasonal_period = seasonal_period
+        # Extra ``auto_arima`` keyword arguments (e.g. set by tuning).
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from pmdarima import auto_arima
 
-        self._model = auto_arima(
-            y_train,
-            exogenous=X_train,
-            suppress_warnings=True,
-            error_action="ignore",
-            stepwise=True,
-        )
+        m = self.seasonal_period or 1
+        seasonal = 2 <= m <= self.MAX_SEASONAL_PERIOD
+        kwargs: Dict[str, Any] = {
+            "seasonal": seasonal,
+            "m": m if seasonal else 1,
+            "suppress_warnings": True,
+            "error_action": "ignore",
+            "stepwise": True,
+        }
+        kwargs.update(self.params)
+        # pmdarima >= 2 takes exogenous regressors as ``X`` (``exogenous``
+        # was silently ignored).
+        self._model = auto_arima(y_train, X=X_train, **kwargs)
 
     def predict(self, horizon, X_test=None):
         return np.asarray(
-            self._model.predict(n_periods=horizon, exogenous=X_test), dtype=float
+            self._model.predict(n_periods=horizon, X=X_test), dtype=float
         )
 
     @property
@@ -465,6 +518,13 @@ class MLForecaster(ForecasterWrapper):
         Window sizes for rolling mean/std features.
     random_state : int, optional (default=42)
         Seed passed to the estimator if it accepts ``random_state``.
+    use_gpu : bool, optional (default=False)
+        Pass GPU settings to estimators that support them.
+    horizon_strategy : str, optional (default="recursive")
+        ``"recursive"`` feeds one-step predictions back as inputs;
+        ``"direct"`` trains one model per forecast step and
+        ``"multi_output"`` one multi-output model (both are trained for the
+        requested horizon when :meth:`predict` is called).
     """
 
     def __init__(
@@ -475,6 +535,7 @@ class MLForecaster(ForecasterWrapper):
         n_rolling: Tuple[int, ...] = (3, 7),
         random_state: int = 42,
         use_gpu: bool = False,
+        horizon_strategy: str = "recursive",
     ):
         self.estimator_class = estimator_class
         self._model_name = model_name
@@ -482,11 +543,25 @@ class MLForecaster(ForecasterWrapper):
         self.n_rolling = n_rolling
         self.random_state = random_state
         self.use_gpu = use_gpu
+        self.horizon_strategy = horizon_strategy
+        # Tuned estimator hyperparameters (override the defaults below).
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
+        self._y_train = y_train
+        self._X_train = X_train
+        if getattr(self, "horizon_strategy", "recursive") != "recursive":
+            return  # direct / multi-output models are trained for the horizon in predict()
         X_feat, y_feat = create_lag_features(
             y_train, self.n_lags, self.n_rolling, X_exog=X_train
         )
+        self._estimator = self.estimator_class(**self._estimator_kwargs())
+        self._scaler = StandardScaler()
+        X_scaled = self._scaler.fit_transform(X_feat)
+        self._estimator.fit(X_scaled, y_feat)
+
+    def _estimator_kwargs(self) -> Dict[str, Any]:
+        """Constructor arguments: GPU, seed, quiet boosting libraries, tuned params."""
         params: dict = get_gpu_model_params(self.estimator_class, self.use_gpu)
         try:
             if "random_state" in self.estimator_class().get_params():
@@ -502,13 +577,19 @@ class MLForecaster(ForecasterWrapper):
             params.setdefault("verbosity", -1)
         if "xgboost" in module:
             params.setdefault("verbosity", 0)
-        self._estimator = self.estimator_class(**params)
-        self._scaler = StandardScaler()
-        X_scaled = self._scaler.fit_transform(X_feat)
-        self._estimator.fit(X_scaled, y_feat)
-        self._y_train = y_train
+        params.update(getattr(self, "params", {}))
+        return params
 
     def predict(self, horizon, X_test=None):
+        strategy = getattr(self, "horizon_strategy", "recursive")
+        if strategy in ("direct", "multi_output"):
+            from lazypredict.horizon import direct_forecast, multi_output_forecast
+
+            forecast = direct_forecast if strategy == "direct" else multi_output_forecast
+            return forecast(
+                self.estimator_class, self._y_train, horizon, self.n_lags, self.n_rolling,
+                X_exog=self._X_train, X_future=X_test, model_params=self._estimator_kwargs(),
+            )
         return recursive_forecast(
             self._estimator,
             self._scaler,
@@ -552,6 +633,8 @@ class _TorchRNNForecaster(ForecasterWrapper):
     random_state : int, optional (default=42)
         Seed for reproducibility.
 
+    Notes
+    -----
     Requires ``torch``.
     """
 
@@ -674,8 +757,8 @@ class _TorchRNNForecaster(ForecasterWrapper):
                 for window in n_rolling:
                     recent = history[-window:]
                     features.append(float(np.mean(recent)))
-                    features.append(
-                        float(np.std(recent)) if len(recent) > 1 else 0.0
+                    features.append(  # ddof=1 like the training features
+                        float(np.std(recent, ddof=1)) if len(recent) > 1 else 0.0
                     )
                 features.append(
                     history[-1] - history[-2] if len(history) >= 2 else 0.0
@@ -704,6 +787,8 @@ class LSTMForecaster(_TorchRNNForecaster):
     """Single-layer LSTM forecaster.
 
     See :class:`_TorchRNNForecaster` for parameter details.
+    Notes
+    -----
     Requires ``torch``.
     """
 
@@ -714,6 +799,8 @@ class GRUForecaster(_TorchRNNForecaster):
     """Single-layer GRU forecaster.
 
     See :class:`_TorchRNNForecaster` for parameter details.
+    Notes
+    -----
     Requires ``torch``.
     """
 
@@ -746,6 +833,8 @@ class TimesFMForecaster(ForecasterWrapper):
         from Hugging Face (``google/timesfm-2.5-200m-pytorch``).
         Use this when you are offline or behind a firewall.
 
+    Notes
+    -----
     Requires ``timesfm`` and ``torch`` (Python 3.10-3.11 only).
     """
 
@@ -836,6 +925,7 @@ def _build_forecaster_list(
     seasonal_period: Optional[int],
     use_gpu: bool = False,
     foundation_model_path: Optional[str] = None,
+    horizon_strategy: str = "recursive",
 ) -> List[Tuple[str, ForecasterWrapper]]:
     """Build the default list of all available forecasters.
 
@@ -897,7 +987,7 @@ def _build_forecaster_list(
 
     # -- pmdarima -------------------------------------------------------------
     if _PMDARIMA_AVAILABLE:
-        forecasters.append(("AutoARIMA", AutoARIMAForecaster()))
+        forecasters.append(("AutoARIMA", AutoARIMAForecaster(seasonal_period=seasonal_period)))
     else:
         logger.info(
             "pmdarima not installed — AutoARIMA unavailable. "
@@ -936,6 +1026,7 @@ def _build_forecaster_list(
                 n_rolling=n_rolling,
                 random_state=random_state,
                 use_gpu=use_gpu,
+                horizon_strategy=horizon_strategy,
             ),
         ))
 
@@ -1119,6 +1210,8 @@ class LazyForecaster:
             raise ValueError(
                 f"horizon_strategy must be 'recursive', 'direct', or 'multi_output', got {horizon_strategy!r}"
             )
+        self._validate_tuning_and_season(tune_top_k, tune_trials, seasonal_period, n_jobs)
+        sort_by = self._canonical_sort_by(sort_by, custom_metric)
 
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -1149,6 +1242,8 @@ class LazyForecaster:
 
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
+        self._last_predictions: Dict[str, np.ndarray] = {}
+        self._validation_cache: Optional[Tuple[Dict[str, np.ndarray], np.ndarray]] = None
         self.mlflow_enabled = setup_mlflow()
 
         if self.use_gpu:
@@ -1164,22 +1259,81 @@ class LazyForecaster:
     # Public API                                                              #
     # --------------------------------------------------------------------- #
 
+    _METRIC_COLUMNS = ("MAE", "RMSE", "MAPE", "SMAPE", "MASE", "R-Squared")
+
+    @staticmethod
+    def _validate_tuning_and_season(
+        tune_top_k: Any, tune_trials: Any, seasonal_period: Any, n_jobs: Any = -1
+    ) -> None:
+        if n_jobs is not None and (not isinstance(n_jobs, int) or isinstance(n_jobs, bool)):
+            raise ValueError(f"n_jobs must be an integer or None, got {n_jobs!r}")
+        for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
+            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                raise ValueError(f"{option} must be a positive integer, got {value!r}")
+        if seasonal_period is not None and (
+            not isinstance(seasonal_period, (int, np.integer)) or seasonal_period < 1
+        ):
+            raise ValueError(
+                f"seasonal_period must be a positive integer or None, got {seasonal_period!r}"
+            )
+
+    @classmethod
+    def _canonical_sort_by(cls, sort_by: str, custom_metric: Optional[Callable]) -> str:
+        """Match *sort_by* case-insensitively against the score table's columns."""
+        valid = list(cls._METRIC_COLUMNS) + [c for c in cls._cv_column_names()] + ["Time Taken"]
+        if custom_metric is not None:
+            valid.append(metric_name(custom_metric))
+        for column in valid:
+            if isinstance(sort_by, str) and sort_by.lower() == column.lower():
+                return column
+        raise ValueError(f"sort_by must be one of {valid}, got {sort_by!r}")
+
+    @staticmethod
+    def _as_series(y: Any, name: str) -> np.ndarray:
+        """Return a finite 1-D float array; one-column frames are flattened."""
+        values: np.ndarray = np.asarray(y, dtype=float)
+        if values.ndim == 2 and values.shape[1] == 1:
+            values = values.ravel()
+        if values.ndim != 1:
+            raise ValueError(f"{name} must be a single series (1-D), got shape {values.shape}")
+        if len(values) == 0:
+            raise ValueError(f"{name} is empty")
+        if not np.all(np.isfinite(values)):
+            raise ValueError(
+                f"{name} contains NaN or infinite values; fill or drop them before fitting"
+            )
+        return values
+
+    @staticmethod
+    def _as_exog(X: Any, name: str, n_rows: int, series: str) -> np.ndarray:
+        """Return finite 2-D exogenous features with one row per value of *series*."""
+        values: np.ndarray = np.asarray(X, dtype=float)
+        if values.ndim == 1:
+            values = values.reshape(-1, 1)
+        if values.ndim != 2:
+            raise ValueError(f"{name} must be 2-D, got shape {values.shape}")
+        if len(values) != n_rows:
+            raise ValueError(f"{name} has {len(values)} rows but {series} has {n_rows} values")
+        if not np.all(np.isfinite(values)):
+            raise ValueError(f"{name} contains NaN or infinite values")
+        return values
+
     def _validate_fit_inputs(self, y_train, y_test, X_train, X_test):
         """Validate and coerce fit inputs to numpy arrays."""
-        y_train = np.asarray(y_train, dtype=float)
-        y_test = np.asarray(y_test, dtype=float)
-        if len(y_train) == 0:
-            raise ValueError("y_train is empty")
-        if len(y_test) == 0:
-            raise ValueError("y_test is empty")
+        y_train = self._as_series(y_train, "y_train")
+        y_test = self._as_series(y_test, "y_test")
+        if (X_train is None) != (X_test is None):
+            raise ValueError(
+                "X_train and X_test must be passed together: models trained with "
+                "exogenous variables need their values for the forecast period."
+            )
         if X_train is not None:
-            X_train = np.asarray(X_train, dtype=float)
-            if X_train.ndim == 1:
-                X_train = X_train.reshape(-1, 1)
-        if X_test is not None:
-            X_test = np.asarray(X_test, dtype=float)
-            if X_test.ndim == 1:
-                X_test = X_test.reshape(-1, 1)
+            X_train = self._as_exog(X_train, "X_train", len(y_train), "y_train")
+            X_test = self._as_exog(X_test, "X_test", len(y_test), "y_test")
+            if X_train.shape[1] != X_test.shape[1]:
+                raise ValueError(
+                    f"X_train has {X_train.shape[1]} columns but X_test has {X_test.shape[1]}"
+                )
         min_required = self.n_lags + max(self.n_rolling) + 1
         if len(y_train) < min_required:
             raise InsufficientDataError(
@@ -1194,36 +1348,31 @@ class LazyForecaster:
         horizon, seasonal_period, results, predictions_dict,
     ):
         """Fit, predict, and score a single forecaster model."""
-        start = time.time()
+        start = time.perf_counter()
         mlflow_active_run = None
         try:
             if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                mlflow_active_run = _mlflow.start_run(
-                    run_name=f"LazyForecaster-{fname}"
-                )
+                mlflow_active_run = start_run(_mlflow, run_name=f"LazyForecaster-{fname}")
                 _mlflow.log_param("model_name", fname)
 
             wrapper_copy = copy.deepcopy(wrapper)
-            wrapper_copy.fit(y_train, X_train)
-            fit_time = time.time() - start
-
-            if self.timeout and fit_time > self.timeout:
-                logger.info(
-                    "%s exceeded timeout (%.2fs > %ss), skipping...",
-                    fname, fit_time, self.timeout,
+            with time_limit(self.timeout):
+                wrapper_copy.fit(y_train, X_train)
+                y_pred = wrapper_copy.predict(horizon, X_test)
+            elapsed = time.perf_counter() - start
+            if self.timeout and elapsed > self.timeout:
+                # The limit could not be enforced preemptively.
+                raise TimeoutException(
+                    f"Training and forecasting took {elapsed:.2f}s, "
+                    f"exceeding timeout={self.timeout}s"
                 )
-                self._end_mlflow_run(mlflow_active_run)
-                return None
-
-            y_pred = wrapper_copy.predict(horizon, X_test)
-            self.models[fname] = wrapper_copy
 
             sp = seasonal_period or 1
             metrics = compute_forecast_metrics(
                 y_test, y_pred, y_train, seasonal_period=sp
             )
             metrics["name"] = fname
-            metrics["time"] = time.time() - start
+            metrics["time"] = time.perf_counter() - start
 
             if self.cv:
                 cv_metrics = self._run_ts_cv(
@@ -1234,6 +1383,8 @@ class LazyForecaster:
             self._compute_custom_metric(metrics, y_test, y_pred, fname)
             self._log_mlflow_metrics(mlflow_active_run, metrics)
 
+            # Only models that produced scores are kept.
+            self.models[fname] = wrapper_copy
             results.append(metrics)
             if self.verbose > 0:
                 self._log_verbose(fname, metrics)
@@ -1246,7 +1397,9 @@ class LazyForecaster:
         except Exception as exc:
             self._end_mlflow_run(mlflow_active_run)
             self.errors[fname] = exc
-            if not self.ignore_warnings:
+            if isinstance(exc, TimeoutException):
+                logger.info("%s skipped: %s", fname, exc)
+            elif not self.ignore_warnings:
                 logger.warning("%s model failed: %s", fname, exc)
             return None
 
@@ -1257,7 +1410,7 @@ class LazyForecaster:
         try:
             metrics["custom_metric"] = self.custom_metric(y_test, y_pred)
         except Exception as custom_exc:
-            metrics["custom_metric"] = None
+            metrics["custom_metric"] = np.nan
             if not self.ignore_warnings:
                 logger.warning(
                     "Custom metric failed for %s: %s", fname, custom_exc
@@ -1275,7 +1428,7 @@ class LazyForecaster:
         if not (mlflow_active_run and _mlflow is not None):
             return
         for key, val in metrics.items():
-            if isinstance(val, (int, float)) and val is not None:
+            if isinstance(val, (int, float, np.number)) and np.isfinite(val):
                 _mlflow.log_metric(key, val)
 
     def fit(
@@ -1305,6 +1458,14 @@ class LazyForecaster:
         predictions : pd.DataFrame
             Per-model predictions (empty if ``self.predictions`` is False).
         """
+        # Results of a previous fit() must not leak into this one.
+        self.models = {}
+        self.errors = {}
+        self.tuned_scores_ = None
+        self.tuned_models_ = {}
+        self._last_predictions = {}
+        self._validation_cache = None
+
         y_train, y_test, X_train, X_test = self._convert_and_validate_inputs(
             y_train, y_test, X_train, X_test
         )
@@ -1359,12 +1520,11 @@ class LazyForecaster:
             seasonal_period=seasonal_period,
             use_gpu=self.use_gpu,
             foundation_model_path=self.foundation_model_path,
+            horizon_strategy=self.horizon_strategy,
         )
-        if self.forecasters != "all":
-            selected_names = set(self.forecasters)
-            all_forecasters = [
-                (n, w) for n, w in all_forecasters if n in selected_names
-            ]
+        all_forecasters = _resolve_estimators(
+            self.forecasters, all_forecasters, "forecaster", allow_classes=False
+        )
         if self.max_models is not None:
             all_forecasters = all_forecasters[: self.max_models]
         return all_forecasters
@@ -1431,7 +1591,14 @@ class LazyForecaster:
         method: str = "weighted_average",
         y_true: Optional[np.ndarray] = None,
     ) -> np.ndarray:
-        """Ensemble predictions from fitted models.
+        """Combine the test-period forecasts of the fitted models.
+
+        ``"weighted_average"`` and ``"stacking"`` learn from a validation
+        window held out from the end of the *training* series: each model is
+        refitted on the rest of the training data and forecasts that window.
+        Weights are the inverse of those validation RMSEs, and the stacking
+        meta-model (Ridge) is fitted on those validation forecasts. The test
+        data is never used to build the ensemble.
 
         Parameters
         ----------
@@ -1439,19 +1606,26 @@ class LazyForecaster:
             Ensemble method: ``'simple_average'``, ``'weighted_average'``,
             or ``'stacking'``.
         y_true : np.ndarray or None
-            True values (required for 'stacking' and 'weighted_average').
+            Ignored; kept for backward compatibility. (Earlier versions fitted
+            the stacking meta-model on the test values passed here, which
+            leaked them into the forecast being evaluated.)
 
         Returns
         -------
         np.ndarray
-            Ensembled predictions.
+            Ensembled predictions for the test period.
         """
         if not self._last_predictions:
-            raise ValueError(
-                "No predictions available. Call fit() with predictions=True first."
+            raise ValueError("No predictions available. Call fit() first.")
+        if y_true is not None:
+            warnings.warn(
+                "ensemble(y_true=...) is ignored and will be removed: weights and the "
+                "stacking meta-model are now learned on a validation window of the "
+                "training series.",
+                FutureWarning,
+                stacklevel=2,
             )
 
-        preds = self._last_predictions
         handlers = {
             "simple_average": self._ensemble_simple,
             "weighted_average": self._ensemble_weighted,
@@ -1462,26 +1636,65 @@ class LazyForecaster:
             raise ValueError(
                 f"Unknown method: {method}. Use {', '.join(repr(k) for k in handlers)}."
             )
-        return handler(preds, y_true)
+        return np.asarray(handler(self._last_predictions))
 
-    def _ensemble_simple(self, preds, y_true):
+    def _ensemble_simple(self, preds):
         from lazypredict.ensemble import ensemble_simple_average
         return ensemble_simple_average(preds)
 
-    def _ensemble_weighted(self, preds, y_true):
+    def _ensemble_weighted(self, preds):
         from lazypredict.ensemble import ensemble_weighted_average
-        scores = {name: 1.0 for name in preds if name in self.models}
-        if hasattr(self, "_last_scores_dict"):
-            for name, s in self._last_scores_dict.items():
-                if name in preds:
-                    scores[name] = s
-        return ensemble_weighted_average(preds, scores)
+        val_preds, y_val = self._validation_predictions()
+        rmse = {
+            name: float(np.sqrt(np.mean((pred - y_val) ** 2)))
+            for name, pred in val_preds.items()
+        }
+        return ensemble_weighted_average({name: preds[name] for name in val_preds}, rmse)
 
-    def _ensemble_stacking(self, preds, y_true):
+    def _ensemble_stacking(self, preds):
         from lazypredict.ensemble import ensemble_stacking
-        if y_true is None:
-            raise ValueError("y_true is required for stacking ensemble.")
-        return ensemble_stacking(preds, y_true)
+        val_preds, y_val = self._validation_predictions()
+        return ensemble_stacking(
+            val_preds, y_val, pred_test={name: preds[name] for name in val_preds}
+        )
+
+    def _validation_predictions(self) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+        """Forecasts of a window held out from the end of the training series.
+
+        The window has the length of the test horizon when the training
+        series is long enough. Models that fail on it are left out.
+        """
+        if self._validation_cache is not None:
+            return self._validation_cache
+        y_train, X_train = self._last_y_train, self._last_X_train
+        min_required = self.n_lags + max(self.n_rolling) + 1
+        window = min(len(self._last_y_test), len(y_train) - min_required)
+        if window < 2:
+            raise ValueError(
+                "y_train is too short to hold out a validation window for the ensemble."
+            )
+        y_fit, y_val = y_train[:-window], y_train[-window:]
+        X_fit = X_train[:-window] if X_train is not None else None
+        X_val = X_train[-window:] if X_train is not None else None
+        templates = dict(self._last_all_forecasters)
+
+        val_preds: Dict[str, np.ndarray] = {}
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for name in self._last_predictions:
+                try:
+                    wrapper = copy.deepcopy(templates[name])
+                    wrapper.fit(y_fit, X_fit)
+                    pred = np.asarray(wrapper.predict(window, X_val), dtype=float)
+                except Exception as exc:
+                    logger.info("%s left out of the ensemble: %s", name, exc)
+                    continue
+                if pred.shape == y_val.shape and np.all(np.isfinite(pred)):
+                    val_preds[name] = pred
+        if not val_preds:
+            raise ValueError("No model could forecast the validation window.")
+        self._validation_cache = (val_preds, y_val)
+        return self._validation_cache
 
     def plot_results(
         self,
@@ -1690,11 +1903,13 @@ class LazyForecaster:
         horizon: int,
         model_name: Optional[str] = None,
         X_test: Optional[Union[pd.DataFrame, np.ndarray]] = None,
+        X_history: Optional[Union[pd.DataFrame, np.ndarray]] = None,
     ) -> Union[Dict[str, np.ndarray], np.ndarray]:
         """Produce forecasts from previously fitted models.
 
-        Each model is re-fit on ``y_history`` before predicting so that the
-        most recent observations are used.
+        A copy of each model is re-fit on ``y_history`` before predicting so
+        that the most recent observations are used; the models stored in
+        :attr:`models` are left untouched.
 
         Parameters
         ----------
@@ -1707,7 +1922,11 @@ class LazyForecaster:
             returned.  Otherwise all fitted models are used and a ``dict``
             mapping model names to arrays is returned.
         X_test : array-like or None, optional
-            Exogenous features for the forecast period.
+            Exogenous features for the ``horizon`` forecast steps.
+        X_history : array-like or None, optional
+            Exogenous features aligned with ``y_history``. Required, together
+            with ``X_test``, when the models were fitted with exogenous
+            variables.
 
         Returns
         -------
@@ -1718,25 +1937,40 @@ class LazyForecaster:
         Raises
         ------
         ValueError
-            If no models have been fitted or ``model_name`` is not found.
+            If no models have been fitted, ``model_name`` is not found, or the
+            exogenous inputs are missing or misaligned.
         """
         if len(self.models) == 0:
             raise ValueError(
                 "No models fitted yet. Call fit() first."
             )
-        if model_name is not None:
-            if model_name not in self.models:
-                raise ValueError(
-                    f"Model '{model_name}' not found. "
-                    f"Available: {list(self.models.keys())}"
-                )
-            wrapper = self.models[model_name]
-            wrapper.fit(np.asarray(y_history, dtype=float))
-            return wrapper.predict(horizon, X_test)
+        if model_name is not None and model_name not in self.models:
+            raise ValueError(
+                f"Model '{model_name}' not found. "
+                f"Available: {list(self.models.keys())}"
+            )
+        if not isinstance(horizon, (int, np.integer)) or horizon < 1:
+            raise ValueError(f"horizon must be a positive integer, got {horizon!r}")
+        y_history = self._as_series(y_history, "y_history")
+        if (X_history is None) != (X_test is None):
+            raise ValueError("X_history and X_test must be passed together.")
+        if X_history is None and getattr(self, "_last_X_train", None) is not None:
+            raise ValueError(
+                "The models were fitted with exogenous variables: pass X_history "
+                "(aligned with y_history) and X_test (one row per forecast step)."
+            )
+        if X_history is not None:
+            X_history = self._as_exog(X_history, "X_history", len(y_history), "y_history")
+            X_test = self._as_exog(X_test, "X_test", horizon, "the forecast horizon")
+
+        names = [model_name] if model_name is not None else list(self.models)
         result = {}
-        for name, wrapper in self.models.items():
-            wrapper.fit(np.asarray(y_history, dtype=float))
-            result[name] = wrapper.predict(horizon, X_test)
+        for name in names:
+            wrapper = copy.deepcopy(self.models[name])
+            wrapper.fit(y_history, X_history)
+            result[name] = np.asarray(wrapper.predict(horizon, X_test), dtype=float)
+        if model_name is not None:
+            return result[model_name]
         return result
 
     def save_models(self, path: str) -> None:
@@ -1814,46 +2048,43 @@ class LazyForecaster:
         Uses ``sklearn.model_selection.TimeSeriesSplit`` so that training
         data always precedes validation data chronologically.
 
-        Returns a dict of ``{metric_name: value}`` with mean and standard
+        Returns a dict of ``{metric: value}`` with mean and standard
         deviation for each fold.
         """
+        from joblib import Parallel, delayed
         from sklearn.model_selection import TimeSeriesSplit
 
-        tscv = TimeSeriesSplit(n_splits=self.cv)
-        cv_scores: Dict[str, List[float]] = {
-            m: [] for m in ["mae", "rmse", "mape", "smape", "mase"]
-        }
+        metric_keys = ["mae", "rmse", "mape", "smape", "mase"]
 
-        for train_idx, val_idx in tscv.split(y_train):
+        def run_fold(train_idx, val_idx):
             y_cv_train = y_train[train_idx]
-            y_cv_val = y_train[val_idx]
             X_cv_train = X_train[train_idx] if X_train is not None else None
             X_cv_val = X_train[val_idx] if X_train is not None else None
-
             try:
                 w = copy.deepcopy(wrapper)
                 w.fit(y_cv_train, X_cv_train)
                 y_cv_pred = w.predict(len(val_idx), X_cv_val)
-                sp = seasonal_period or 1
                 fold_metrics = compute_forecast_metrics(
-                    y_cv_val, y_cv_pred, y_cv_train, seasonal_period=sp
+                    y_train[val_idx], y_cv_pred, y_cv_train, seasonal_period=seasonal_period or 1
                 )
-                for metric_name in cv_scores:
-                    cv_scores[metric_name].append(fold_metrics[metric_name])
+                return [fold_metrics[key] for key in metric_keys]
             except Exception:
-                for metric_name in cv_scores:
-                    cv_scores[metric_name].append(np.nan)
+                return [np.nan] * len(metric_keys)
+
+        # Threads: folds share the data and wrappers need not be pickled.
+        folds = Parallel(n_jobs=self.n_jobs, prefer="threads")(
+            delayed(run_fold)(train_idx, val_idx)
+            for train_idx, val_idx in TimeSeriesSplit(n_splits=self.cv).split(y_train)
+        )
+        values = np.array(folds, dtype=float)
 
         result: Dict[str, Optional[float]] = {}
-        for metric_name, values in cv_scores.items():
-            arr = np.array(values, dtype=float)
-            label = metric_name.upper()
-            result[f"{label} CV Mean"] = (
-                float(np.nanmean(arr)) if not np.all(np.isnan(arr)) else None
-            )
-            result[f"{label} CV Std"] = (
-                float(np.nanstd(arr)) if not np.all(np.isnan(arr)) else None
-            )
+        for column, metric in enumerate(metric_keys):
+            fold_values = values[:, column]
+            label = metric.upper()
+            all_failed = np.all(np.isnan(fold_values))
+            result[f"{label} CV Mean"] = np.nan if all_failed else float(np.nanmean(fold_values))
+            result[f"{label} CV Std"] = np.nan if all_failed else float(np.nanstd(fold_values))
         return result
 
     @staticmethod
@@ -1891,7 +2122,7 @@ class LazyForecaster:
                     row[col] = r[col]
             # Custom metric
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric")
+                row[metric_name(self.custom_metric)] = r.get("custom_metric", np.nan)
             row["Time Taken"] = r["time"]
             rows.append(row)
 

@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in lazypredict does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! A short script that reproduces the problem is the
+        fastest way to a fix.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproducible example
+      description: Self-contained code, ideally using a scikit-learn toy dataset or synthetic data.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Error message / traceback
+      render: text
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: |
+        Paste the output of:
+        `python -c "import sys, lazypredict, sklearn, pandas, numpy; print(sys.version); print('lazypredict', lazypredict.__version__); print('scikit-learn', sklearn.__version__); print('pandas', pandas.__version__); print('numpy', numpy.__version__)"`
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. Ubuntu 24.04, macOS 15, Windows 11

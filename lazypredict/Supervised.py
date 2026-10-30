@@ -7,9 +7,9 @@ perform best on a given dataset.
 """
 # Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
+import importlib.util
 import logging
-import signal
-from contextlib import contextmanager
+import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -27,10 +27,12 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 from sklearn.utils import all_estimators
+from sklearn.utils.multiclass import type_of_target
 
 # Re-export from submodules for backward compatibility
 from lazypredict._base import (  # noqa: F401
     LazyEstimator,
+    _resolve_estimators,
     _validate_fit_inputs,
     _validate_init_params,
 )
@@ -39,13 +41,14 @@ from lazypredict.config import (
     REMOVED_REGRESSORS,
     VALID_ENCODERS,
 )
-from lazypredict.exceptions import TimeoutException
+from lazypredict._timeout import time_limit  # noqa: F401  (backward compatibility)
+from lazypredict.exceptions import TimeoutException  # noqa: F401
 from lazypredict.integrations.mlflow import (  # noqa: F401
     MLFLOW_AVAILABLE,
     is_mlflow_tracking_enabled,
     setup_mlflow,
 )
-from lazypredict.metrics import adjusted_rsquared
+from lazypredict.metrics import adjusted_rsquared, metric_name
 from lazypredict.preprocessing import (  # noqa: F401
     CATEGORY_ENCODERS_AVAILABLE,
     build_preprocessor,
@@ -107,13 +110,10 @@ try:
 except ImportError:
     _INTERPRET_AVAILABLE = False
 
-# Intel Extension for Scikit-learn for better performance
-try:
-    from sklearnex import patch_sklearn
-    patch_sklearn()
-    INTEL_EXTENSION_AVAILABLE = True
-except ImportError:
-    INTEL_EXTENSION_AVAILABLE = False
+# Intel Extension for Scikit-learn: only report whether it is installed.
+# Patching scikit-learn is the user's decision; doing it at import time
+# changed every scikit-learn estimator in the user's process.
+INTEL_EXTENSION_AVAILABLE = importlib.util.find_spec("sklearnex") is not None
 
 # Optional MLflow
 try:
@@ -160,32 +160,23 @@ removed_classifiers = list(_REMOVED_CLASSIFIERS)
 removed_regressors = list(_REMOVED_REGRESSORS)
 
 
-@contextmanager
-def time_limit(seconds: int):
-    """Context manager to limit execution time of a code block.
+def _weighted_ovr_roc_auc(y_true: Any, proba: np.ndarray, classes: np.ndarray) -> float:
+    """Support-weighted one-vs-rest ROC AUC over the classes present in *y_true*.
 
-    Parameters
-    ----------
-    seconds : int
-        Maximum time in seconds for the code block to execute.
-
-    Raises
-    ------
-    TimeoutException
-        If the code block exceeds the time limit.
+    Same value as ``roc_auc_score(..., multi_class="ovr", average="weighted")``,
+    but it stays defined when the test split lacks a class seen in training
+    (that class has zero weight), on every supported scikit-learn version.
     """
-    def signal_handler(signum, frame):
-        raise TimeoutException(f"Timed out after {seconds} seconds")
-
-    if hasattr(signal, "SIGALRM"):
-        signal.signal(signal.SIGALRM, signal_handler)
-        signal.alarm(seconds)
-        try:
-            yield
-        finally:
-            signal.alarm(0)
-    else:
-        yield
+    y_true = np.asarray(y_true)
+    scores, weights = [], []
+    for column, label in enumerate(classes):
+        positive = y_true == label
+        if positive.any() and not positive.all():
+            scores.append(roc_auc_score(positive.astype(int), proba[:, column]))
+            weights.append(positive.sum())
+    if not scores:
+        raise ValueError("ROC AUC needs at least two classes in y_true")
+    return float(np.average(scores, weights=weights))
 
 
 # ---------------------------------------------------------------------------
@@ -208,12 +199,19 @@ class LazyClassifier(LazyEstimator):
         When True, ``fit()`` returns a tuple of (scores, predictions_dataframe).
     random_state : int, optional (default=42)
         Random seed passed to models that accept it.
-    classifiers : list or ``"all"``, optional (default="all")
-        Specific classifier classes to train, or ``"all"`` for every available one.
+    classifiers : list, str or ``"all"``, optional (default="all")
+        ``"all"`` for every available classifier, or a model name / list of
+        model names and estimator classes to train. Unknown names raise a
+        ``ValueError``.
     cv : int or None, optional (default=None)
         Number of folds for cross-validation.  If None, uses train/test split only.
     timeout : int or float or None, optional (default=None)
-        Maximum seconds for each model.  Models exceeding this are skipped.
+        Maximum training time in seconds for each model. On POSIX systems,
+        when ``fit()`` runs in the main thread, training is interrupted once
+        the limit is reached (code inside C extensions is interrupted when it
+        returns to Python); elsewhere the model is discarded after it
+        finishes. Timed-out models are listed in ``errors`` as
+        ``TimeoutException``.
     categorical_encoder : str, optional (default='onehot')
         Encoder for categorical features: ``'onehot'``, ``'ordinal'``,
         ``'target'``, or ``'binary'``.
@@ -294,34 +292,51 @@ class LazyClassifier(LazyEstimator):
     def _estimator_step_name(self) -> str:
         return "classifier"
 
+    def _validate_target(self, y_train: Any) -> None:
+        target_type = type_of_target(y_train)
+        if target_type.startswith("continuous"):
+            raise ValueError(
+                "LazyClassifier needs class labels, but y_train looks like a "
+                f"continuous target (type_of_target: {target_type!r}). "
+                "Use LazyRegressor for regression problems."
+            )
+        if target_type == "multiclass":
+            n_samples = len(y_train)
+            n_classes = len(np.unique(np.asarray(y_train)))
+            if n_classes > 20 and n_classes > 0.5 * n_samples:
+                warnings.warn(
+                    f"y_train has {n_classes} distinct labels for {n_samples} samples, "
+                    "so most classes have a single example. If this is a numeric "
+                    "regression target, use LazyRegressor instead.",
+                    UserWarning,
+                    stacklevel=3,
+                )
+
     def _get_estimator_list(self) -> List[Tuple[str, Any]]:
-        if self.classifiers == "all":
-            return list(CLASSIFIERS)
-        # Support both string names and class objects
-        if self.classifiers and isinstance(self.classifiers[0], str):
-            return [
-                (name, cls)
-                for name, cls in CLASSIFIERS
-                if name in self.classifiers
-            ]
-        try:
-            return [(cls.__name__, cls) for cls in self.classifiers]
-        except Exception as exc:
-            logger.error("Invalid classifier(s): %s", exc)
-            raise ValueError(f"Invalid classifier(s): {exc}") from exc
+        return _resolve_estimators(self.classifiers, CLASSIFIERS, "classifier")
 
     def _tune_scoring(self) -> str:
         return "balanced_accuracy"
 
-    def _cv_scoring(self) -> Optional[Dict[str, str]]:
-        return {
+    def _cv_scoring(self, y_train: Any, pipe: Pipeline) -> Optional[Dict[str, str]]:
+        scoring = {
             "accuracy": "accuracy",
             "balanced_accuracy": "balanced_accuracy",
             "f1_weighted": "f1_weighted",
             "precision_weighted": "precision_weighted",
             "recall_weighted": "recall_weighted",
-            "roc_auc_ovr_weighted": "roc_auc_ovr_weighted",
         }
+        # Only request ROC AUC when the model can produce scores for it:
+        # scikit-learn checks every scorer's response method up front, so an
+        # unsupported one would abort the whole cross-validation. Binary
+        # "roc_auc" accepts decision_function like the test-set ROC AUC; the
+        # multiclass variant needs probabilities.
+        if type_of_target(y_train) == "binary":
+            if hasattr(pipe, "predict_proba") or hasattr(pipe, "decision_function"):
+                scoring["roc_auc"] = "roc_auc"
+        elif hasattr(pipe, "predict_proba"):
+            scoring["roc_auc"] = "roc_auc_ovr_weighted"
+        return scoring
 
     def _cv_column_names(self) -> List[str]:
         return [
@@ -348,12 +363,9 @@ class LazyClassifier(LazyEstimator):
             "Recall CV Mean": cv_results["test_recall_weighted"].mean(),
             "Recall CV Std": cv_results["test_recall_weighted"].std(),
         }
-        try:
-            result["ROC AUC CV Mean"] = cv_results["test_roc_auc_ovr_weighted"].mean()
-            result["ROC AUC CV Std"] = cv_results["test_roc_auc_ovr_weighted"].std()
-        except Exception:
-            result["ROC AUC CV Mean"] = None
-            result["ROC AUC CV Std"] = None
+        roc_auc = cv_results.get("test_roc_auc")
+        result["ROC AUC CV Mean"] = np.nan if roc_auc is None else roc_auc.mean()
+        result["ROC AUC CV Std"] = np.nan if roc_auc is None else roc_auc.std()
         return result
 
     def _compute_metrics(
@@ -366,16 +378,14 @@ class LazyClassifier(LazyEstimator):
         precision = precision_score(y_test, y_pred, average="weighted", zero_division=0)
         recall_val = recall_score(y_test, y_pred, average="weighted")
 
-        roc_auc = None
+        roc_auc = np.nan
         try:
             if hasattr(pipe, "predict_proba"):
                 y_pred_proba = pipe.predict_proba(X_test)
                 if y_pred_proba.shape[1] == 2:
                     roc_auc = roc_auc_score(y_test, y_pred_proba[:, 1])
                 else:
-                    roc_auc = roc_auc_score(
-                        y_test, y_pred_proba, multi_class="ovr", average="weighted"
-                    )
+                    roc_auc = _weighted_ovr_roc_auc(y_test, y_pred_proba, pipe.classes_)
             elif hasattr(pipe, "decision_function"):
                 roc_auc = roc_auc_score(y_test, pipe.decision_function(X_test))
             else:
@@ -409,7 +419,7 @@ class LazyClassifier(LazyEstimator):
                 "Recall": r["recall"],
             }
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric")
+                row[metric_name(self.custom_metric)] = r.get("custom_metric", np.nan)
             # CV columns
             for col in self._cv_column_names():
                 if col in r:
@@ -453,12 +463,19 @@ class LazyRegressor(LazyEstimator):
         When True, ``fit()`` returns a tuple of (scores, predictions_dataframe).
     random_state : int, optional (default=42)
         Random seed passed to models that accept it.
-    regressors : list or ``"all"``, optional (default="all")
-        Specific regressor classes to train, or ``"all"`` for every available one.
+    regressors : list, str or ``"all"``, optional (default="all")
+        ``"all"`` for every available regressor, or a model name / list of
+        model names and estimator classes to train. Unknown names raise a
+        ``ValueError``.
     cv : int or None, optional (default=None)
         Number of folds for cross-validation.  If None, uses train/test split only.
     timeout : int or float or None, optional (default=None)
-        Maximum seconds for each model.  Models exceeding this are skipped.
+        Maximum training time in seconds for each model. On POSIX systems,
+        when ``fit()`` runs in the main thread, training is interrupted once
+        the limit is reached (code inside C extensions is interrupted when it
+        returns to Python); elsewhere the model is discarded after it
+        finishes. Timed-out models are listed in ``errors`` as
+        ``TimeoutException``.
     categorical_encoder : str, optional (default='onehot')
         Encoder for categorical features: ``'onehot'``, ``'ordinal'``,
         ``'target'``, or ``'binary'``.
@@ -543,25 +560,12 @@ class LazyRegressor(LazyEstimator):
         return "regressor"
 
     def _get_estimator_list(self) -> List[Tuple[str, Any]]:
-        if self.regressors == "all":
-            return list(REGRESSORS)
-        # Support both string names and class objects
-        if self.regressors and isinstance(self.regressors[0], str):
-            return [
-                (name, cls)
-                for name, cls in REGRESSORS
-                if name in self.regressors
-            ]
-        try:
-            return [(cls.__name__, cls) for cls in self.regressors]
-        except Exception as exc:
-            logger.error("Invalid regressor(s): %s", exc)
-            raise ValueError(f"Invalid regressor(s): {exc}") from exc
+        return _resolve_estimators(self.regressors, REGRESSORS, "regressor")
 
     def _tune_scoring(self) -> str:
         return "r2"
 
-    def _cv_scoring(self) -> Optional[Dict[str, str]]:
+    def _cv_scoring(self, y_train: Any, pipe: Pipeline) -> Optional[Dict[str, str]]:
         return {
             "r2": "r2",
             "neg_mean_squared_error": "neg_mean_squared_error",
@@ -578,8 +582,9 @@ class LazyRegressor(LazyEstimator):
         self, cv_results: Dict[str, Any], X_train: pd.DataFrame
     ) -> Dict[str, Optional[float]]:
         rmse_cv = np.sqrt(-cv_results["test_neg_mean_squared_error"])
+        fold_size = X_train.shape[0] // self.cv  # observations in each validation fold
         adj_r2_cv = [
-            adjusted_rsquared(r2, X_train.shape[0], X_train.shape[1])
+            adjusted_rsquared(r2, fold_size, X_train.shape[1])
             for r2 in cv_results["test_r2"]
         ]
         return {
@@ -623,12 +628,16 @@ class LazyRegressor(LazyEstimator):
                 if col in r:
                     row[col] = r[col]
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric")
+                row[metric_name(self.custom_metric)] = r.get("custom_metric", np.nan)
             row["Time Taken"] = r["time"]
             rows.append(row)
 
         scores = pd.DataFrame(rows)
-        scores = scores.sort_values(by="Adjusted R-Squared", ascending=False).set_index("Model")
+        # Adjusted R² is NaN when the test set has no more rows than features;
+        # R² then decides the order.
+        scores = scores.sort_values(
+            by=["Adjusted R-Squared", "R-Squared"], ascending=False, na_position="last"
+        ).set_index("Model")
         return scores
 
     def _log_verbose(self, name: str, metrics: Dict[str, Any]) -> None:

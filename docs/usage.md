@@ -96,7 +96,7 @@ All `LazyClassifier`, `LazyRegressor`, and `LazyForecaster` share these options:
 | `predictions` | bool | False | Return per-model predictions DataFrame |
 | `random_state` | int | 42 | Random seed |
 | `cv` | int or None | None | Cross-validation folds (≥ 2) |
-| `timeout` | float or None | None | Max seconds per model |
+| `timeout` | float or None | None | Max training seconds per model; slow models are interrupted (Linux/macOS, main thread) and listed in `errors` |
 | `n_jobs` | int | -1 | Parallel jobs (-1 = all CPUs) |
 | `max_models` | int or None | None | Limit number of models trained |
 | `use_gpu` | bool | False | Enable GPU acceleration |
@@ -105,8 +105,9 @@ Classifier/Regressor-only:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
+| `classifiers` / `regressors` | str or list | `'all'` | Model names (exact, case-sensitive) and/or estimator classes; unknown names raise `ValueError` |
 | `categorical_encoder` | str | `'onehot'` | Encoder: `'onehot'`, `'ordinal'`, `'target'`, `'binary'` |
-| `tune` | bool | False | Tune top-k models after benchmarking |
+| `tune` | bool | False | Tune top-k models after benchmarking (results in `tuned_scores_`, `tuned_params_`, `tuned_models_`) |
 | `tune_top_k` | int | 5 | Number of models to tune |
 | `tune_trials` | int | 50 | Optuna trials per model |
 | `tune_backend` | str | `'optuna'` | Tuning backend: `'optuna'`, `'sklearn'`, `'flaml'` |
@@ -121,13 +122,23 @@ Access the fitted model pipelines after calling `fit()`:
 reg = LazyRegressor(verbose=0, ignore_warnings=True)
 models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 
-# Access all fitted model objects
-model_dict = reg.provide_models(X_train, X_test, y_train, y_test)
+# Predict with one model (NumPy arrays and DataFrames are both accepted)
+preds = reg.predict(X_test, model_name="RandomForestRegressor")
 
-# Use a specific model
+# The fitted scikit-learn pipelines (preprocessor + estimator), keyed by name
+model_dict = reg.models
 rf = model_dict["RandomForestRegressor"]
-preds = rf.predict(X_test)
 ```
+
+Each pipeline was fitted on a DataFrame (NumPy input gets the column names
+`feature_0`, `feature_1`, ...), so call `reg.predict()` rather than the
+pipeline directly when you have NumPy arrays. Calling `fit()` again replaces
+`models` and `errors` with the results of the new run.
+
+Pandas `category`, `string` and `str` columns are encoded as categorical
+features, like `object` columns. `LazyClassifier` rejects continuous targets
+(use `LazyRegressor`) and warns when an integer target has more distinct
+values than half the samples.
 
 ---
 
@@ -183,6 +194,9 @@ Options:
 | `--version` | Show version |
 | `--help` | Show help |
 
+The command exits with status 2 (and a message) for a missing option, an unknown
+target column or an invalid `--test-size`, so it can be used in scripts.
+
 ---
 
 ## Logging Configuration
@@ -217,6 +231,11 @@ reg = LazyRegressor(verbose=0, ignore_warnings=True)
 models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 # Metrics and model artifacts are automatically logged to MLflow
 ```
+
+Each model is logged as its own run, nested under the active run when you
+wrap the call in `mlflow.start_run()`. Fitted pipelines are logged as run
+artifacts but not registered in the model registry, and `mlflow.autolog()` is
+not enabled for you.
 
 View results in the MLflow UI:
 

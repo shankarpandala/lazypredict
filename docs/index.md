@@ -87,8 +87,8 @@
 - **Explainability** — permutation importance and optional SHAP values
 - **Ensemble methods** — simple average, weighted average, stacking
 - **Visualization** — forecast plots, model comparison, residuals, error heatmaps
-- **Intel Extension acceleration** — automatic CPU speedup when installed
-- **Python 3.9 – 3.13** support
+- **Intel Extension acceleration** — opt-in CPU speedup via `sklearnex.patch_sklearn()`
+- **Python 3.10 – 3.14** support
 - **MIT licensed**, free software
 
 ---

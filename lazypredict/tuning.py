@@ -8,10 +8,12 @@ import logging
 import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
+from sklearn.base import clone
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 
-from lazypredict.search_spaces import get_search_space
+from lazypredict.search_spaces import SEARCH_SPACES, get_search_space
 
 logger = logging.getLogger("lazypredict")
 
@@ -53,6 +55,39 @@ def _check_flaml():
 # Supervised tuning
 # ---------------------------------------------------------------------------
 
+# Keyword arguments that only control logging/parallelism, not the model.
+_NON_MODEL_PARAMS = ("n_jobs", "verbose", "verbosity", "random_state", "seed", "thread_count")
+
+
+def _model_kwargs(model_class: Any, random_state: int, use_gpu: bool = False) -> Dict[str, Any]:
+    """Seed, GPU and verbosity keyword arguments shared by every trial."""
+    from lazypredict.config import get_gpu_model_params
+
+    kwargs = dict(get_gpu_model_params(model_class, use_gpu))
+    module = getattr(model_class, "__module__", "") or ""
+    if "catboost" in module:
+        kwargs.setdefault("verbose", 0)
+    if "lightgbm" in module:
+        kwargs.setdefault("verbose", -1)
+        kwargs.setdefault("verbosity", -1)
+    if "xgboost" in module:
+        kwargs.setdefault("verbosity", 0)
+    try:
+        if "random_state" in model_class().get_params():
+            kwargs["random_state"] = random_state
+    except Exception:
+        pass
+    return kwargs
+
+
+def _cv_score(pipe: Any, X_train: Any, y_train: Any, cv: int, scoring: str, n_jobs: int) -> float:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        scores = cross_val_score(
+            pipe, X_train, y_train, cv=cv, scoring=scoring, n_jobs=n_jobs, error_score=np.nan
+        )
+    return float(np.mean(scores))
+
 
 def tune_supervised_optuna(
     model_name: str,
@@ -70,55 +105,74 @@ def tune_supervised_optuna(
 ) -> Tuple[Dict[str, Any], float]:
     """Tune a single supervised model using Optuna.
 
+    Trials that raise or produce NaN scores are recorded as failed and the
+    search continues. The sampler is seeded with *random_state*.
+
     Returns
     -------
     best_params : dict
-        Best hyperparameters found.
+        Best hyperparameters found (including fixed values from the search
+        space); empty when no trial completed.
     best_score : float
-        Best cross-validation score.
+        Best mean cross-validation score (higher is better); NaN when no
+        trial completed.
     """
     _check_optuna()
     from sklearn.pipeline import Pipeline
 
-    from lazypredict.config import get_gpu_model_params
-
     space_fn = get_search_space(model_name)
     if space_fn is None:
         logger.info("No search space for %s, skipping tuning.", model_name)
-        return {}, float("-inf")
+        return {}, float("nan")
+    fixed = _model_kwargs(model_class, random_state, use_gpu)
 
     def objective(trial):
         params = space_fn(trial)
-        gpu_params = get_gpu_model_params(model_class, use_gpu)
-        all_params = {**gpu_params, **params}
-        # Suppress boosting verbose
-        module = getattr(model_class, "__module__", "") or ""
-        if "catboost" in module:
-            all_params.setdefault("verbose", 0)
-        if "lightgbm" in module:
-            all_params.setdefault("verbose", -1)
-            all_params.setdefault("verbosity", -1)
-        if "xgboost" in module:
-            all_params.setdefault("verbosity", 0)
-        try:
-            if "random_state" in model_class().get_params():
-                all_params["random_state"] = random_state
-        except Exception:
-            pass
+        trial.set_user_attr("params", params)
+        pipe = Pipeline([("preprocessor", clone(preprocessor)), ("model", model_class(**{**fixed, **params}))])
+        return _cv_score(pipe, X_train, y_train, cv, scoring, n_jobs)
 
-        model = model_class(**all_params)
-        pipe = Pipeline([("preprocessor", preprocessor), ("model", model)])
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            scores = cross_val_score(
-                pipe, X_train, y_train, cv=cv, scoring=scoring, n_jobs=n_jobs
-            )
-        return scores.mean()
+    study = optuna.create_study(
+        direction="maximize", sampler=optuna.samplers.TPESampler(seed=random_state)
+    )
+    study.optimize(objective, n_trials=n_trials, timeout=timeout, catch=(Exception,))
 
-    study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=n_trials, timeout=timeout)
+    completed = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
+    if not completed:
+        return {}, float("nan")
+    best = study.best_trial
+    return dict(best.user_attrs.get("params", best.params)), float(study.best_value)
 
-    return study.best_params, study.best_value
+
+class _DistributionRecorder:
+    """Stand-in for an Optuna trial that turns a search space into scipy distributions."""
+
+    def suggest_float(self, name, low, high, log=False, **kwargs):
+        from scipy import stats
+
+        return stats.loguniform(low, high) if log else stats.uniform(low, high - low)
+
+    def suggest_int(self, name, low, high, **kwargs):
+        from scipy import stats
+
+        return stats.randint(low, high + 1)
+
+    def suggest_categorical(self, name, choices):
+        return list(choices)
+
+
+def _optuna_to_sklearn_dist(model_name: str) -> dict:
+    """Convert a model's Optuna search space into RandomizedSearchCV distributions."""
+    space_fn = get_search_space(model_name)
+    if space_fn is None:
+        return {}
+    distributions = {}
+    for key, value in space_fn(_DistributionRecorder()).items():
+        if isinstance(value, list) or hasattr(value, "rvs"):
+            distributions[key] = value
+        else:  # a fixed value in the search space
+            distributions[key] = [value]
+    return distributions
 
 
 def tune_supervised_sklearn(
@@ -132,26 +186,22 @@ def tune_supervised_sklearn(
     n_iter: int = 50,
     random_state: int = 42,
     n_jobs: int = -1,
+    use_gpu: bool = False,
 ) -> Tuple[Dict[str, Any], float]:
-    """Tune a single supervised model using sklearn RandomizedSearchCV.
+    """Tune a single supervised model using scikit-learn's RandomizedSearchCV.
 
-    Uses a simple parameter distribution derived from the search space registry.
+    Distributions are derived from the model's Optuna search space.
+    Candidates that fail (e.g. ``n_neighbors`` larger than a fold) score NaN
+    instead of aborting the search.
     """
     from sklearn.pipeline import Pipeline
 
-    space_fn = get_search_space(model_name)
-    if space_fn is None:
-        return {}, float("-inf")
-
-    # Build a rough param distribution from the Optuna space
     param_dist = _optuna_to_sklearn_dist(model_name)
     if not param_dist:
-        return {}, float("-inf")
+        return {}, float("nan")
 
-    model = model_class()
-    pipe = Pipeline([("preprocessor", preprocessor), ("model", model)])
-
-    # Prefix params with step name
+    model = model_class(**_model_kwargs(model_class, random_state, use_gpu))
+    pipe = Pipeline([("preprocessor", clone(preprocessor)), ("model", model)])
     prefixed = {f"model__{k}": v for k, v in param_dist.items()}
 
     with warnings.catch_warnings():
@@ -159,54 +209,48 @@ def tune_supervised_sklearn(
         search = RandomizedSearchCV(
             pipe,
             prefixed,
-            n_iter=min(n_iter, 50),
+            n_iter=n_iter,
             cv=cv,
             scoring=scoring,
             n_jobs=n_jobs,
             random_state=random_state,
-            error_score="raise",
+            error_score=np.nan,
         )
         search.fit(X_train, y_train)
 
-    # Strip prefix
-    best = {k.replace("model__", ""): v for k, v in search.best_params_.items()}
-    return best, search.best_score_
+    best = {k[len("model__"):]: v for k, v in search.best_params_.items()}
+    return best, float(search.best_score_)
 
 
-def _optuna_to_sklearn_dist(model_name: str) -> dict:
-    """Convert Optuna search space to rough scipy distributions for RandomizedSearchCV."""
-    from scipy import stats
+# scikit-learn / boosting class name -> FLAML learner name
+_FLAML_LEARNERS = {
+    "RandomForestClassifier": "rf",
+    "RandomForestRegressor": "rf",
+    "ExtraTreesClassifier": "extra_tree",
+    "ExtraTreesRegressor": "extra_tree",
+    "KNeighborsClassifier": "kneighbor",
+    "KNeighborsRegressor": "kneighbor",
+    "LogisticRegression": "lrl2",
+    "LGBMClassifier": "lgbm",
+    "LGBMRegressor": "lgbm",
+    "XGBClassifier": "xgboost",
+    "XGBRegressor": "xgboost",
+    "CatBoostClassifier": "catboost",
+    "CatBoostRegressor": "catboost",
+}
 
-    distributions: Dict[str, Dict[str, Any]] = {
-        "Ridge": {"alpha": stats.loguniform(1e-4, 100)},
-        "RidgeClassifier": {"alpha": stats.loguniform(1e-4, 100)},
-        "Lasso": {"alpha": stats.loguniform(1e-4, 100)},
-        "ElasticNet": {
-            "alpha": stats.loguniform(1e-4, 100),
-            "l1_ratio": stats.uniform(0.01, 0.98),
-        },
-        "KNeighborsClassifier": {
-            "n_neighbors": stats.randint(1, 51),
-            "weights": ["uniform", "distance"],
-        },
-        "KNeighborsRegressor": {
-            "n_neighbors": stats.randint(1, 51),
-            "weights": ["uniform", "distance"],
-        },
-        "RandomForestClassifier": {
-            "n_estimators": stats.randint(50, 501),
-            "max_depth": stats.randint(2, 51),
-        },
-        "RandomForestRegressor": {
-            "n_estimators": stats.randint(50, 501),
-            "max_depth": stats.randint(2, 51),
-        },
-        "DecisionTreeClassifier": {"max_depth": stats.randint(2, 51)},
-        "DecisionTreeRegressor": {"max_depth": stats.randint(2, 51)},
-        "SVC": {"C": stats.loguniform(1e-3, 100), "kernel": ["rbf", "linear"]},
-        "SVR": {"C": stats.loguniform(1e-3, 100), "kernel": ["rbf", "linear"]},
-    }
-    return distributions.get(model_name, {})
+
+def _flaml_loss(scoring: str):
+    """FLAML minimises a loss; wrap a scikit-learn scorer as ``1 - score``."""
+    from sklearn.metrics import get_scorer
+
+    scorer = get_scorer(scoring)
+
+    def loss(X_val, y_val, estimator, labels, X_train, y_train, *args, **kwargs):
+        score = scorer(estimator, X_val, y_val)
+        return 1.0 - score, {scoring: score}
+
+    return loss
 
 
 def tune_supervised_flaml(
@@ -221,33 +265,55 @@ def tune_supervised_flaml(
     timeout: Optional[float] = None,
     random_state: int = 42,
     n_jobs: int = -1,
+    use_gpu: bool = False,
 ) -> Tuple[Dict[str, Any], float]:
-    """Tune using FLAML's cost-frugal search."""
+    """Tune a single supervised model with FLAML's cost-frugal search.
+
+    FLAML searches its own space for the matching learner; the parameters of
+    the best estimator it finds are then scored through the lazypredict
+    pipeline, so ``best_score`` is comparable with the other backends.
+    Models FLAML has no learner for return ``({}, nan)``.
+    """
     _check_flaml()
-    # FLAML tune requires a config space and evaluation function
-    # Wrap it to use the same interface as Optuna
-    # For now, fall back to Optuna-like behavior via FLAML's BlendSearch
-    logger.info("FLAML tuning for %s", model_name)
-    # Use FLAML's AutoML for individual model tuning
     from flaml import AutoML
+    from sklearn.base import ClassifierMixin
+    from sklearn.pipeline import Pipeline
+
+    learner = _FLAML_LEARNERS.get(model_name)
+    if learner is None:
+        logger.info("FLAML has no learner for %s, skipping tuning.", model_name)
+        return {}, float("nan")
 
     automl = AutoML()
     settings = {
-        "time_budget": timeout or 60,
-        "metric": scoring.replace("neg_", "").replace("_", " "),
-        "task": "classification" if "Classifier" in model_name else "regression",
-        "estimator_list": [model_name.lower()],
+        "task": "classification" if issubclass(model_class, ClassifierMixin) else "regression",
+        "metric": _flaml_loss(scoring),
+        "estimator_list": [learner],
+        "max_iter": n_trials,
+        "time_budget": timeout if timeout is not None else 60,
+        "eval_method": "cv",
+        "n_splits": cv,
+        "n_jobs": n_jobs,
         "seed": random_state,
         "verbose": 0,
     }
+    X_prepared = preprocessor.fit_transform(X_train, y_train)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        try:
-            automl.fit(X_train, y_train, **settings)
-            return automl.best_config or {}, automl.best_loss or float("-inf")
-        except Exception as exc:
-            logger.warning("FLAML tuning failed for %s: %s", model_name, exc)
-            return {}, float("-inf")
+        automl.fit(X_prepared, np.asarray(y_train), **settings)
+
+    estimator = getattr(automl.model, "estimator", None)
+    if estimator is None or type(estimator).__name__ != model_class.__name__:
+        return {}, float("nan")
+    defaults = model_class().get_params()
+    best = {
+        key: value
+        for key, value in estimator.get_params().items()
+        if key in defaults and key not in _NON_MODEL_PARAMS and defaults[key] != value
+    }
+    fixed = _model_kwargs(model_class, random_state, use_gpu)
+    pipe = Pipeline([("preprocessor", clone(preprocessor)), ("model", model_class(**{**fixed, **best}))])
+    return best, _cv_score(pipe, X_train, y_train, cv, scoring, n_jobs)
 
 
 # ---------------------------------------------------------------------------
@@ -270,6 +336,7 @@ def tune_top_k(
     n_jobs: int = -1,
     backend: str = "optuna",
     use_gpu: bool = False,
+    cv: int = 5,
 ) -> pd.DataFrame:
     """Tune the top-k models from the initial ranking.
 
@@ -284,15 +351,15 @@ def tune_top_k(
     X_train, y_train : array-like
         Training data.
     preprocessor : ColumnTransformer
-        Fitted preprocessor.
+        Preprocessor template (cloned for every candidate).
     scoring : str
         Scoring metric string (e.g. 'balanced_accuracy', 'r2').
     top_k : int
         Number of top models to tune.
     n_trials : int
-        Optuna trials per model.
+        Trials (Optuna/FLAML) or sampled candidates (sklearn) per model.
     timeout : float or None
-        Seconds per model tuning.
+        Seconds per model tuning (Optuna and FLAML).
     random_state : int
         Random seed.
     n_jobs : int
@@ -301,58 +368,59 @@ def tune_top_k(
         'optuna', 'sklearn', or 'flaml'.
     use_gpu : bool
         Whether GPU is enabled.
+    cv : int
+        Number of cross-validation folds.
 
     Returns
     -------
     pd.DataFrame
-        Tuning results with columns: Model, Best Score, Best Params.
+        One row per model (index ``Model``) with ``Best Score`` (mean
+        cross-validated score on the training data, higher is better),
+        ``Best Params`` (a dict) and ``Status`` (``"tuned"``,
+        ``"no search space"`` or ``"failed: ..."``). A model that cannot be
+        tuned never aborts the others.
     """
-    top_model_names = list(scores_df.index[:top_k])
-    name_to_class = {name: cls for name, cls in estimator_list}
+    tuners = {
+        "optuna": lambda name, cls: tune_supervised_optuna(
+            name, cls, X_train, y_train, preprocessor, scoring, cv=cv, n_trials=n_trials,
+            timeout=timeout, random_state=random_state, n_jobs=n_jobs, use_gpu=use_gpu,
+        ),
+        "sklearn": lambda name, cls: tune_supervised_sklearn(
+            name, cls, X_train, y_train, preprocessor, scoring, cv=cv, n_iter=n_trials,
+            random_state=random_state, n_jobs=n_jobs, use_gpu=use_gpu,
+        ),
+        "flaml": lambda name, cls: tune_supervised_flaml(
+            name, cls, X_train, y_train, preprocessor, scoring, cv=cv, n_trials=n_trials,
+            timeout=timeout, random_state=random_state, n_jobs=n_jobs, use_gpu=use_gpu,
+        ),
+    }
+    if backend not in tuners:
+        raise ValueError(f"Unknown backend: {backend}. Use 'optuna', 'sklearn', or 'flaml'.")
+    supported = _FLAML_LEARNERS if backend == "flaml" else SEARCH_SPACES
 
+    name_to_class = dict(estimator_list)
     results = []
-    for model_name in top_model_names:
+    for model_name in list(scores_df.index[:top_k]):
         model_class = name_to_class.get(model_name)
         if model_class is None:
             continue
-
-        space_fn = get_search_space(model_name)
-        if space_fn is None:
-            logger.info("No search space for %s, skipping.", model_name)
-            results.append({
-                "Model": model_name,
-                "Best Score": None,
-                "Best Params": "N/A (no search space)",
-            })
+        row = {"Model": model_name, "Best Score": float("nan"), "Best Params": {}}
+        if model_name not in supported:
+            logger.info("No %s search space for %s, skipping.", backend, model_name)
+            results.append({**row, "Status": "no search space"})
             continue
 
         logger.info("Tuning %s with %s backend...", model_name, backend)
+        try:
+            best_params, best_score = tuners[backend](model_name, model_class)
+        except Exception as exc:
+            logger.warning("Tuning %s failed: %s", model_name, exc)
+            results.append({**row, "Status": f"failed: {exc}"})
+            continue
+        if not best_params or np.isnan(best_score):
+            results.append({**row, "Status": "failed: no successful trial"})
+            continue
+        results.append({**row, "Best Score": best_score, "Best Params": best_params, "Status": "tuned"})
 
-        if backend == "optuna":
-            best_params, best_score = tune_supervised_optuna(
-                model_name, model_class, X_train, y_train, preprocessor,
-                scoring, cv=5, n_trials=n_trials, timeout=timeout,
-                random_state=random_state, n_jobs=n_jobs, use_gpu=use_gpu,
-            )
-        elif backend == "sklearn":
-            best_params, best_score = tune_supervised_sklearn(
-                model_name, model_class, X_train, y_train, preprocessor,
-                scoring, cv=5, n_iter=n_trials, random_state=random_state,
-                n_jobs=n_jobs,
-            )
-        elif backend == "flaml":
-            best_params, best_score = tune_supervised_flaml(
-                model_name, model_class, X_train, y_train, preprocessor,
-                scoring, cv=5, n_trials=n_trials, timeout=timeout,
-                random_state=random_state, n_jobs=n_jobs,
-            )
-        else:
-            raise ValueError(f"Unknown backend: {backend}. Use 'optuna', 'sklearn', or 'flaml'.")
-
-        results.append({
-            "Model": model_name,
-            "Best Score": best_score,
-            "Best Params": str(best_params),
-        })
-
-    return pd.DataFrame(results).set_index("Model")
+    columns = ["Model", "Best Score", "Best Params", "Status"]
+    return pd.DataFrame(results, columns=columns).set_index("Model")

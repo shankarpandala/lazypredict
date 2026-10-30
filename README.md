@@ -20,10 +20,10 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 - Multiple categorical encoding strategies (OneHot, Ordinal, Target, Binary)
 - Built-in MLflow integration for experiment tracking
 - **GPU acceleration**: XGBoost, LightGBM, CatBoost, cuML (RAPIDS), LSTM/GRU, TimesFM
-- Support for Python 3.9 through 3.13
+- Support for Python 3.10 through 3.14
 - Custom metric evaluation support
 - Configurable timeout and cross-validation
-- Intel Extension for Scikit-learn acceleration support
+- Intel Extension for Scikit-learn acceleration support (opt-in)
 
 ## Installation
 
@@ -47,12 +47,18 @@ Install with boosting libraries (XGBoost, LightGBM, CatBoost):
 pip install lazypredict[boost]
 ```
 
+Install the target/binary categorical encoders (`category-encoders`):
+
+```bash
+pip install lazypredict[encoders]
+```
+
 Install with time series forecasting support:
 
 ```bash
 pip install lazypredict[timeseries]          # statsmodels + pmdarima
 pip install lazypredict[timeseries,deeplearning]  # + LSTM/GRU via PyTorch
-pip install lazypredict[timeseries,foundation]    # + Google TimesFM (Python 3.10-3.11)
+pip install lazypredict[timeseries,foundation]    # + Google TimesFM (PyTorch)
 ```
 
 Install with all optional dependencies:
@@ -119,42 +125,40 @@ models, predictions = clf.fit(X_train, X_test, y_train, y_test)
   - `'ordinal'`: Ordinal encoding
   - `'target'`: Target encoding (requires `category-encoders`)
   - `'binary'`: Binary encoding (requires `category-encoders`)
-- `timeout` (int): Maximum seconds per model (None for no limit)
+- `timeout` (int/float): Maximum training time per model in seconds (None for no limit). Slow models are interrupted on Linux/macOS and listed in `errors` as `TimeoutException`
 - `cv` (int): Number of cross-validation folds (None to disable)
 - `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
 
-| Model                          |   Accuracy |   Balanced Accuracy |   ROC AUC |   F1 Score |   Time Taken |
-|:-------------------------------|-----------:|--------------------:|----------:|-----------:|-------------:|
-| LinearSVC                      |   0.989474 |            0.987544 |  0.987544 |   0.989462 |    0.0150008 |
-| SGDClassifier                  |   0.989474 |            0.987544 |  0.987544 |   0.989462 |    0.0109992 |
-| MLPClassifier                  |   0.985965 |            0.986904 |  0.986904 |   0.985994 |    0.426     |
-| Perceptron                     |   0.985965 |            0.984797 |  0.984797 |   0.985965 |    0.0120046 |
-| LogisticRegression             |   0.985965 |            0.98269  |  0.98269  |   0.985934 |    0.0200036 |
-| LogisticRegressionCV           |   0.985965 |            0.98269  |  0.98269  |   0.985934 |    0.262997  |
-| SVC                            |   0.982456 |            0.979942 |  0.979942 |   0.982437 |    0.0140011 |
-| CalibratedClassifierCV         |   0.982456 |            0.975728 |  0.975728 |   0.982357 |    0.0350015 |
-| PassiveAggressiveClassifier    |   0.975439 |            0.974448 |  0.974448 |   0.975464 |    0.0130005 |
-| LabelPropagation               |   0.975439 |            0.974448 |  0.974448 |   0.975464 |    0.0429988 |
-| LabelSpreading                 |   0.975439 |            0.974448 |  0.974448 |   0.975464 |    0.0310006 |
-| RandomForestClassifier         |   0.97193  |            0.969594 |  0.969594 |   0.97193  |    0.033     |
-| GradientBoostingClassifier     |   0.97193  |            0.967486 |  0.967486 |   0.971869 |    0.166998  |
-| QuadraticDiscriminantAnalysis  |   0.964912 |            0.966206 |  0.966206 |   0.965052 |    0.0119994 |
-| HistGradientBoostingClassifier |   0.968421 |            0.964739 |  0.964739 |   0.968387 |    0.682003  |
-| RidgeClassifierCV              |   0.97193  |            0.963272 |  0.963272 |   0.971736 |    0.0130029 |
-| RidgeClassifier                |   0.968421 |            0.960525 |  0.960525 |   0.968242 |    0.0119977 |
-| AdaBoostClassifier             |   0.961404 |            0.959245 |  0.959245 |   0.961444 |    0.204998  |
-| ExtraTreesClassifier           |   0.961404 |            0.957138 |  0.957138 |   0.961362 |    0.0270066 |
-| KNeighborsClassifier           |   0.961404 |            0.95503  |  0.95503  |   0.961276 |    0.0560005 |
-| BaggingClassifier              |   0.947368 |            0.954577 |  0.954577 |   0.947882 |    0.0559971 |
-| BernoulliNB                    |   0.950877 |            0.951003 |  0.951003 |   0.951072 |    0.0169988 |
-| LinearDiscriminantAnalysis     |   0.961404 |            0.950816 |  0.950816 |   0.961089 |    0.0199995 |
-| GaussianNB                     |   0.954386 |            0.949536 |  0.949536 |   0.954337 |    0.0139935 |
-| NuSVC                          |   0.954386 |            0.943215 |  0.943215 |   0.954014 |    0.019989  |
-| DecisionTreeClassifier         |   0.936842 |            0.933693 |  0.933693 |   0.936971 |    0.0170023 |
-| NearestCentroid                |   0.947368 |            0.933506 |  0.933506 |   0.946801 |    0.0160074 |
-| ExtraTreeClassifier            |   0.922807 |            0.912168 |  0.912168 |   0.922462 |    0.0109999 |
-| CheckingClassifier             |   0.361404 |            0.5      |  0.5      |   0.191879 |    0.0170043 |
-| DummyClassifier                |   0.512281 |            0.489598 |  0.489598 |   0.518924 |    0.0119965 |
+Output on the breast cancer split above (scikit-learn 1.9, with `xgboost` and `lightgbm` installed; times are machine-dependent):
+
+| Model                       | Accuracy | Balanced Accuracy | ROC AUC | F1 Score | Precision | Recall | Time Taken |
+|:----------------------------|---------:|------------------:|--------:|---------:|----------:|-------:|-----------:|
+| LinearSVC                   |   0.9895 |            0.9875 |  0.9925 |   0.9895 |    0.9895 | 0.9895 |       0.02 |
+| Perceptron                  |   0.9860 |            0.9848 |  0.9932 |   0.9860 |    0.9860 | 0.9860 |       0.04 |
+| LogisticRegression          |   0.9860 |            0.9827 |  0.9947 |   0.9859 |    0.9860 | 0.9860 |       0.04 |
+| SVC                         |   0.9825 |            0.9799 |  0.9949 |   0.9824 |    0.9824 | 0.9825 |       0.03 |
+| XGBClassifier               |   0.9754 |            0.9744 |  0.9874 |   0.9755 |    0.9755 | 0.9754 |       0.07 |
+| LabelSpreading              |   0.9754 |            0.9744 |         |   0.9755 |    0.9755 | 0.9754 |       0.04 |
+| LabelPropagation            |   0.9754 |            0.9744 |         |   0.9755 |    0.9755 | 0.9754 |       0.03 |
+| BaggingClassifier           |   0.9719 |            0.9738 |  0.9860 |   0.9720 |    0.9726 | 0.9719 |       0.07 |
+| PassiveAggressiveClassifier |   0.9789 |            0.9730 |  0.9962 |   0.9789 |    0.9792 | 0.9789 |       0.04 |
+| SGDClassifier               |   0.9754 |            0.9723 |  0.9918 |   0.9754 |    0.9754 | 0.9754 |       0.03 |
+| RandomForestClassifier      |   0.9719 |            0.9717 |  0.9933 |   0.9720 |    0.9721 | 0.9719 |       0.21 |
+| CalibratedClassifierCV      |   0.9789 |            0.9709 |  0.9939 |   0.9788 |    0.9796 | 0.9789 |       0.07 |
+| AdaBoostClassifier          |   0.9719 |            0.9696 |  0.9906 |   0.9719 |    0.9719 | 0.9719 |       0.18 |
+| LGBMClassifier              |   0.9684 |            0.9668 |  0.9895 |   0.9685 |    0.9685 | 0.9684 |       0.07 |
+| ExtraTreesClassifier        |   0.9684 |            0.9647 |  0.9949 |   0.9684 |    0.9684 | 0.9684 |       0.15 |
+| RidgeClassifierCV           |   0.9719 |            0.9633 |  0.9924 |   0.9717 |    0.9725 | 0.9719 |       0.03 |
+| RidgeClassifier             |   0.9684 |            0.9605 |  0.9919 |   0.9682 |    0.9687 | 0.9684 |       0.03 |
+| KNeighborsClassifier        |   0.9614 |            0.9550 |  0.9866 |   0.9613 |    0.9614 | 0.9614 |       0.04 |
+| BernoulliNB                 |   0.9509 |            0.9510 |  0.9899 |   0.9511 |    0.9517 | 0.9509 |       0.03 |
+| LinearDiscriminantAnalysis  |   0.9614 |            0.9508 |  0.9823 |   0.9611 |    0.9621 | 0.9614 |       0.03 |
+| GaussianNB                  |   0.9544 |            0.9495 |  0.9935 |   0.9543 |    0.9543 | 0.9544 |       0.02 |
+| NuSVC                       |   0.9544 |            0.9432 |  0.9918 |   0.9540 |    0.9549 | 0.9544 |       0.05 |
+| ExtraTreeClassifier         |   0.9439 |            0.9350 |  0.9350 |   0.9436 |    0.9438 | 0.9439 |       0.03 |
+| NearestCentroid             |   0.9474 |            0.9335 |  0.9891 |   0.9468 |    0.9483 | 0.9474 |       0.04 |
+| DecisionTreeClassifier      |   0.9298 |            0.9282 |  0.9282 |   0.9301 |    0.9308 | 0.9298 |       0.03 |
+| DummyClassifier             |   0.6386 |            0.5000 |  0.5000 |   0.4977 |    0.4078 | 0.6386 |       0.03 |
 
 ## Regression
 
@@ -209,52 +213,55 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
   - `'ordinal'`: Ordinal encoding
   - `'target'`: Target encoding (requires `category-encoders`)
   - `'binary'`: Binary encoding (requires `category-encoders`)
-- `timeout` (int): Maximum seconds per model (None for no limit)
+- `timeout` (int/float): Maximum training time per model in seconds (None for no limit). Slow models are interrupted on Linux/macOS and listed in `errors` as `TimeoutException`
 - `use_gpu` (bool): Enable GPU acceleration for supported models (default False)
 
-| Model                         |   Adjusted R-Squared |   R-Squared |     RMSE |   Time Taken |
-|:------------------------------|---------------------:|------------:|---------:|-------------:|
-| ExtraTreesRegressor           |           0.378921   |  0.520076   |  54.2202 |   0.121466   |
-| OrthogonalMatchingPursuitCV   |           0.374947   |  0.517004   |  54.3934 |   0.0111742  |
-| Lasso                         |           0.373483   |  0.515873   |  54.457  |   0.00620174 |
-| LassoLars                     |           0.373474   |  0.515866   |  54.4575 |   0.0087235  |
-| LarsCV                        |           0.3715     |  0.514341   |  54.5432 |   0.0160234  |
-| LassoCV                       |           0.370413   |  0.513501   |  54.5903 |   0.0624897  |
-| PassiveAggressiveRegressor    |           0.366958   |  0.510831   |  54.7399 |   0.00689793 |
-| LassoLarsIC                   |           0.364984   |  0.509306   |  54.8252 |   0.0108321  |
-| SGDRegressor                  |           0.364307   |  0.508783   |  54.8544 |   0.0055306  |
-| RidgeCV                       |           0.363002   |  0.507774   |  54.9107 |   0.00728202 |
-| Ridge                         |           0.363002   |  0.507774   |  54.9107 |   0.00556874 |
-| BayesianRidge                 |           0.362296   |  0.507229   |  54.9411 |   0.0122972  |
-| LassoLarsCV                   |           0.361749   |  0.506806   |  54.9646 |   0.0175984  |
-| TransformedTargetRegressor    |           0.361749   |  0.506806   |  54.9646 |   0.00604773 |
-| LinearRegression              |           0.361749   |  0.506806   |  54.9646 |   0.00677514 |
-| Lars                          |           0.358828   |  0.504549   |  55.0903 |   0.00935149 |
-| ElasticNetCV                  |           0.356159   |  0.502486   |  55.2048 |   0.0478678  |
-| HuberRegressor                |           0.355251   |  0.501785   |  55.2437 |   0.0129263  |
-| RandomForestRegressor         |           0.349621   |  0.497434   |  55.4844 |   0.2331     |
-| AdaBoostRegressor             |           0.340416   |  0.490322   |  55.8757 |   0.0512381  |
-| LGBMRegressor                 |           0.339239   |  0.489412   |  55.9255 |   0.0396187  |
-| HistGradientBoostingRegressor |           0.335632   |  0.486625   |  56.0779 |   0.0897055  |
-| PoissonRegressor              |           0.323033   |  0.476889   |  56.6072 |   0.00953603 |
-| ElasticNet                    |           0.301755   |  0.460447   |  57.4899 |   0.00604224 |
-| KNeighborsRegressor           |           0.299855   |  0.458979   |  57.5681 |   0.00757337 |
-| OrthogonalMatchingPursuit     |           0.292421   |  0.453235   |  57.8729 |   0.00709486 |
-| BaggingRegressor              |           0.291213   |  0.452301   |  57.9223 |   0.0302746  |
-| GradientBoostingRegressor     |           0.247009   |  0.418143   |  59.7011 |   0.136803   |
-| TweedieRegressor              |           0.244215   |  0.415984   |  59.8118 |   0.00633955 |
-| XGBRegressor                  |           0.224263   |  0.400567   |  60.5961 |   0.339694   |
-| GammaRegressor                |           0.223895   |  0.400283   |  60.6105 |   0.0235181  |
-| RANSACRegressor               |           0.203535   |  0.38455    |  61.4004 |   0.0653253  |
-| LinearSVR                     |           0.116707   |  0.317455   |  64.6607 |   0.0077076  |
-| ExtraTreeRegressor            |           0.00201902 |  0.228833   |  68.7304 |   0.00626636 |
-| NuSVR                         |          -0.0667043  |  0.175728   |  71.0575 |   0.0143399  |
-| SVR                           |          -0.0964128  |  0.152772   |  72.0402 |   0.0114729  |
-| DummyRegressor                |          -0.297553   | -0.00265478 |  78.3701 |   0.00592971 |
-| DecisionTreeRegressor         |          -0.470263   | -0.136112   |  83.4229 |   0.00749898 |
-| GaussianProcessRegressor      |          -0.769174   | -0.367089   |  91.5109 |   0.0770502  |
-| MLPRegressor                  |          -1.86772    | -1.21597    | 116.508  |   0.235267   |
-| KernelRidge                   |          -5.03822    | -3.6659     | 169.061  |   0.0243919  |
+Output on the diabetes split above:
+
+| Model                         | Adjusted R-Squared | R-Squared |     RMSE | Time Taken |
+|:------------------------------|-------------------:|----------:|---------:|-----------:|
+| ExtraTreesRegressor           |             0.3789 |    0.5201 |  54.2202 |       0.16 |
+| OrthogonalMatchingPursuitCV   |             0.3749 |    0.5170 |  54.3934 |       0.02 |
+| Lasso                         |             0.3735 |    0.5159 |  54.4570 |       0.01 |
+| LassoLars                     |             0.3735 |    0.5159 |  54.4574 |       0.02 |
+| LarsCV                        |             0.3715 |    0.5143 |  54.5431 |       0.04 |
+| LassoCV                       |             0.3704 |    0.5135 |  54.5903 |       0.12 |
+| PassiveAggressiveRegressor    |             0.3670 |    0.5108 |  54.7399 |       0.01 |
+| LassoLarsIC                   |             0.3650 |    0.5093 |  54.8251 |       0.02 |
+| SGDRegressor                  |             0.3643 |    0.5088 |  54.8544 |       0.01 |
+| Ridge                         |             0.3630 |    0.5078 |  54.9107 |       0.01 |
+| RidgeCV                       |             0.3630 |    0.5078 |  54.9107 |       0.01 |
+| BayesianRidge                 |             0.3623 |    0.5072 |  54.9411 |       0.01 |
+| LassoLarsCV                   |             0.3617 |    0.5068 |  54.9646 |       0.03 |
+| LinearRegression              |             0.3617 |    0.5068 |  54.9646 |       0.01 |
+| TransformedTargetRegressor    |             0.3617 |    0.5068 |  54.9646 |       0.01 |
+| Lars                          |             0.3588 |    0.5045 |  55.0903 |       0.04 |
+| ElasticNetCV                  |             0.3562 |    0.5025 |  55.2048 |       0.07 |
+| HuberRegressor                |             0.3553 |    0.5018 |  55.2437 |       0.04 |
+| RandomForestRegressor         |             0.3478 |    0.4960 |  55.5630 |       0.32 |
+| AdaBoostRegressor             |             0.3404 |    0.4903 |  55.8757 |       0.08 |
+| LGBMRegressor                 |             0.3392 |    0.4894 |  55.9255 |       0.04 |
+| PoissonRegressor              |             0.3230 |    0.4768 |  56.6103 |       0.98 |
+| HistGradientBoostingRegressor |             0.3141 |    0.4699 |  56.9814 |       0.18 |
+| ElasticNet                    |             0.3018 |    0.4604 |  57.4899 |       0.01 |
+| KNeighborsRegressor           |             0.2999 |    0.4590 |  57.5681 |       0.02 |
+| OrthogonalMatchingPursuit     |             0.2924 |    0.4532 |  57.8729 |       0.01 |
+| BaggingRegressor              |             0.2779 |    0.4420 |  58.4654 |       0.04 |
+| XGBRegressor                  |             0.2505 |    0.4209 |  59.5610 |       0.09 |
+| TweedieRegressor              |             0.2442 |    0.4160 |  59.8118 |       0.17 |
+| GradientBoostingRegressor     |             0.2362 |    0.4098 |  60.1296 |       0.15 |
+| GammaRegressor                |             0.2239 |    0.4003 |  60.6105 |       0.05 |
+| RANSACRegressor               |             0.2035 |    0.3845 |  61.4004 |       0.12 |
+| LinearSVR                     |             0.1167 |    0.3175 |  64.6607 |       0.02 |
+| ExtraTreeRegressor            |             0.0020 |    0.2288 |  68.7304 |       0.01 |
+| NuSVR                         |            -0.0667 |    0.1757 |  71.0575 |       0.02 |
+| SVR                           |            -0.0964 |    0.1528 |  72.0402 |       0.02 |
+| DummyRegressor                |            -0.2976 |   -0.0027 |  78.3701 |       0.01 |
+| QuantileRegressor             |            -0.3466 |   -0.0405 |  79.8364 |       0.03 |
+| DecisionTreeRegressor         |            -0.4698 |   -0.1358 |  83.4105 |       0.01 |
+| GaussianProcessRegressor      |            -0.7692 |   -0.3671 |  91.5109 |       0.07 |
+| MLPRegressor                  |            -1.8677 |   -1.2160 | 116.5081 |       0.29 |
+| KernelRidge                   |            -5.0382 |   -3.6659 | 169.0604 |       0.05 |
 
 ## Time Series Forecasting
 
@@ -318,7 +325,7 @@ scores, predictions = fcst.fit(y_train, y_test)
 - `predictions` (bool): Return a second DataFrame of forecasted values
 - `seasonal_period` (int/None): Seasonal cycle length; ``None`` auto-detects via ACF
 - `cv` (int/None): Number of ``TimeSeriesSplit`` folds for cross-validation
-- `timeout` (int/float/None): Maximum training seconds per model
+- `timeout` (int/float/None): Maximum seconds per model for training and forecasting; slow models are interrupted on Linux/macOS and listed in `errors`
 - `sort_by` (str): Metric to sort by (``"RMSE"``, ``"MAE"``, ``"MAPE"``, ``"SMAPE"``, ``"MASE"``, ``"R-Squared"``)
 - `forecasters` (str/list): ``"all"`` or a list of model names
 - `n_lags` (int): Number of lag features for ML/DL models (default 10)
@@ -397,8 +404,11 @@ for encoder in ['onehot', 'ordinal', 'target', 'binary']:
 
 **Note:** Target and binary encoders require the `category-encoders` package:
 ```bash
-pip install category-encoders
+pip install lazypredict[encoders]
 ```
+
+pandas `category`, `string` and (pandas 3) `str` columns are treated as
+categorical features alongside `object` columns.
 
 ## Intel Extension Acceleration
 
@@ -408,7 +418,17 @@ For improved performance on Intel CPUs, install Intel Extension for Scikit-learn
 pip install scikit-learn-intelex
 ```
 
-Lazy Predict will automatically detect and use it for acceleration.
+Patch scikit-learn **before** importing lazypredict, so that the accelerated
+estimators are the ones lazypredict collects:
+
+```python
+from sklearnex import patch_sklearn
+patch_sklearn()
+
+from lazypredict.Supervised import LazyClassifier
+```
+
+> **Changed in 0.4.0:** Earlier versions called `patch_sklearn()` automatically on `import lazypredict`, which changed scikit-learn for the whole Python process. The patch is now opt-in.
 
 ## MLflow Integration
 
@@ -423,8 +443,11 @@ reg = LazyRegressor(verbose=0, ignore_warnings=True)
 models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 ```
 
-Automatically tracks:
+Each model gets its own MLflow run (nested under your active run, if any) with:
 - Model metrics (R-squared, RMSE, etc.)
 - Training time
-- Model parameters
-- Model artifacts
+- The model name as a parameter
+- The fitted pipeline as an artifact (not registered in the model registry)
+
+Lazy Predict does not call `mlflow.autolog()`; enable it yourself if you want
+autologging for the rest of your code.

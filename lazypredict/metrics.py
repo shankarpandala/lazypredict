@@ -1,7 +1,19 @@
 """Metric helper functions for LazyPredict."""
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+
+def metric_name(metric: Any) -> str:
+    """Column name for a user-supplied metric callable.
+
+    Uses ``__name__``, the wrapped function's name for ``functools.partial``
+    objects, and ``"custom_metric"`` otherwise.
+    """
+    name = getattr(metric, "__name__", None) or getattr(getattr(metric, "func", None), "__name__", None)
+    return name or "custom_metric"
 
 
 def adjusted_rsquared(r2: float, n: int, p: int) -> float:
@@ -19,9 +31,13 @@ def adjusted_rsquared(r2: float, n: int, p: int) -> float:
     Returns
     -------
     float
-        Adjusted R-squared value.
+        Adjusted R-squared value, or NaN when it is undefined
+        (``n - p - 1 <= 0``, i.e. no more observations than predictors).
     """
-    return 1 - (1 - r2) * ((n - 1) / (n - p - 1))
+    dof = n - p - 1
+    if dof <= 0:
+        return float("nan")
+    return 1 - (1 - r2) * ((n - 1) / dof)
 
 
 # ---------------------------------------------------------------------------
@@ -112,16 +128,25 @@ def mean_absolute_scaled_error(
     y_train : array-like
         Training series used to compute the naive scaling factor.
     seasonal_period : int
-        Seasonal period for the naive baseline (1 = non-seasonal).
+        Seasonal period for the naive baseline (1 = non-seasonal). When the
+        training series is not longer than one season, the non-seasonal
+        naive forecast is used instead.
 
     Returns
     -------
     float
-        MASE value.  Values < 1 beat the naive baseline.
+        MASE value.  Values < 1 beat the naive baseline; NaN when
+        ``y_train`` has fewer than two values.
     """
+    if int(seasonal_period) < 1:
+        raise ValueError(f"seasonal_period must be >= 1, got {seasonal_period!r}")
     y_true = np.asarray(y_true, dtype=float)
     y_pred = np.asarray(y_pred, dtype=float)
     y_train = np.asarray(y_train, dtype=float)
+    if len(y_train) <= seasonal_period:
+        seasonal_period = 1
+    if len(y_train) < 2:
+        return float("nan")
     naive_errors = np.abs(y_train[seasonal_period:] - y_train[:-seasonal_period])
     scale = np.mean(naive_errors)
     if scale == 0:

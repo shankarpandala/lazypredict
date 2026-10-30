@@ -253,7 +253,7 @@ def plot_residuals(
     ax4.set_ylabel("ACF")
     ax4.set_title("Autocorrelation of Residuals")
 
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
     return fig
 
 
@@ -423,4 +423,4 @@ def _norm_ppf(p: float) -> float:
 
     result = t - (c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t)
 
-    return result if p > 0.5 else -result
+    return float(result if p > 0.5 else -result)

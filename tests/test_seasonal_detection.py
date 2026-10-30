@@ -70,3 +70,10 @@ def test_no_period_for_non_seasonal_series(name):
 @pytest.mark.parametrize("y", [np.ones(50), np.arange(5.0), np.array([1.0, np.nan] * 20)])
 def test_degenerate_inputs(y):
     assert detect_seasonal_period(y) is None
+
+
+@pytest.mark.parametrize("offset", [0.0, 1e8])
+def test_large_offsets_do_not_hide_seasonality(offset):
+    t = np.arange(120)
+    y = offset + 10 * np.sin(2 * np.pi * t / 12) + _rng(0).normal(0, 1, 120)
+    assert detect_seasonal_period(y) == 12

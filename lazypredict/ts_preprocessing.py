@@ -57,7 +57,12 @@ def detect_seasonal_period(
     n = len(y)
     if n < 8 or not np.all(np.isfinite(y)):
         return None
-    scale = max(1.0, float(np.dot(y, y)))
+    # Degeneracy threshold from the centred series, so a large constant
+    # offset does not hide the seasonal signal.
+    centred = y - y.mean()
+    scale = float(np.dot(centred, centred))
+    if scale == 0:
+        return None
     t = np.linspace(-1.0, 1.0, n)
     detrended = y - np.polyval(np.polyfit(t, y, 1), t)
     for series in (detrended, np.diff(y)):

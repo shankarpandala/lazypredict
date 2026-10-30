@@ -49,7 +49,7 @@ def test_n_jobs_is_validated_and_used_for_cv():
     with pytest.raises(ValueError, match="n_jobs"):
         LazyForecaster(n_jobs="garbage")
     y = 20 + np.sin(np.arange(120) / 2.0) * 5
-    serial = LazyForecaster(forecasters=["Ridge_TS", "Holt"], cv=3, n_jobs=1).fit(y[:100], y[100:])[0]
-    parallel = LazyForecaster(forecasters=["Ridge_TS", "Holt"], cv=3, n_jobs=2).fit(y[:100], y[100:])[0]
+    serial = LazyForecaster(forecasters=["Ridge_TS", "Naive"], cv=3, n_jobs=1).fit(y[:100], y[100:])[0]
+    parallel = LazyForecaster(forecasters=["Ridge_TS", "Naive"], cv=3, n_jobs=2).fit(y[:100], y[100:])[0]
     cv_columns = [c for c in serial.columns if "CV" in c]
     np.testing.assert_allclose(serial[cv_columns].to_numpy(), parallel.loc[serial.index, cv_columns].to_numpy())

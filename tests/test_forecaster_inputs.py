@@ -10,6 +10,8 @@ from sklearn.metrics import mean_pinball_loss
 from lazypredict.ts_preprocessing import create_lag_features
 from lazypredict.TimeSeriesForecasting import LazyForecaster
 
+pytest.importorskip("statsmodels")  # Holt / SARIMAX forecasters
+
 
 @pytest.fixture
 def exog_series():

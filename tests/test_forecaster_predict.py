@@ -5,6 +5,8 @@ import pytest
 
 from lazypredict.TimeSeriesForecasting import LazyForecaster
 
+pytest.importorskip("statsmodels")  # Holt / SARIMAX forecasters
+
 
 @pytest.fixture
 def fitted():

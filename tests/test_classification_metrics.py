@@ -77,3 +77,16 @@ def test_regressor_cv_columns(binary_split):
     reg = LazyRegressor(regressors=["Ridge"], cv=3, n_jobs=1)
     scores = _fit(reg, binary_split)
     assert scores[["R-Squared CV Mean", "RMSE CV Mean"]].notna().all().all()
+
+
+def test_weighted_ovr_auc_matches_scikit_learn():
+    from sklearn.metrics import roc_auc_score
+
+    from lazypredict.Supervised import _weighted_ovr_roc_auc
+
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 4, 200)
+    y[:4] = np.arange(4)
+    proba = rng.dirichlet(np.ones(4), 200)
+    expected = roc_auc_score(y, proba, multi_class="ovr", average="weighted")
+    assert _weighted_ovr_roc_auc(y, proba, np.arange(4)) == pytest.approx(expected)

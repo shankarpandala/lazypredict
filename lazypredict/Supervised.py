@@ -160,6 +160,25 @@ removed_classifiers = list(_REMOVED_CLASSIFIERS)
 removed_regressors = list(_REMOVED_REGRESSORS)
 
 
+def _weighted_ovr_roc_auc(y_true: Any, proba: np.ndarray, classes: np.ndarray) -> float:
+    """Support-weighted one-vs-rest ROC AUC over the classes present in *y_true*.
+
+    Same value as ``roc_auc_score(..., multi_class="ovr", average="weighted")``,
+    but it stays defined when the test split lacks a class seen in training
+    (that class has zero weight), on every supported scikit-learn version.
+    """
+    y_true = np.asarray(y_true)
+    scores, weights = [], []
+    for column, label in enumerate(classes):
+        positive = y_true == label
+        if positive.any() and not positive.all():
+            scores.append(roc_auc_score(positive.astype(int), proba[:, column]))
+            weights.append(positive.sum())
+    if not scores:
+        raise ValueError("ROC AUC needs at least two classes in y_true")
+    return float(np.average(scores, weights=weights))
+
+
 # ---------------------------------------------------------------------------
 # LazyClassifier
 # ---------------------------------------------------------------------------
@@ -366,12 +385,7 @@ class LazyClassifier(LazyEstimator):
                 if y_pred_proba.shape[1] == 2:
                     roc_auc = roc_auc_score(y_test, y_pred_proba[:, 1])
                 else:
-                    # labels= keeps the score defined when y_test lacks some of
-                    # the classes seen in training (they get zero weight).
-                    roc_auc = roc_auc_score(
-                        y_test, y_pred_proba, multi_class="ovr", average="weighted",
-                        labels=pipe.classes_,
-                    )
+                    roc_auc = _weighted_ovr_roc_auc(y_test, y_pred_proba, pipe.classes_)
             elif hasattr(pipe, "decision_function"):
                 roc_auc = roc_auc_score(y_test, pipe.decision_function(X_test))
             else:

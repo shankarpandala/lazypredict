@@ -10,6 +10,8 @@ import lazypredict.TimeSeriesForecasting as tsf
 from lazypredict.exceptions import TimeoutException
 from lazypredict.TimeSeriesForecasting import LazyForecaster
 
+pytest.importorskip("statsmodels")  # Holt / SARIMAX forecasters
+
 
 @pytest.fixture
 def series():

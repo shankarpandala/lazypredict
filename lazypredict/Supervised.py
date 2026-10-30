@@ -31,6 +31,7 @@ from sklearn.utils import all_estimators
 # Re-export from submodules for backward compatibility
 from lazypredict._base import (  # noqa: F401
     LazyEstimator,
+    _resolve_estimators,
     _validate_fit_inputs,
     _validate_init_params,
 )
@@ -208,8 +209,10 @@ class LazyClassifier(LazyEstimator):
         When True, ``fit()`` returns a tuple of (scores, predictions_dataframe).
     random_state : int, optional (default=42)
         Random seed passed to models that accept it.
-    classifiers : list or ``"all"``, optional (default="all")
-        Specific classifier classes to train, or ``"all"`` for every available one.
+    classifiers : list, str or ``"all"``, optional (default="all")
+        ``"all"`` for every available classifier, or a model name / list of
+        model names and estimator classes to train. Unknown names raise a
+        ``ValueError``.
     cv : int or None, optional (default=None)
         Number of folds for cross-validation.  If None, uses train/test split only.
     timeout : int or float or None, optional (default=None)
@@ -295,20 +298,7 @@ class LazyClassifier(LazyEstimator):
         return "classifier"
 
     def _get_estimator_list(self) -> List[Tuple[str, Any]]:
-        if self.classifiers == "all":
-            return list(CLASSIFIERS)
-        # Support both string names and class objects
-        if self.classifiers and isinstance(self.classifiers[0], str):
-            return [
-                (name, cls)
-                for name, cls in CLASSIFIERS
-                if name in self.classifiers
-            ]
-        try:
-            return [(cls.__name__, cls) for cls in self.classifiers]
-        except Exception as exc:
-            logger.error("Invalid classifier(s): %s", exc)
-            raise ValueError(f"Invalid classifier(s): {exc}") from exc
+        return _resolve_estimators(self.classifiers, CLASSIFIERS, "classifier")
 
     def _tune_scoring(self) -> str:
         return "balanced_accuracy"
@@ -453,8 +443,10 @@ class LazyRegressor(LazyEstimator):
         When True, ``fit()`` returns a tuple of (scores, predictions_dataframe).
     random_state : int, optional (default=42)
         Random seed passed to models that accept it.
-    regressors : list or ``"all"``, optional (default="all")
-        Specific regressor classes to train, or ``"all"`` for every available one.
+    regressors : list, str or ``"all"``, optional (default="all")
+        ``"all"`` for every available regressor, or a model name / list of
+        model names and estimator classes to train. Unknown names raise a
+        ``ValueError``.
     cv : int or None, optional (default=None)
         Number of folds for cross-validation.  If None, uses train/test split only.
     timeout : int or float or None, optional (default=None)
@@ -543,20 +535,7 @@ class LazyRegressor(LazyEstimator):
         return "regressor"
 
     def _get_estimator_list(self) -> List[Tuple[str, Any]]:
-        if self.regressors == "all":
-            return list(REGRESSORS)
-        # Support both string names and class objects
-        if self.regressors and isinstance(self.regressors[0], str):
-            return [
-                (name, cls)
-                for name, cls in REGRESSORS
-                if name in self.regressors
-            ]
-        try:
-            return [(cls.__name__, cls) for cls in self.regressors]
-        except Exception as exc:
-            logger.error("Invalid regressor(s): %s", exc)
-            raise ValueError(f"Invalid regressor(s): {exc}") from exc
+        return _resolve_estimators(self.regressors, REGRESSORS, "regressor")
 
     def _tune_scoring(self) -> str:
         return "r2"

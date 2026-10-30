@@ -1,5 +1,6 @@
 """Base class for LazyClassifier and LazyRegressor — shared logic lives here."""
 
+import difflib
 import logging
 import time
 import warnings
@@ -95,6 +96,63 @@ def _validate_fit_inputs(
         raise ValueError("X_train is empty")
     if hasattr(X_test, "__len__") and len(X_test) == 0:
         raise ValueError("X_test is empty")
+
+
+def _resolve_estimators(
+    selection: Union[str, List[Any]],
+    available: List[Tuple[str, Any]],
+    kind: str,
+) -> List[Tuple[str, Any]]:
+    """Resolve a user's model selection into ``(name, class)`` pairs.
+
+    Parameters
+    ----------
+    selection : "all", str or list
+        ``"all"``, a single model name, or a list mixing model names and
+        estimator classes.
+    available : list of (str, type)
+        Models that can be selected by name.
+    kind : str
+        Singular noun used in error messages, e.g. ``"classifier"``.
+
+    Raises
+    ------
+    ValueError
+        If a name is unknown or an element is neither a name nor a class.
+    """
+    if isinstance(selection, str):
+        if selection == "all":
+            return list(available)
+        selection = [selection]
+
+    by_name = dict(available)
+    resolved: Dict[str, Any] = {}
+    unknown: List[str] = []
+    for item in selection:
+        if isinstance(item, str):
+            if item in by_name:
+                resolved[item] = by_name[item]
+            else:
+                unknown.append(item)
+        elif isinstance(item, type):
+            resolved[item.__name__] = item
+        else:
+            raise ValueError(
+                f"Invalid {kind} {item!r}: pass estimator classes or their names, "
+                "not instances."
+            )
+
+    if unknown:
+        hints = []
+        for name in unknown:
+            close = difflib.get_close_matches(name, list(by_name), n=1)
+            hints.append(f"{name!r} (did you mean {close[0]!r}?)" if close else repr(name))
+        raise ValueError(
+            f"Unknown {kind} name(s): {', '.join(hints)}. Names are case-sensitive; "
+            "models from optional packages (xgboost, lightgbm, catboost, ...) are "
+            f"only available when those packages are installed. Available: {sorted(by_name)}"
+        )
+    return list(resolved.items())
 
 
 def _auto_convert_inputs(*args):

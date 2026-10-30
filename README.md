@@ -23,7 +23,7 @@ Lazy Predict helps build a lot of basic models without much code and helps under
 - Support for Python 3.9 through 3.13
 - Custom metric evaluation support
 - Configurable timeout and cross-validation
-- Intel Extension for Scikit-learn acceleration support
+- Intel Extension for Scikit-learn acceleration support (opt-in)
 
 ## Installation
 
@@ -408,7 +408,17 @@ For improved performance on Intel CPUs, install Intel Extension for Scikit-learn
 pip install scikit-learn-intelex
 ```
 
-Lazy Predict will automatically detect and use it for acceleration.
+Patch scikit-learn **before** importing lazypredict, so that the accelerated
+estimators are the ones lazypredict collects:
+
+```python
+from sklearnex import patch_sklearn
+patch_sklearn()
+
+from lazypredict.Supervised import LazyClassifier
+```
+
+> **Changed in 0.4.0:** Earlier versions called `patch_sklearn()` automatically on `import lazypredict`, which changed scikit-learn for the whole Python process. The patch is now opt-in.
 
 ## MLflow Integration
 

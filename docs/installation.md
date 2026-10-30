@@ -146,7 +146,19 @@ For improved performance on Intel CPUs:
 pip install scikit-learn-intelex
 ```
 
-Lazy Predict detects and uses it automatically — no code changes needed.
+Patch scikit-learn **before** importing lazypredict, so that the accelerated
+estimators are the ones lazypredict collects:
+
+```python
+from sklearnex import patch_sklearn
+patch_sklearn()
+
+from lazypredict.Supervised import LazyClassifier
+```
+
+!!! note "Changed in 0.4.0"
+    Earlier versions called `patch_sklearn()` automatically on `import lazypredict`,
+    which changed scikit-learn for the whole Python process. The patch is now opt-in.
 
 ---
 

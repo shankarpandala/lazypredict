@@ -7,6 +7,7 @@ perform best on a given dataset.
 """
 # Author: Shankar Rao Pandala <shankar.pandala@live.com>
 
+import importlib.util
 import logging
 import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -109,13 +110,10 @@ try:
 except ImportError:
     _INTERPRET_AVAILABLE = False
 
-# Intel Extension for Scikit-learn for better performance
-try:
-    from sklearnex import patch_sklearn
-    patch_sklearn()
-    INTEL_EXTENSION_AVAILABLE = True
-except ImportError:
-    INTEL_EXTENSION_AVAILABLE = False
+# Intel Extension for Scikit-learn: only report whether it is installed.
+# Patching scikit-learn is the user's decision; doing it at import time
+# changed every scikit-learn estimator in the user's process.
+INTEL_EXTENSION_AVAILABLE = importlib.util.find_spec("sklearnex") is not None
 
 # Optional MLflow
 try:

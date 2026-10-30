@@ -476,7 +476,8 @@ class AutoARIMAForecaster(ForecasterWrapper):
     def fit(self, y_train, X_train=None):
         from pmdarima import auto_arima
 
-        m = self.seasonal_period or 1
+        # getattr: models saved by lazypredict 0.3 lack these attributes.
+        m = getattr(self, "seasonal_period", None) or 1
         seasonal = 2 <= m <= self.MAX_SEASONAL_PERIOD
         kwargs: Dict[str, Any] = {
             "seasonal": seasonal,
@@ -485,7 +486,7 @@ class AutoARIMAForecaster(ForecasterWrapper):
             "error_action": "ignore",
             "stepwise": True,
         }
-        kwargs.update(self.params)
+        kwargs.update(getattr(self, "params", {}))
         # pmdarima >= 2 takes exogenous regressors as ``X`` (``exogenous``
         # was silently ignored).
         self._model = auto_arima(y_train, X=X_train, **kwargs)
@@ -749,7 +750,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
         device = self._device
         predictions: List[float] = []
         history = list(self._y_train)
-        n_rolling = self.n_rolling
+        n_rolling = tuple(dict.fromkeys(self.n_rolling))  # as in create_lag_features
 
         if X_test is not None:
             X_test = np.asarray(X_test)
@@ -1603,6 +1604,7 @@ class LazyForecaster:
             random_state=self.random_state,
             tune_seasonal=self.tune_seasonal,
             refit=True,
+            horizon=len(self._last_y_test),
         )
 
     def ensemble(

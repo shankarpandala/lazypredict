@@ -157,7 +157,7 @@ def create_lag_features(
     y_target : np.ndarray
         Target values aligned with the feature rows.
     """
-    n_rolling = n_rolling or (3, 7)
+    n_rolling = tuple(dict.fromkeys(n_rolling or (3, 7)))  # equal windows count once
     df = pd.DataFrame({"y": y})
 
     # Lag features
@@ -202,7 +202,7 @@ def next_step_features(
     Mirrors :func:`create_lag_features`: the row built from ``y[:t]`` here is
     identical to the training row of time ``t``.
     """
-    n_rolling = n_rolling or (3, 7)
+    n_rolling = tuple(dict.fromkeys(n_rolling or (3, 7)))
     features: List[float] = [history[-lag] for lag in range(1, n_lags + 1)]
     for window in n_rolling:
         recent = history[-window:]

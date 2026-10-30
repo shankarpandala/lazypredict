@@ -46,8 +46,9 @@ def _theta_space(trial) -> dict:
 
 def _auto_arima_space(trial) -> dict:
     return {
-        "max_p": trial.suggest_int("max_p", 1, 5),
-        "max_q": trial.suggest_int("max_q", 1, 5),
+        # auto_arima rejects max_p/max_q below its start_p = start_q = 2.
+        "max_p": trial.suggest_int("max_p", 2, 5),
+        "max_q": trial.suggest_int("max_q", 2, 5),
         "max_d": trial.suggest_int("max_d", 1, 2),
         "seasonal": trial.suggest_categorical("seasonal", [True, False]),
         "stepwise": trial.suggest_categorical("stepwise", [True, False]),
@@ -170,6 +171,7 @@ def _lgbm_ts_space(trial) -> dict:
     base["max_depth"] = trial.suggest_int("max_depth", 2, 15)
     base["num_leaves"] = trial.suggest_int("num_leaves", 15, 127)
     base["subsample"] = trial.suggest_float("subsample", 0.5, 1.0)
+    base["subsample_freq"] = 1  # without it LightGBM ignores subsample
     base["reg_alpha"] = trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True)
     base["reg_lambda"] = trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True)
     return base

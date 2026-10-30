@@ -12,7 +12,10 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: docs-${{ github.ref }}
+  # Pull requests get their own group per PR. The "closed" event of a merged
+  # PR runs with github.ref set to the base branch, so a shared ref-based
+  # group let it cancel the deployment of the merge itself.
+  group: docs-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -49,8 +52,9 @@ jobs:
       && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
+      # Needed on "closed" too: removing the preview pushes to gh-pages
+      # from this checkout.
       - uses: actions/checkout@v7
-        if: github.event.action != 'closed'
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v7

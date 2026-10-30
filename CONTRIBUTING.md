@@ -163,7 +163,7 @@ Releases are cut from `dev` and published to PyPI by
 
 The publish workflow first checks that the tag matches
 `lazypredict.__version__` and fails before building anything if it does
-not, then runs the tests, builds and smoke-tests the sdist and wheel,
+not, then runs the tests, builds the sdist and wheel, smoke-tests the wheel,
 uploads them to PyPI via Trusted Publishing and attaches them to the
 GitHub release. If an upload fails for a transient reason, re-run it from
 the Actions tab (`Publish to PyPI` > `Run workflow`, entering the tag).

@@ -278,6 +278,7 @@ class LazyEstimator:
             Metrics for every model.
         predictions : pandas.DataFrame
             Only returned when ``self.predictions`` is True.
+            Prediction rows preserve the index of ``X_test``.
         """
         # Auto-convert PySpark/Dask DataFrames
         X_train, X_test, y_train, y_test = _auto_convert_inputs(
@@ -457,7 +458,10 @@ class LazyEstimator:
             self.tuned_scores_ = self._run_tuning(scores, X_train, y_train, preprocessor, estimator_list)
 
         if self.predictions:
-            predictions_df = pd.DataFrame.from_dict(predictions_dict)
+            prediction_index = X_test.index if isinstance(X_test, pd.DataFrame) else None
+            predictions_df = pd.DataFrame(
+                predictions_dict, index=prediction_index if predictions_dict else None
+            )
             return scores, predictions_df
         return scores, pd.DataFrame()
 

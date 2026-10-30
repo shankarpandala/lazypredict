@@ -518,6 +518,13 @@ class MLForecaster(ForecasterWrapper):
         Window sizes for rolling mean/std features.
     random_state : int, optional (default=42)
         Seed passed to the estimator if it accepts ``random_state``.
+    use_gpu : bool, optional (default=False)
+        Pass GPU settings to estimators that support them.
+    horizon_strategy : str, optional (default="recursive")
+        ``"recursive"`` feeds one-step predictions back as inputs;
+        ``"direct"`` trains one model per forecast step and
+        ``"multi_output"`` one multi-output model (both are trained for the
+        requested horizon when :meth:`predict` is called).
     """
 
     def __init__(
@@ -528,6 +535,7 @@ class MLForecaster(ForecasterWrapper):
         n_rolling: Tuple[int, ...] = (3, 7),
         random_state: int = 42,
         use_gpu: bool = False,
+        horizon_strategy: str = "recursive",
     ):
         self.estimator_class = estimator_class
         self._model_name = model_name
@@ -535,13 +543,25 @@ class MLForecaster(ForecasterWrapper):
         self.n_rolling = n_rolling
         self.random_state = random_state
         self.use_gpu = use_gpu
+        self.horizon_strategy = horizon_strategy
         # Tuned estimator hyperparameters (override the defaults below).
         self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
+        self._y_train = y_train
+        self._X_train = X_train
+        if getattr(self, "horizon_strategy", "recursive") != "recursive":
+            return  # direct / multi-output models are trained for the horizon in predict()
         X_feat, y_feat = create_lag_features(
             y_train, self.n_lags, self.n_rolling, X_exog=X_train
         )
+        self._estimator = self.estimator_class(**self._estimator_kwargs())
+        self._scaler = StandardScaler()
+        X_scaled = self._scaler.fit_transform(X_feat)
+        self._estimator.fit(X_scaled, y_feat)
+
+    def _estimator_kwargs(self) -> Dict[str, Any]:
+        """Constructor arguments: GPU, seed, quiet boosting libraries, tuned params."""
         params: dict = get_gpu_model_params(self.estimator_class, self.use_gpu)
         try:
             if "random_state" in self.estimator_class().get_params():
@@ -558,13 +578,18 @@ class MLForecaster(ForecasterWrapper):
         if "xgboost" in module:
             params.setdefault("verbosity", 0)
         params.update(getattr(self, "params", {}))
-        self._estimator = self.estimator_class(**params)
-        self._scaler = StandardScaler()
-        X_scaled = self._scaler.fit_transform(X_feat)
-        self._estimator.fit(X_scaled, y_feat)
-        self._y_train = y_train
+        return params
 
     def predict(self, horizon, X_test=None):
+        strategy = getattr(self, "horizon_strategy", "recursive")
+        if strategy in ("direct", "multi_output"):
+            from lazypredict.horizon import direct_forecast, multi_output_forecast
+
+            forecast = direct_forecast if strategy == "direct" else multi_output_forecast
+            return forecast(
+                self.estimator_class, self._y_train, horizon, self.n_lags, self.n_rolling,
+                X_exog=self._X_train, X_future=X_test, model_params=self._estimator_kwargs(),
+            )
         return recursive_forecast(
             self._estimator,
             self._scaler,
@@ -900,6 +925,7 @@ def _build_forecaster_list(
     seasonal_period: Optional[int],
     use_gpu: bool = False,
     foundation_model_path: Optional[str] = None,
+    horizon_strategy: str = "recursive",
 ) -> List[Tuple[str, ForecasterWrapper]]:
     """Build the default list of all available forecasters.
 
@@ -1000,6 +1026,7 @@ def _build_forecaster_list(
                 n_rolling=n_rolling,
                 random_state=random_state,
                 use_gpu=use_gpu,
+                horizon_strategy=horizon_strategy,
             ),
         ))
 
@@ -1183,7 +1210,7 @@ class LazyForecaster:
             raise ValueError(
                 f"horizon_strategy must be 'recursive', 'direct', or 'multi_output', got {horizon_strategy!r}"
             )
-        self._validate_tuning_and_season(tune_top_k, tune_trials, seasonal_period)
+        self._validate_tuning_and_season(tune_top_k, tune_trials, seasonal_period, n_jobs)
         sort_by = self._canonical_sort_by(sort_by, custom_metric)
 
         self.verbose = verbose
@@ -1235,7 +1262,11 @@ class LazyForecaster:
     _METRIC_COLUMNS = ("MAE", "RMSE", "MAPE", "SMAPE", "MASE", "R-Squared")
 
     @staticmethod
-    def _validate_tuning_and_season(tune_top_k: Any, tune_trials: Any, seasonal_period: Any) -> None:
+    def _validate_tuning_and_season(
+        tune_top_k: Any, tune_trials: Any, seasonal_period: Any, n_jobs: Any = -1
+    ) -> None:
+        if n_jobs is not None and (not isinstance(n_jobs, int) or isinstance(n_jobs, bool)):
+            raise ValueError(f"n_jobs must be an integer or None, got {n_jobs!r}")
         for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
                 raise ValueError(f"{option} must be a positive integer, got {value!r}")
@@ -1327,14 +1358,14 @@ class LazyForecaster:
             wrapper_copy = copy.deepcopy(wrapper)
             with time_limit(self.timeout):
                 wrapper_copy.fit(y_train, X_train)
-            fit_time = time.perf_counter() - start
-            if self.timeout and fit_time > self.timeout:
+                y_pred = wrapper_copy.predict(horizon, X_test)
+            elapsed = time.perf_counter() - start
+            if self.timeout and elapsed > self.timeout:
                 # The limit could not be enforced preemptively.
                 raise TimeoutException(
-                    f"Training took {fit_time:.2f}s, exceeding timeout={self.timeout}s"
+                    f"Training and forecasting took {elapsed:.2f}s, "
+                    f"exceeding timeout={self.timeout}s"
                 )
-
-            y_pred = wrapper_copy.predict(horizon, X_test)
 
             sp = seasonal_period or 1
             metrics = compute_forecast_metrics(
@@ -1489,6 +1520,7 @@ class LazyForecaster:
             seasonal_period=seasonal_period,
             use_gpu=self.use_gpu,
             foundation_model_path=self.foundation_model_path,
+            horizon_strategy=self.horizon_strategy,
         )
         all_forecasters = _resolve_estimators(
             self.forecasters, all_forecasters, "forecaster", allow_classes=False
@@ -2019,43 +2051,40 @@ class LazyForecaster:
         Returns a dict of ``{metric: value}`` with mean and standard
         deviation for each fold.
         """
+        from joblib import Parallel, delayed
         from sklearn.model_selection import TimeSeriesSplit
 
-        tscv = TimeSeriesSplit(n_splits=self.cv)
-        cv_scores: Dict[str, List[float]] = {
-            m: [] for m in ["mae", "rmse", "mape", "smape", "mase"]
-        }
+        metric_keys = ["mae", "rmse", "mape", "smape", "mase"]
 
-        for train_idx, val_idx in tscv.split(y_train):
+        def run_fold(train_idx, val_idx):
             y_cv_train = y_train[train_idx]
-            y_cv_val = y_train[val_idx]
             X_cv_train = X_train[train_idx] if X_train is not None else None
             X_cv_val = X_train[val_idx] if X_train is not None else None
-
             try:
                 w = copy.deepcopy(wrapper)
                 w.fit(y_cv_train, X_cv_train)
                 y_cv_pred = w.predict(len(val_idx), X_cv_val)
-                sp = seasonal_period or 1
                 fold_metrics = compute_forecast_metrics(
-                    y_cv_val, y_cv_pred, y_cv_train, seasonal_period=sp
+                    y_train[val_idx], y_cv_pred, y_cv_train, seasonal_period=seasonal_period or 1
                 )
-                for metric in cv_scores:
-                    cv_scores[metric].append(fold_metrics[metric])
+                return [fold_metrics[key] for key in metric_keys]
             except Exception:
-                for metric in cv_scores:
-                    cv_scores[metric].append(np.nan)
+                return [np.nan] * len(metric_keys)
+
+        # Threads: folds share the data and wrappers need not be pickled.
+        folds = Parallel(n_jobs=self.n_jobs, prefer="threads")(
+            delayed(run_fold)(train_idx, val_idx)
+            for train_idx, val_idx in TimeSeriesSplit(n_splits=self.cv).split(y_train)
+        )
+        values = np.array(folds, dtype=float)
 
         result: Dict[str, Optional[float]] = {}
-        for metric, values in cv_scores.items():
-            arr = np.array(values, dtype=float)
+        for column, metric in enumerate(metric_keys):
+            fold_values = values[:, column]
             label = metric.upper()
-            result[f"{label} CV Mean"] = (
-                float(np.nanmean(arr)) if not np.all(np.isnan(arr)) else None
-            )
-            result[f"{label} CV Std"] = (
-                float(np.nanstd(arr)) if not np.all(np.isnan(arr)) else None
-            )
+            all_failed = np.all(np.isnan(fold_values))
+            result[f"{label} CV Mean"] = np.nan if all_failed else float(np.nanmean(fold_values))
+            result[f"{label} CV Std"] = np.nan if all_failed else float(np.nanstd(fold_values))
         return result
 
     @staticmethod

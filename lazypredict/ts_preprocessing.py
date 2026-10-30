@@ -143,6 +143,30 @@ def create_lag_features(
     return X_features, y_target
 
 
+def next_step_features(
+    history,
+    n_lags: int,
+    n_rolling: Optional[Tuple[int, ...]] = None,
+    exog_row: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """Feature row for the step right after *history*.
+
+    Mirrors :func:`create_lag_features`: the row built from ``y[:t]`` here is
+    identical to the training row of time ``t``.
+    """
+    n_rolling = n_rolling or (3, 7)
+    features: List[float] = [history[-lag] for lag in range(1, n_lags + 1)]
+    for window in n_rolling:
+        recent = history[-window:]
+        features.append(float(np.mean(recent)))
+        # ddof=1 matches pandas' rolling().std() used for the training features.
+        features.append(float(np.std(recent, ddof=1)) if len(recent) > 1 else 0.0)
+    features.append(history[-1] - history[-2] if len(history) >= 2 else 0.0)
+    if exog_row is not None:
+        features.extend(np.asarray(exog_row, dtype=float).ravel().tolist())
+    return np.array(features, dtype=float).reshape(1, -1)
+
+
 def recursive_forecast(
     estimator,
     scaler: StandardScaler,
@@ -179,7 +203,6 @@ def recursive_forecast(
     np.ndarray
         Array of length ``horizon`` with predicted values.
     """
-    n_rolling = n_rolling or (3, 7)
     predictions: List[float] = []
     history = list(y_history)
 
@@ -193,28 +216,8 @@ def recursive_forecast(
             )
 
     for step in range(horizon):
-        features: List[float] = []
-
-        # Lags
-        for lag in range(1, n_lags + 1):
-            features.append(history[-lag])
-
-        # Rolling stats
-        for window in n_rolling:
-            recent = history[-window:]
-            features.append(float(np.mean(recent)))
-            # ddof=1 matches pandas' rolling().std() used for the training features.
-            features.append(float(np.std(recent, ddof=1)) if len(recent) > 1 else 0.0)
-
-        # Diff
-        features.append(history[-1] - history[-2] if len(history) >= 2 else 0.0)
-
-        # Exogenous
-        if X_exog is not None and step < len(X_exog):
-            features.extend(X_exog[step].tolist())
-
-        X_step = np.array(features).reshape(1, -1)
-        X_step = scaler.transform(X_step)
+        exog_row = X_exog[step] if X_exog is not None else None
+        X_step = scaler.transform(next_step_features(history, n_lags, n_rolling, exog_row))
         pred = float(estimator.predict(X_step)[0])
         predictions.append(pred)
         history.append(pred)

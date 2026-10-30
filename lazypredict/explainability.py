@@ -9,6 +9,7 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
+from sklearn.base import is_classifier
 from sklearn.inspection import permutation_importance
 from sklearn.pipeline import Pipeline
 
@@ -113,7 +114,6 @@ def _get_shap_explainer(pipe: Pipeline, X_background: pd.DataFrame, step_name: s
         "ExtraTreesClassifier", "ExtraTreesRegressor",
         "GradientBoostingClassifier", "GradientBoostingRegressor",
         "DecisionTreeClassifier", "DecisionTreeRegressor",
-        "AdaBoostClassifier", "AdaBoostRegressor",
         "XGBClassifier", "XGBRegressor",
         "LGBMClassifier", "LGBMRegressor",
         "CatBoostClassifier", "CatBoostRegressor",
@@ -130,8 +130,17 @@ def _get_shap_explainer(pipe: Pipeline, X_background: pd.DataFrame, step_name: s
     elif model_type in linear_models:
         return shap.LinearExplainer(model, X_transformed), X_transformed
     else:
-        # Fall back to permutation explainer (model-agnostic, faster than Kernel)
-        return shap.PermutationExplainer(model.predict, X_transformed), X_transformed
+        # Model-agnostic fallback (faster than Kernel). Classifiers are
+        # explained through their class probabilities, or decision function,
+        # rather than through the predicted labels.
+        function = model.predict
+        if is_classifier(model):
+            function = (
+                getattr(model, "predict_proba", None)
+                or getattr(model, "decision_function", None)
+                or model.predict
+            )
+        return shap.PermutationExplainer(function, X_transformed), X_transformed
 
 
 def _normalise_shap_output(sv: Any) -> np.ndarray:

@@ -27,6 +27,7 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 from sklearn.utils import all_estimators
+from sklearn.utils.multiclass import type_of_target
 
 # Re-export from submodules for backward compatibility
 from lazypredict._base import (  # noqa: F401
@@ -303,15 +304,25 @@ class LazyClassifier(LazyEstimator):
     def _tune_scoring(self) -> str:
         return "balanced_accuracy"
 
-    def _cv_scoring(self) -> Optional[Dict[str, str]]:
-        return {
+    def _cv_scoring(self, y_train: Any, pipe: Pipeline) -> Optional[Dict[str, str]]:
+        scoring = {
             "accuracy": "accuracy",
             "balanced_accuracy": "balanced_accuracy",
             "f1_weighted": "f1_weighted",
             "precision_weighted": "precision_weighted",
             "recall_weighted": "recall_weighted",
-            "roc_auc_ovr_weighted": "roc_auc_ovr_weighted",
         }
+        # Only request ROC AUC when the model can produce scores for it:
+        # scikit-learn checks every scorer's response method up front, so an
+        # unsupported one would abort the whole cross-validation. Binary
+        # "roc_auc" accepts decision_function like the test-set ROC AUC; the
+        # multiclass variant needs probabilities.
+        if type_of_target(y_train) == "binary":
+            if hasattr(pipe, "predict_proba") or hasattr(pipe, "decision_function"):
+                scoring["roc_auc"] = "roc_auc"
+        elif hasattr(pipe, "predict_proba"):
+            scoring["roc_auc"] = "roc_auc_ovr_weighted"
+        return scoring
 
     def _cv_column_names(self) -> List[str]:
         return [
@@ -338,12 +349,9 @@ class LazyClassifier(LazyEstimator):
             "Recall CV Mean": cv_results["test_recall_weighted"].mean(),
             "Recall CV Std": cv_results["test_recall_weighted"].std(),
         }
-        try:
-            result["ROC AUC CV Mean"] = cv_results["test_roc_auc_ovr_weighted"].mean()
-            result["ROC AUC CV Std"] = cv_results["test_roc_auc_ovr_weighted"].std()
-        except Exception:
-            result["ROC AUC CV Mean"] = None
-            result["ROC AUC CV Std"] = None
+        roc_auc = cv_results.get("test_roc_auc")
+        result["ROC AUC CV Mean"] = np.nan if roc_auc is None else roc_auc.mean()
+        result["ROC AUC CV Std"] = np.nan if roc_auc is None else roc_auc.std()
         return result
 
     def _compute_metrics(
@@ -356,15 +364,18 @@ class LazyClassifier(LazyEstimator):
         precision = precision_score(y_test, y_pred, average="weighted", zero_division=0)
         recall_val = recall_score(y_test, y_pred, average="weighted")
 
-        roc_auc = None
+        roc_auc = np.nan
         try:
             if hasattr(pipe, "predict_proba"):
                 y_pred_proba = pipe.predict_proba(X_test)
                 if y_pred_proba.shape[1] == 2:
                     roc_auc = roc_auc_score(y_test, y_pred_proba[:, 1])
                 else:
+                    # labels= keeps the score defined when y_test lacks some of
+                    # the classes seen in training (they get zero weight).
                     roc_auc = roc_auc_score(
-                        y_test, y_pred_proba, multi_class="ovr", average="weighted"
+                        y_test, y_pred_proba, multi_class="ovr", average="weighted",
+                        labels=pipe.classes_,
                     )
             elif hasattr(pipe, "decision_function"):
                 roc_auc = roc_auc_score(y_test, pipe.decision_function(X_test))
@@ -399,7 +410,7 @@ class LazyClassifier(LazyEstimator):
                 "Recall": r["recall"],
             }
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric")
+                row[self.custom_metric.__name__] = r.get("custom_metric", np.nan)
             # CV columns
             for col in self._cv_column_names():
                 if col in r:
@@ -540,7 +551,7 @@ class LazyRegressor(LazyEstimator):
     def _tune_scoring(self) -> str:
         return "r2"
 
-    def _cv_scoring(self) -> Optional[Dict[str, str]]:
+    def _cv_scoring(self, y_train: Any, pipe: Pipeline) -> Optional[Dict[str, str]]:
         return {
             "r2": "r2",
             "neg_mean_squared_error": "neg_mean_squared_error",
@@ -602,7 +613,7 @@ class LazyRegressor(LazyEstimator):
                 if col in r:
                     row[col] = r[col]
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric")
+                row[self.custom_metric.__name__] = r.get("custom_metric", np.nan)
             row["Time Taken"] = r["time"]
             rows.append(row)
 

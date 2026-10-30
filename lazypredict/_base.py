@@ -242,7 +242,7 @@ class LazyEstimator:
     def _build_scores_dataframe(self, results: List[Dict[str, Any]]) -> pd.DataFrame:
         raise NotImplementedError
 
-    def _cv_scoring(self) -> Optional[Dict[str, str]]:
+    def _cv_scoring(self, y_train: Any, pipe: Pipeline) -> Optional[Dict[str, str]]:
         raise NotImplementedError
 
     def _process_cv_results(
@@ -413,7 +413,7 @@ class LazyEstimator:
                             if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
                                 _mlflow.log_metric(self.custom_metric.__name__, custom_val)
                         except Exception as custom_exc:
-                            metrics["custom_metric"] = None
+                            metrics["custom_metric"] = np.nan
                             if not self.ignore_warnings:
                                 logger.warning(
                                     "Custom metric %s failed for %s: %s",
@@ -572,20 +572,22 @@ class LazyEstimator:
         """Run cross-validation and return metric dict."""
         from sklearn.model_selection import cross_validate
 
-        scoring = self._cv_scoring()
+        scoring = self._cv_scoring(y_train, pipe)
         if scoring is None:
             return {}
         try:
+            # error_score=nan: a scorer that cannot be computed for this model
+            # (e.g. ROC AUC without predict_proba) only blanks its own column.
             cv_results = cross_validate(
                 pipe, X_train, y_train,
                 cv=self.cv, scoring=scoring,
-                n_jobs=self.n_jobs, error_score="raise",
+                n_jobs=self.n_jobs, error_score=np.nan,
             )
             return self._process_cv_results(cv_results, X_train)
         except Exception as cv_exc:
             if not self.ignore_warnings:
                 logger.warning("Cross-validation failed for %s: %s", name, cv_exc)
-            return {key: None for key in self._cv_column_names()}
+            return {key: np.nan for key in self._cv_column_names()}
 
     def _cv_column_names(self) -> List[str]:
         """Return the CV column names for null-filling on failure."""
@@ -602,7 +604,7 @@ class LazyEstimator:
         if _mlflow is None:
             return
         for key, val in metrics.items():
-            if isinstance(val, (int, float)) and val is not None:
+            if isinstance(val, (int, float, np.number)) and not np.isnan(val):
                 _mlflow.log_metric(key, val)
         _mlflow.log_metric("training_time", metrics.get("time", 0))
         try:

@@ -94,6 +94,8 @@ def ensemble_stacking(
         Stacked predictions for ``pred_test``.
     """
     from sklearn.linear_model import Ridge
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
 
     if not predictions:
         raise ValueError("No predictions to ensemble.")
@@ -106,7 +108,9 @@ def ensemble_stacking(
     names = sorted(predictions.keys())
     X_stack = np.column_stack([predictions[n] for n in names])
 
-    meta = Ridge(alpha=1.0)
+    # Standardised inputs make the ridge penalty independent of the series'
+    # units; on raw values it shrank small-valued series to their mean.
+    meta = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
     meta.fit(X_stack, y_true)
 
     X_test_stack = np.column_stack([pred_test[n] for n in names])

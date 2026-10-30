@@ -64,3 +64,11 @@ def test_one_step_test_horizon(series, method):
     prediction = forecaster.ensemble(method)
     assert prediction.shape == (1,)
     assert np.isfinite(prediction).all()
+
+
+def test_stacking_does_not_depend_on_the_units_of_the_series(series):
+    # Issue #625: an unscaled ridge penalty shrank small-valued series to a constant.
+    y_train, y_test = series
+    in_units = _fit(y_train, y_test).ensemble("stacking")
+    in_thousands = _fit(y_train / 1000, y_test / 1000).ensemble("stacking")
+    assert np.allclose(in_thousands * 1000, in_units, rtol=1e-6)

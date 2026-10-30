@@ -925,6 +925,10 @@ class TimesFMForecaster(ForecasterWrapper):
 # ============================================================================
 
 
+# Models that only exist for seasonal data (a seasonal period of at least 2).
+_SEASONAL_ONLY_FORECASTERS = ("HoltWinters_Add", "HoltWinters_Mul")
+
+
 def _build_forecaster_list(
     n_lags: int,
     n_rolling: Tuple[int, ...],
@@ -1272,8 +1276,10 @@ class LazyForecaster:
     def _validate_tuning_and_season(
         tune_top_k: Any, tune_trials: Any, seasonal_period: Any, n_jobs: Any = -1
     ) -> None:
-        if n_jobs is not None and (not isinstance(n_jobs, int) or isinstance(n_jobs, bool)):
-            raise ValueError(f"n_jobs must be an integer or None, got {n_jobs!r}")
+        if n_jobs is not None and (
+            not isinstance(n_jobs, int) or isinstance(n_jobs, bool) or n_jobs == 0
+        ):
+            raise ValueError(f"n_jobs must be a non-zero integer or None, got {n_jobs!r}")
         for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
                 raise ValueError(f"{option} must be a positive integer, got {value!r}")
@@ -1529,8 +1535,23 @@ class LazyForecaster:
             foundation_model_path=self.foundation_model_path,
             horizon_strategy=self.horizon_strategy,
         )
+        selection = self.forecasters
+        if selection != "all" and _STATSMODELS_AVAILABLE and not (
+            seasonal_period and seasonal_period >= 2
+        ):
+            # A selected Holt-Winters model is valid but cannot run on this
+            # data: report it instead of treating its name as unknown.
+            names = [selection] if isinstance(selection, str) else list(selection)
+            skipped = [name for name in names if name in _SEASONAL_ONLY_FORECASTERS]
+            for name in skipped:
+                self.errors[name] = ValueError(
+                    f"{name} needs a seasonal period of at least 2 and none was "
+                    "detected; pass seasonal_period to use it."
+                )
+                logger.warning("%s skipped: %s", name, self.errors[name])
+            selection = [name for name in names if name not in skipped]
         all_forecasters = _resolve_estimators(
-            self.forecasters, all_forecasters, "forecaster", allow_classes=False
+            selection, all_forecasters, "forecaster", allow_classes=False
         )
         if self.max_models is not None:
             all_forecasters = all_forecasters[: self.max_models]
@@ -1668,14 +1689,15 @@ class LazyForecaster:
     def _validation_predictions(self) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
         """Forecasts of a window held out from the end of the training series.
 
-        The window has the length of the test horizon when the training
-        series is long enough. Models that fail on it are left out.
+        The window has the length of the test horizon, but at least two
+        points, when the training series is long enough. Models that fail on
+        it are left out.
         """
         if self._validation_cache is not None:
             return self._validation_cache
         y_train, X_train = self._last_y_train, self._last_X_train
         min_required = self.n_lags + max(self.n_rolling) + 1
-        window = min(len(self._last_y_test), len(y_train) - min_required)
+        window = min(max(len(self._last_y_test), 2), len(y_train) - min_required)
         if window < 2:
             raise ValueError(
                 "y_train is too short to hold out a validation window for the ensemble."

@@ -53,3 +53,14 @@ def test_too_short_training_series_raises():
     forecaster.fit(y[:19], y[19:])
     with pytest.raises(ValueError, match="too short"):
         forecaster.ensemble("stacking")
+
+
+@pytest.mark.parametrize("method", ["weighted_average", "stacking"])
+def test_one_step_test_horizon(series, method):
+    # Issue #618: the validation window had the test length (1) and always failed.
+    y_train, y_test = series
+    forecaster = LazyForecaster(forecasters=MODELS, seasonal_period=12)
+    forecaster.fit(y_train, y_test[:1])
+    prediction = forecaster.ensemble(method)
+    assert prediction.shape == (1,)
+    assert np.isfinite(prediction).all()

@@ -67,7 +67,10 @@ print(scores)
 | `CatBoostRegressor_TS` | `MLForecaster` | CatBoost (requires `lazypredict[boost]`) |
 
 Pass any of these names (or a list of them) as `forecasters=`; unknown names
-raise a `ValueError` that suggests the closest valid name.
+raise a `ValueError` that suggests the closest valid name. `HoltWinters_Add`
+and `HoltWinters_Mul` need a seasonal period of at least 2: when none is
+detected or given, a selected Holt-Winters model is skipped and the reason is
+recorded in `errors`.
 
 ### Deep Learning Models (require `pip install lazypredict[deeplearning]`)
 

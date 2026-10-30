@@ -8,7 +8,12 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
+from sklearn.preprocessing import (
+    FunctionTransformer,
+    OneHotEncoder,
+    OrdinalEncoder,
+    StandardScaler,
+)
 
 from lazypredict.config import VALID_ENCODERS
 
@@ -41,6 +46,49 @@ categorical_transformer_high = Pipeline(
         ("encoding", OrdinalEncoder()),
     ]
 )
+
+
+def _is_categorical_dtype(dtype) -> bool:
+    """True for ``object``, ``string``/``str`` and ``category`` columns."""
+    return (
+        isinstance(dtype, pd.CategoricalDtype)
+        or pd.api.types.is_object_dtype(dtype)
+        or pd.api.types.is_string_dtype(dtype)
+    )
+
+
+def _column_as_strings(column: pd.Series) -> pd.Series:
+    """Return *column* as ``object`` values of ``str``, with ``np.nan`` for missing."""
+    missing = column.isna()
+    if isinstance(column.dtype, pd.CategoricalDtype):
+        labels = column.cat.categories
+        values = column.astype(object)
+        if pd.api.types.infer_dtype(labels, skipna=True) != "string":
+            values = values.map(str, na_action="ignore")
+    elif pd.api.types.infer_dtype(column, skipna=True) in ("string", "empty"):
+        values = column.astype(object)
+    else:
+        values = column.astype(object).map(str, na_action="ignore")
+    return values.where(~missing, np.nan)
+
+
+def categories_as_strings(X) -> np.ndarray:
+    """Normalise categorical input before imputation and encoding.
+
+    ``category``, nullable ``string``, pandas 3 ``str`` and mixed-type
+    ``object`` columns become one ``object`` array of ``str`` values with
+    ``np.nan`` for every kind of missing value (``None``, ``pd.NA``, ``NaN``),
+    so they are imputed and encoded the same way even when the training and
+    test data use different dtypes.
+    """
+    frame = X if isinstance(X, pd.DataFrame) else pd.DataFrame(X)
+    columns = [
+        _column_as_strings(frame.iloc[:, i]).to_numpy(dtype=object)
+        for i in range(frame.shape[1])
+    ]
+    if not columns:
+        return np.empty((len(frame), 0), dtype=object)
+    return np.column_stack(columns)
 
 
 def get_categorical_encoder(
@@ -104,7 +152,16 @@ def get_categorical_encoder(
             f"Choose from {VALID_ENCODERS!r}"
         )
 
-    return Pipeline(steps=[("imputer", imputer), ("encoding", encoder)])
+    return Pipeline(
+        steps=[
+            (
+                "as_strings",
+                FunctionTransformer(categories_as_strings, feature_names_out="one-to-one"),
+            ),
+            ("imputer", imputer),
+            ("encoding", encoder),
+        ]
+    )
 
 
 def get_card_split(
@@ -152,7 +209,9 @@ def build_preprocessor(
 ) -> ColumnTransformer:
     """Build a ColumnTransformer for the given data."""
     numeric_features = X_train.select_dtypes(include=[np.number, "bool"]).columns
-    categorical_features = X_train.select_dtypes(include=["object"]).columns
+    categorical_features = pd.Index(
+        [col for col, dtype in X_train.dtypes.items() if _is_categorical_dtype(dtype)]
+    )
 
     categorical_low, categorical_high = get_card_split(X_train, categorical_features)
 

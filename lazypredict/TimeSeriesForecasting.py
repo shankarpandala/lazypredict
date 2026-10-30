@@ -44,7 +44,7 @@ from lazypredict._base import _resolve_estimators
 from lazypredict._timeout import time_limit
 from lazypredict.exceptions import InsufficientDataError, TimeoutException
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow, start_run
-from lazypredict.metrics import compute_forecast_metrics
+from lazypredict.metrics import compute_forecast_metrics, metric_name
 from lazypredict.ts_preprocessing import (
     create_lag_features,
     detect_seasonal_period,
@@ -1162,6 +1162,8 @@ class LazyForecaster:
             raise ValueError(
                 f"horizon_strategy must be 'recursive', 'direct', or 'multi_output', got {horizon_strategy!r}"
             )
+        self._validate_tuning_and_season(tune_top_k, tune_trials, seasonal_period)
+        sort_by = self._canonical_sort_by(sort_by, custom_metric)
 
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -1208,22 +1210,77 @@ class LazyForecaster:
     # Public API                                                              #
     # --------------------------------------------------------------------- #
 
+    _METRIC_COLUMNS = ("MAE", "RMSE", "MAPE", "SMAPE", "MASE", "R-Squared")
+
+    @staticmethod
+    def _validate_tuning_and_season(tune_top_k: Any, tune_trials: Any, seasonal_period: Any) -> None:
+        for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
+            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                raise ValueError(f"{option} must be a positive integer, got {value!r}")
+        if seasonal_period is not None and (
+            not isinstance(seasonal_period, (int, np.integer)) or seasonal_period < 1
+        ):
+            raise ValueError(
+                f"seasonal_period must be a positive integer or None, got {seasonal_period!r}"
+            )
+
+    @classmethod
+    def _canonical_sort_by(cls, sort_by: str, custom_metric: Optional[Callable]) -> str:
+        """Match *sort_by* case-insensitively against the score table's columns."""
+        valid = list(cls._METRIC_COLUMNS) + [c for c in cls._cv_column_names()] + ["Time Taken"]
+        if custom_metric is not None:
+            valid.append(metric_name(custom_metric))
+        for column in valid:
+            if isinstance(sort_by, str) and sort_by.lower() == column.lower():
+                return column
+        raise ValueError(f"sort_by must be one of {valid}, got {sort_by!r}")
+
+    @staticmethod
+    def _as_series(y: Any, name: str) -> np.ndarray:
+        """Return a finite 1-D float array; one-column frames are flattened."""
+        values: np.ndarray = np.asarray(y, dtype=float)
+        if values.ndim == 2 and values.shape[1] == 1:
+            values = values.ravel()
+        if values.ndim != 1:
+            raise ValueError(f"{name} must be a single series (1-D), got shape {values.shape}")
+        if len(values) == 0:
+            raise ValueError(f"{name} is empty")
+        if not np.all(np.isfinite(values)):
+            raise ValueError(
+                f"{name} contains NaN or infinite values; fill or drop them before fitting"
+            )
+        return values
+
+    @staticmethod
+    def _as_exog(X: Any, name: str, n_rows: int, series: str) -> np.ndarray:
+        """Return finite 2-D exogenous features with one row per value of *series*."""
+        values: np.ndarray = np.asarray(X, dtype=float)
+        if values.ndim == 1:
+            values = values.reshape(-1, 1)
+        if values.ndim != 2:
+            raise ValueError(f"{name} must be 2-D, got shape {values.shape}")
+        if len(values) != n_rows:
+            raise ValueError(f"{name} has {len(values)} rows but {series} has {n_rows} values")
+        if not np.all(np.isfinite(values)):
+            raise ValueError(f"{name} contains NaN or infinite values")
+        return values
+
     def _validate_fit_inputs(self, y_train, y_test, X_train, X_test):
         """Validate and coerce fit inputs to numpy arrays."""
-        y_train = np.asarray(y_train, dtype=float)
-        y_test = np.asarray(y_test, dtype=float)
-        if len(y_train) == 0:
-            raise ValueError("y_train is empty")
-        if len(y_test) == 0:
-            raise ValueError("y_test is empty")
+        y_train = self._as_series(y_train, "y_train")
+        y_test = self._as_series(y_test, "y_test")
+        if (X_train is None) != (X_test is None):
+            raise ValueError(
+                "X_train and X_test must be passed together: models trained with "
+                "exogenous variables need their values for the forecast period."
+            )
         if X_train is not None:
-            X_train = np.asarray(X_train, dtype=float)
-            if X_train.ndim == 1:
-                X_train = X_train.reshape(-1, 1)
-        if X_test is not None:
-            X_test = np.asarray(X_test, dtype=float)
-            if X_test.ndim == 1:
-                X_test = X_test.reshape(-1, 1)
+            X_train = self._as_exog(X_train, "X_train", len(y_train), "y_train")
+            X_test = self._as_exog(X_test, "X_test", len(y_test), "y_test")
+            if X_train.shape[1] != X_test.shape[1]:
+                raise ValueError(
+                    f"X_train has {X_train.shape[1]} columns but X_test has {X_test.shape[1]}"
+                )
         min_required = self.n_lags + max(self.n_rolling) + 1
         if len(y_train) < min_required:
             raise InsufficientDataError(
@@ -1300,7 +1357,7 @@ class LazyForecaster:
         try:
             metrics["custom_metric"] = self.custom_metric(y_test, y_pred)
         except Exception as custom_exc:
-            metrics["custom_metric"] = None
+            metrics["custom_metric"] = np.nan
             if not self.ignore_warnings:
                 logger.warning(
                     "Custom metric failed for %s: %s", fname, custom_exc
@@ -1860,7 +1917,7 @@ class LazyForecaster:
         Uses ``sklearn.model_selection.TimeSeriesSplit`` so that training
         data always precedes validation data chronologically.
 
-        Returns a dict of ``{metric_name: value}`` with mean and standard
+        Returns a dict of ``{metric: value}`` with mean and standard
         deviation for each fold.
         """
         from sklearn.model_selection import TimeSeriesSplit
@@ -1884,16 +1941,16 @@ class LazyForecaster:
                 fold_metrics = compute_forecast_metrics(
                     y_cv_val, y_cv_pred, y_cv_train, seasonal_period=sp
                 )
-                for metric_name in cv_scores:
-                    cv_scores[metric_name].append(fold_metrics[metric_name])
+                for metric in cv_scores:
+                    cv_scores[metric].append(fold_metrics[metric])
             except Exception:
-                for metric_name in cv_scores:
-                    cv_scores[metric_name].append(np.nan)
+                for metric in cv_scores:
+                    cv_scores[metric].append(np.nan)
 
         result: Dict[str, Optional[float]] = {}
-        for metric_name, values in cv_scores.items():
+        for metric, values in cv_scores.items():
             arr = np.array(values, dtype=float)
-            label = metric_name.upper()
+            label = metric.upper()
             result[f"{label} CV Mean"] = (
                 float(np.nanmean(arr)) if not np.all(np.isnan(arr)) else None
             )
@@ -1937,7 +1994,7 @@ class LazyForecaster:
                     row[col] = r[col]
             # Custom metric
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric")
+                row[metric_name(self.custom_metric)] = r.get("custom_metric", np.nan)
             row["Time Taken"] = r["time"]
             rows.append(row)
 

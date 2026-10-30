@@ -26,6 +26,7 @@ from lazypredict.integrations.mlflow import (
     setup_mlflow,
     start_run,
 )
+from lazypredict.metrics import metric_name
 from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
 
 logger = logging.getLogger("lazypredict")
@@ -428,13 +429,13 @@ class LazyEstimator:
                             custom_val = self.custom_metric(y_test, y_pred)
                             metrics["custom_metric"] = custom_val
                             if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                                _mlflow.log_metric(self.custom_metric.__name__, custom_val)
+                                _mlflow.log_metric(metric_name(self.custom_metric), custom_val)
                         except Exception as custom_exc:
                             metrics["custom_metric"] = np.nan
                             if not self.ignore_warnings:
                                 logger.warning(
                                     "Custom metric %s failed for %s: %s",
-                                    self.custom_metric.__name__, name, custom_exc,
+                                    metric_name(self.custom_metric), name, custom_exc,
                                 )
 
                     results.append(metrics)

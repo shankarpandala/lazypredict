@@ -129,13 +129,16 @@ def create_lag_features(
     y_target = df["y"].values
     X_features = df.drop(columns=["y"]).values
 
-    # Append exogenous variables (trimmed to match)
+    # Append the exogenous variables of the rows that were kept
     if X_exog is not None:
         X_exog = np.asarray(X_exog)
         if X_exog.ndim == 1:
             X_exog = X_exog.reshape(-1, 1)
-        X_exog_trimmed = X_exog[-len(y_target):]
-        X_features = np.hstack([X_features, X_exog_trimmed])
+        if len(X_exog) != len(y):
+            raise ValueError(
+                f"X_exog has {len(X_exog)} rows but the series has {len(y)} values"
+            )
+        X_features = np.hstack([X_features, X_exog[df.index.to_numpy()]])
 
     return X_features, y_target
 
@@ -184,6 +187,10 @@ def recursive_forecast(
         X_exog = np.asarray(X_exog)
         if X_exog.ndim == 1:
             X_exog = X_exog.reshape(-1, 1)
+        if len(X_exog) < horizon:
+            raise ValueError(
+                f"X_exog has {len(X_exog)} rows but {horizon} forecast steps were requested"
+            )
 
     for step in range(horizon):
         features: List[float] = []

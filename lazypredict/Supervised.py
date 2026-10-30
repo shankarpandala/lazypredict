@@ -48,7 +48,7 @@ from lazypredict.integrations.mlflow import (  # noqa: F401
     is_mlflow_tracking_enabled,
     setup_mlflow,
 )
-from lazypredict.metrics import adjusted_rsquared
+from lazypredict.metrics import adjusted_rsquared, metric_name
 from lazypredict.preprocessing import (  # noqa: F401
     CATEGORY_ENCODERS_AVAILABLE,
     build_preprocessor,
@@ -405,7 +405,7 @@ class LazyClassifier(LazyEstimator):
                 "Recall": r["recall"],
             }
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric", np.nan)
+                row[metric_name(self.custom_metric)] = r.get("custom_metric", np.nan)
             # CV columns
             for col in self._cv_column_names():
                 if col in r:
@@ -614,7 +614,7 @@ class LazyRegressor(LazyEstimator):
                 if col in r:
                     row[col] = r[col]
             if self.custom_metric is not None:
-                row[self.custom_metric.__name__] = r.get("custom_metric", np.nan)
+                row[metric_name(self.custom_metric)] = r.get("custom_metric", np.nan)
             row["Time Taken"] = r["time"]
             rows.append(row)
 

@@ -1,7 +1,19 @@
 """Metric helper functions for LazyPredict."""
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+
+def metric_name(metric: Any) -> str:
+    """Column name for a user-supplied metric callable.
+
+    Uses ``__name__``, the wrapped function's name for ``functools.partial``
+    objects, and ``"custom_metric"`` otherwise.
+    """
+    name = getattr(metric, "__name__", None) or getattr(getattr(metric, "func", None), "__name__", None)
+    return name or "custom_metric"
 
 
 def adjusted_rsquared(r2: float, n: int, p: int) -> float:

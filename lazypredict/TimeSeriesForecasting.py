@@ -1195,6 +1195,7 @@ class LazyForecaster:
         self.models: Dict[str, ForecasterWrapper] = {}
         self.errors: Dict[str, Exception] = {}
         self._last_predictions: Dict[str, np.ndarray] = {}
+        self._validation_cache: Optional[Tuple[Dict[str, np.ndarray], np.ndarray]] = None
         self.mlflow_enabled = setup_mlflow()
 
         if self.use_gpu:
@@ -1411,6 +1412,7 @@ class LazyForecaster:
         self.tuned_scores_ = None
         self.tuned_models_ = {}
         self._last_predictions = {}
+        self._validation_cache = None
 
         y_train, y_test, X_train, X_test = self._convert_and_validate_inputs(
             y_train, y_test, X_train, X_test
@@ -1536,7 +1538,14 @@ class LazyForecaster:
         method: str = "weighted_average",
         y_true: Optional[np.ndarray] = None,
     ) -> np.ndarray:
-        """Ensemble predictions from fitted models.
+        """Combine the test-period forecasts of the fitted models.
+
+        ``"weighted_average"`` and ``"stacking"`` learn from a validation
+        window held out from the end of the *training* series: each model is
+        refitted on the rest of the training data and forecasts that window.
+        Weights are the inverse of those validation RMSEs, and the stacking
+        meta-model (Ridge) is fitted on those validation forecasts. The test
+        data is never used to build the ensemble.
 
         Parameters
         ----------
@@ -1544,17 +1553,26 @@ class LazyForecaster:
             Ensemble method: ``'simple_average'``, ``'weighted_average'``,
             or ``'stacking'``.
         y_true : np.ndarray or None
-            True values (required for 'stacking' and 'weighted_average').
+            Ignored; kept for backward compatibility. (Earlier versions fitted
+            the stacking meta-model on the test values passed here, which
+            leaked them into the forecast being evaluated.)
 
         Returns
         -------
         np.ndarray
-            Ensembled predictions.
+            Ensembled predictions for the test period.
         """
         if not self._last_predictions:
             raise ValueError("No predictions available. Call fit() first.")
+        if y_true is not None:
+            warnings.warn(
+                "ensemble(y_true=...) is ignored and will be removed: weights and the "
+                "stacking meta-model are now learned on a validation window of the "
+                "training series.",
+                FutureWarning,
+                stacklevel=2,
+            )
 
-        preds = self._last_predictions
         handlers = {
             "simple_average": self._ensemble_simple,
             "weighted_average": self._ensemble_weighted,
@@ -1565,26 +1583,65 @@ class LazyForecaster:
             raise ValueError(
                 f"Unknown method: {method}. Use {', '.join(repr(k) for k in handlers)}."
             )
-        return np.asarray(handler(preds, y_true))
+        return np.asarray(handler(self._last_predictions))
 
-    def _ensemble_simple(self, preds, y_true):
+    def _ensemble_simple(self, preds):
         from lazypredict.ensemble import ensemble_simple_average
         return ensemble_simple_average(preds)
 
-    def _ensemble_weighted(self, preds, y_true):
+    def _ensemble_weighted(self, preds):
         from lazypredict.ensemble import ensemble_weighted_average
-        scores = {name: 1.0 for name in preds if name in self.models}
-        if hasattr(self, "_last_scores_dict"):
-            for name, s in self._last_scores_dict.items():
-                if name in preds:
-                    scores[name] = s
-        return ensemble_weighted_average(preds, scores)
+        val_preds, y_val = self._validation_predictions()
+        rmse = {
+            name: float(np.sqrt(np.mean((pred - y_val) ** 2)))
+            for name, pred in val_preds.items()
+        }
+        return ensemble_weighted_average({name: preds[name] for name in val_preds}, rmse)
 
-    def _ensemble_stacking(self, preds, y_true):
+    def _ensemble_stacking(self, preds):
         from lazypredict.ensemble import ensemble_stacking
-        if y_true is None:
-            raise ValueError("y_true is required for stacking ensemble.")
-        return ensemble_stacking(preds, y_true)
+        val_preds, y_val = self._validation_predictions()
+        return ensemble_stacking(
+            val_preds, y_val, pred_test={name: preds[name] for name in val_preds}
+        )
+
+    def _validation_predictions(self) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+        """Forecasts of a window held out from the end of the training series.
+
+        The window has the length of the test horizon when the training
+        series is long enough. Models that fail on it are left out.
+        """
+        if self._validation_cache is not None:
+            return self._validation_cache
+        y_train, X_train = self._last_y_train, self._last_X_train
+        min_required = self.n_lags + max(self.n_rolling) + 1
+        window = min(len(self._last_y_test), len(y_train) - min_required)
+        if window < 2:
+            raise ValueError(
+                "y_train is too short to hold out a validation window for the ensemble."
+            )
+        y_fit, y_val = y_train[:-window], y_train[-window:]
+        X_fit = X_train[:-window] if X_train is not None else None
+        X_val = X_train[-window:] if X_train is not None else None
+        templates = dict(self._last_all_forecasters)
+
+        val_preds: Dict[str, np.ndarray] = {}
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for name in self._last_predictions:
+                try:
+                    wrapper = copy.deepcopy(templates[name])
+                    wrapper.fit(y_fit, X_fit)
+                    pred = np.asarray(wrapper.predict(window, X_val), dtype=float)
+                except Exception as exc:
+                    logger.info("%s left out of the ensemble: %s", name, exc)
+                    continue
+                if pred.shape == y_val.shape and np.all(np.isfinite(pred)):
+                    val_preds[name] = pred
+        if not val_preds:
+            raise ValueError("No model could forecast the validation window.")
+        self._validation_cache = (val_preds, y_val)
+        return self._validation_cache
 
     def plot_results(
         self,

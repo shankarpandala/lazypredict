@@ -223,8 +223,11 @@ class TestEnsemble:
             "model_b": np.array([1.5, 2.5, 3.5, 4.5, 5.5]),
         }
         y_true = np.array([1.2, 2.1, 3.3, 4.1, 5.2])
-        result = ensemble_stacking(preds, y_true)
-        assert len(result) == 5
+        pred_test = {"model_a": np.array([6.0, 7.0]), "model_b": np.array([6.5, 7.5])}
+        result = ensemble_stacking(preds, y_true, pred_test=pred_test)
+        assert len(result) == 2
+        with pytest.raises(ValueError, match="pred_test is required"):
+            ensemble_stacking(preds, y_true)
 
     def test_empty_predictions_raises(self):
         from lazypredict.ensemble import ensemble_simple_average

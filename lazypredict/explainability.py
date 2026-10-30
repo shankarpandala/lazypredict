@@ -84,7 +84,7 @@ def explain_permutation(
     return df
 
 
-def _get_shap_explainer(pipe: Pipeline, X_background: np.ndarray, step_name: str):
+def _get_shap_explainer(pipe: Pipeline, X_background: pd.DataFrame, step_name: str):
     """Select the appropriate SHAP explainer for the inner model.
 
     Returns (explainer, X_transformed) or raises ImportError.
@@ -131,6 +131,21 @@ def _get_shap_explainer(pipe: Pipeline, X_background: np.ndarray, step_name: str
         return shap.PermutationExplainer(model.predict, X_transformed), X_transformed
 
 
+def _normalise_shap_output(sv: Any) -> np.ndarray:
+    """Return one array per model whatever the shap version's output format.
+
+    Older shap versions return a list with one array per class, newer ones a
+    single ``(n_samples, n_features, n_outputs)`` array. Binary classifiers
+    are reduced to the positive class.
+    """
+    if isinstance(sv, list):
+        sv = np.stack([np.asarray(values) for values in sv], axis=-1)
+    values: np.ndarray = np.asarray(sv)
+    if values.ndim == 3 and values.shape[-1] == 2:
+        values = values[..., 1]
+    return values
+
+
 def explain_shap(
     models: Dict[str, Pipeline],
     X_test: pd.DataFrame,
@@ -153,7 +168,10 @@ def explain_shap(
     Returns
     -------
     dict
-        Mapping of model name to SHAP values array (n_samples, n_features).
+        Mapping of model name to SHAP values for the transformed features:
+        shape ``(n_samples, n_features)`` for regressors and binary
+        classifiers (values for the positive class), and
+        ``(n_samples, n_features, n_classes)`` for multiclass classifiers.
     """
     if not _SHAP_AVAILABLE:
         raise ImportError(
@@ -165,19 +183,15 @@ def explain_shap(
         cols = [f"feature_{i}" for i in range(X_test.shape[1])]
         X_test = pd.DataFrame(X_test, columns=cols)
 
-    X_sample = X_test.iloc[:max_samples] if len(X_test) > max_samples else X_test
-    X_bg = X_test.values[:max_samples]
+    # Keep a DataFrame: the fitted ColumnTransformer selects columns by name.
+    X_bg = X_test.iloc[:max_samples]
 
     shap_values: Dict[str, np.ndarray] = {}
 
     for name, pipe in models.items():
         try:
             explainer, X_transformed = _get_shap_explainer(pipe, X_bg, step_name)
-            X_explain = X_transformed[:len(X_sample)]
-            sv = explainer.shap_values(X_explain)
-            if isinstance(sv, list):
-                sv = sv[0]  # binary classification: take class 1
-            shap_values[name] = sv
+            shap_values[name] = _normalise_shap_output(explainer.shap_values(X_transformed))
         except Exception as exc:
             logger.warning("SHAP explanation failed for %s: %s", name, exc)
 

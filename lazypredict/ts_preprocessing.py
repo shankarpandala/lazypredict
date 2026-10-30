@@ -196,7 +196,8 @@ def recursive_forecast(
         for window in n_rolling:
             recent = history[-window:]
             features.append(float(np.mean(recent)))
-            features.append(float(np.std(recent)) if len(recent) > 1 else 0.0)
+            # ddof=1 matches pandas' rolling().std() used for the training features.
+            features.append(float(np.std(recent, ddof=1)) if len(recent) > 1 else 0.0)
 
         # Diff
         features.append(history[-1] - history[-2] if len(history) >= 2 else 0.0)

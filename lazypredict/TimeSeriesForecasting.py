@@ -688,8 +688,8 @@ class _TorchRNNForecaster(ForecasterWrapper):
                 for window in n_rolling:
                     recent = history[-window:]
                     features.append(float(np.mean(recent)))
-                    features.append(
-                        float(np.std(recent)) if len(recent) > 1 else 0.0
+                    features.append(  # ddof=1 like the training features
+                        float(np.std(recent, ddof=1)) if len(recent) > 1 else 0.0
                     )
                 features.append(
                     history[-1] - history[-2] if len(history) >= 2 else 0.0

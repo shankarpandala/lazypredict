@@ -87,6 +87,7 @@ def test_no_limit():
         assert not enforced
 
 
+@posix_only
 @pytest.mark.parametrize("seconds", [float("inf"), 1e12, float("nan")])
 def test_limits_the_timer_cannot_hold_are_not_armed(seconds):
     # Issue #616: setitimer() overflowed and the handler was left installed.
@@ -97,9 +98,11 @@ def test_limits_the_timer_cannot_hold_are_not_armed(seconds):
 
 
 def test_infinite_timeout_trains_every_model():
-    previous = signal.getsignal(signal.SIGALRM)
+    has_alarm = hasattr(signal, "SIGALRM")  # not on Windows
+    previous = signal.getsignal(signal.SIGALRM) if has_alarm else None
     clf = LazyClassifier(classifiers=["LogisticRegression"], timeout=float("inf"))
     scores, _ = clf.fit(*_data())
     assert list(scores.index) == ["LogisticRegression"]
     assert clf.errors == {}
-    assert signal.getsignal(signal.SIGALRM) is previous
+    if has_alarm:
+        assert signal.getsignal(signal.SIGALRM) is previous

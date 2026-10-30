@@ -43,13 +43,14 @@ from lazypredict.config import (
 from lazypredict._base import _resolve_estimators
 from lazypredict._timeout import time_limit
 from lazypredict.exceptions import InsufficientDataError, TimeoutException
-from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow, start_run
+from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, RunTracker, setup_mlflow
 from lazypredict.metrics import compute_forecast_metrics, metric_name
 from lazypredict.ts_preprocessing import (
     create_lag_features,
     detect_seasonal_period,
     recursive_forecast,
 )
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -73,8 +74,9 @@ except Exception:
 # ---------------------------------------------------------------------------
 try:
     import mlflow as _mlflow
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _mlflow = None  # type: ignore[assignment]
+    warn_if_broken("mlflow", exc)
 
 # ---------------------------------------------------------------------------
 # Optional dependencies — graceful degradation
@@ -83,15 +85,17 @@ try:
     import statsmodels  # noqa: F401
 
     _STATSMODELS_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _STATSMODELS_AVAILABLE = False
+    warn_if_broken("statsmodels", exc)
 
 try:
     import pmdarima  # noqa: F401
 
     _PMDARIMA_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _PMDARIMA_AVAILABLE = False
+    warn_if_broken("pmdarima", exc)
 
 try:
     _TORCH_AVAILABLE = importlib.util.find_spec("torch") is not None
@@ -102,22 +106,25 @@ try:
     import xgboost  # noqa: F401
 
     _XGBOOST_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _XGBOOST_AVAILABLE = False
+    warn_if_broken("xgboost", exc)
 
 try:
     import lightgbm  # noqa: F401
 
     _LIGHTGBM_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _LIGHTGBM_AVAILABLE = False
+    warn_if_broken("lightgbm", exc)
 
 try:
     import catboost  # noqa: F401
 
     _CATBOOST_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _CATBOOST_AVAILABLE = False
+    warn_if_broken("catboost", exc)
 
 try:
     _TIMESFM_AVAILABLE = importlib.util.find_spec("timesfm") is not None
@@ -469,7 +476,8 @@ class AutoARIMAForecaster(ForecasterWrapper):
     def fit(self, y_train, X_train=None):
         from pmdarima import auto_arima
 
-        m = self.seasonal_period or 1
+        # getattr: models saved by lazypredict 0.3 lack these attributes.
+        m = getattr(self, "seasonal_period", None) or 1
         seasonal = 2 <= m <= self.MAX_SEASONAL_PERIOD
         kwargs: Dict[str, Any] = {
             "seasonal": seasonal,
@@ -478,7 +486,7 @@ class AutoARIMAForecaster(ForecasterWrapper):
             "error_action": "ignore",
             "stepwise": True,
         }
-        kwargs.update(self.params)
+        kwargs.update(getattr(self, "params", {}))
         # pmdarima >= 2 takes exogenous regressors as ``X`` (``exogenous``
         # was silently ignored).
         self._model = auto_arima(y_train, X=X_train, **kwargs)
@@ -742,7 +750,7 @@ class _TorchRNNForecaster(ForecasterWrapper):
         device = self._device
         predictions: List[float] = []
         history = list(self._y_train)
-        n_rolling = self.n_rolling
+        n_rolling = tuple(dict.fromkeys(self.n_rolling))  # as in create_lag_features
 
         if X_test is not None:
             X_test = np.asarray(X_test)
@@ -916,6 +924,10 @@ class TimesFMForecaster(ForecasterWrapper):
 # ============================================================================
 # Model Registry
 # ============================================================================
+
+
+# Models that only exist for seasonal data (a seasonal period of at least 2).
+_SEASONAL_ONLY_FORECASTERS = ("HoltWinters_Add", "HoltWinters_Mul")
 
 
 def _build_forecaster_list(
@@ -1212,6 +1224,10 @@ class LazyForecaster:
             )
         self._validate_tuning_and_season(tune_top_k, tune_trials, seasonal_period, n_jobs)
         sort_by = self._canonical_sort_by(sort_by, custom_metric)
+        if sort_by in self._cv_column_names() and not cv:
+            raise ValueError(
+                f"sort_by={sort_by!r} needs cross-validation: set cv or sort by a test metric"
+            )
 
         self.verbose = verbose
         self.ignore_warnings = ignore_warnings
@@ -1265,8 +1281,10 @@ class LazyForecaster:
     def _validate_tuning_and_season(
         tune_top_k: Any, tune_trials: Any, seasonal_period: Any, n_jobs: Any = -1
     ) -> None:
-        if n_jobs is not None and (not isinstance(n_jobs, int) or isinstance(n_jobs, bool)):
-            raise ValueError(f"n_jobs must be an integer or None, got {n_jobs!r}")
+        if n_jobs is not None and (
+            not isinstance(n_jobs, int) or isinstance(n_jobs, bool) or n_jobs == 0
+        ):
+            raise ValueError(f"n_jobs must be a non-zero integer or None, got {n_jobs!r}")
         for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
                 raise ValueError(f"{option} must be a positive integer, got {value!r}")
@@ -1345,16 +1363,12 @@ class LazyForecaster:
 
     def _fit_single_model(
         self, fname, wrapper, y_train, y_test, X_train, X_test,
-        horizon, seasonal_period, results, predictions_dict,
+        horizon, seasonal_period, results, predictions_dict, tracker,
     ):
         """Fit, predict, and score a single forecaster model."""
         start = time.perf_counter()
-        mlflow_active_run = None
+        run_started = tracker.start(f"LazyForecaster-{fname}", model_name=fname)
         try:
-            if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                mlflow_active_run = start_run(_mlflow, run_name=f"LazyForecaster-{fname}")
-                _mlflow.log_param("model_name", fname)
-
             wrapper_copy = copy.deepcopy(wrapper)
             with time_limit(self.timeout):
                 wrapper_copy.fit(y_train, X_train)
@@ -1381,8 +1395,14 @@ class LazyForecaster:
                 metrics.update(cv_metrics)
 
             self._compute_custom_metric(metrics, y_test, y_pred, fname)
-            self._log_mlflow_metrics(mlflow_active_run, metrics)
-
+        except Exception as exc:
+            self.errors[fname] = exc
+            if isinstance(exc, TimeoutException):
+                logger.info("%s skipped: %s", fname, exc)
+            elif not self.ignore_warnings:
+                logger.warning("%s model failed: %s", fname, exc)
+            return None
+        else:
             # Only models that produced scores are kept.
             self.models[fname] = wrapper_copy
             results.append(metrics)
@@ -1390,18 +1410,12 @@ class LazyForecaster:
                 self._log_verbose(fname, metrics)
             # Always store predictions internally for ensemble/plotting/diagnostics
             predictions_dict[fname] = y_pred
-
-            self._end_mlflow_run(mlflow_active_run)
+            if run_started:
+                tracker.call(self._log_mlflow_metrics, metrics)
             return metrics
-
-        except Exception as exc:
-            self._end_mlflow_run(mlflow_active_run)
-            self.errors[fname] = exc
-            if isinstance(exc, TimeoutException):
-                logger.info("%s skipped: %s", fname, exc)
-            elif not self.ignore_warnings:
-                logger.warning("%s model failed: %s", fname, exc)
-            return None
+        finally:
+            if run_started:
+                tracker.end()
 
     def _compute_custom_metric(self, metrics, y_test, y_pred, fname):
         """Run user-supplied custom metric if configured."""
@@ -1417,15 +1431,9 @@ class LazyForecaster:
                 )
 
     @staticmethod
-    def _end_mlflow_run(mlflow_active_run):
-        """End an MLflow run if one is active."""
-        if mlflow_active_run and _mlflow is not None:
-            _mlflow.end_run()
-
-    @staticmethod
-    def _log_mlflow_metrics(mlflow_active_run, metrics):
-        """Log all numeric metrics to MLflow if a run is active."""
-        if not (mlflow_active_run and _mlflow is not None):
+    def _log_mlflow_metrics(metrics):
+        """Log all finite numeric metrics to the active MLflow run."""
+        if _mlflow is None:
             return
         for key, val in metrics.items():
             if isinstance(val, (int, float, np.number)) and np.isfinite(val):
@@ -1466,6 +1474,7 @@ class LazyForecaster:
         self._last_predictions = {}
         self._validation_cache = None
 
+        test_index = y_test.index if isinstance(y_test, (pd.Series, pd.DataFrame)) else None
         y_train, y_test, X_train, X_test = self._convert_and_validate_inputs(
             y_train, y_test, X_train, X_test
         )
@@ -1490,7 +1499,8 @@ class LazyForecaster:
         self._auto_tune(scores, all_forecasters, y_train, X_train, seasonal_period)
 
         if self.predictions:
-            return scores, pd.DataFrame.from_dict(predictions_dict)
+            # Forecast rows keep y_test's index, e.g. its dates.
+            return scores, pd.DataFrame(predictions_dict, index=test_index)
         return scores, pd.DataFrame()
 
     def _convert_and_validate_inputs(self, y_train, y_test, X_train, X_test):
@@ -1522,8 +1532,23 @@ class LazyForecaster:
             foundation_model_path=self.foundation_model_path,
             horizon_strategy=self.horizon_strategy,
         )
+        selection = self.forecasters
+        if selection != "all" and _STATSMODELS_AVAILABLE and not (
+            seasonal_period and seasonal_period >= 2
+        ):
+            # A selected Holt-Winters model is valid but cannot run on this
+            # data: report it instead of treating its name as unknown.
+            names = [selection] if isinstance(selection, str) else list(selection)
+            skipped = [name for name in names if name in _SEASONAL_ONLY_FORECASTERS]
+            for name in skipped:
+                self.errors[name] = ValueError(
+                    f"{name} needs a seasonal period of at least 2 and none was "
+                    "detected; pass seasonal_period to use it."
+                )
+                logger.warning("%s skipped: %s", name, self.errors[name])
+            selection = [name for name in names if name not in skipped]
         all_forecasters = _resolve_estimators(
-            self.forecasters, all_forecasters, "forecaster", allow_classes=False
+            selection, all_forecasters, "forecaster", allow_classes=False
         )
         if self.max_models is not None:
             all_forecasters = all_forecasters[: self.max_models]
@@ -1535,6 +1560,7 @@ class LazyForecaster:
     ):
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(all_forecasters)
+        tracker = RunTracker(_mlflow if self.mlflow_enabled and MLFLOW_AVAILABLE else None)
         with warnings.catch_warnings():
             if self.ignore_warnings:
                 warnings.simplefilter("ignore")
@@ -1543,7 +1569,7 @@ class LazyForecaster:
             ):
                 metrics = self._fit_single_model(
                     fname, wrapper, y_train, y_test, X_train, X_test,
-                    horizon, seasonal_period, results, predictions_dict,
+                    horizon, seasonal_period, results, predictions_dict, tracker,
                 )
                 if self.progress_callback is not None:
                     self.progress_callback(fname, idx + 1, total, metrics)
@@ -1584,6 +1610,7 @@ class LazyForecaster:
             random_state=self.random_state,
             tune_seasonal=self.tune_seasonal,
             refit=True,
+            horizon=len(self._last_y_test),
         )
 
     def ensemble(
@@ -1661,14 +1688,15 @@ class LazyForecaster:
     def _validation_predictions(self) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
         """Forecasts of a window held out from the end of the training series.
 
-        The window has the length of the test horizon when the training
-        series is long enough. Models that fail on it are left out.
+        The window has the length of the test horizon, but at least two
+        points, when the training series is long enough. Models that fail on
+        it are left out.
         """
         if self._validation_cache is not None:
             return self._validation_cache
         y_train, X_train = self._last_y_train, self._last_X_train
         min_required = self.n_lags + max(self.n_rolling) + 1
-        window = min(len(self._last_y_test), len(y_train) - min_required)
+        window = min(max(len(self._last_y_test), 2), len(y_train) - min_required)
         if window < 2:
             raise ValueError(
                 "y_train is too short to hold out a validation window for the ensemble."

@@ -73,3 +73,22 @@ def test_slow_forecaster_is_interrupted(series, monkeypatch):
     assert time.perf_counter() - start < 3
     assert list(scores.index) == ["Holt"]
     assert isinstance(forecaster.errors["Naive"], TimeoutException)
+
+
+@pytest.mark.parametrize("seasonal_period", [None, 1])
+def test_holt_winters_without_a_season_is_skipped_not_unknown(seasonal_period):
+    # Issue #615: a non-seasonal series made "HoltWinters_Add" an unknown name.
+    rng = np.random.default_rng(0)
+    y = 50 + 0.5 * np.arange(120) + rng.normal(0, 1, 120)
+    forecaster = LazyForecaster(
+        forecasters=["Naive", "HoltWinters_Add"], seasonal_period=seasonal_period
+    )
+    scores, _ = forecaster.fit(y[:100], y[100:])
+    assert list(scores.index) == ["Naive"]
+    assert "seasonal period of at least 2" in str(forecaster.errors["HoltWinters_Add"])
+
+
+def test_n_jobs_zero_is_rejected():
+    # Issue #617: n_jobs=0 passed validation and failed every model's CV.
+    with pytest.raises(ValueError, match="n_jobs must be a non-zero integer"):
+        LazyForecaster(n_jobs=0)

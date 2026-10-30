@@ -84,3 +84,53 @@ def test_tuning_is_reproducible_and_used(y):
     assert table.loc["Naive", "Status"] == "no search space"
     params = table.loc["Ridge_TS", "Best Params"]
     assert first.tuned_models_["Ridge_TS"]._estimator.alpha == params["alpha"]
+
+
+# -- issue #628 ------------------------------------------------------------------
+
+@pytest.mark.parametrize("strategy", ["direct", "multi_output"])
+def test_direct_and_multi_output_forecasters_can_be_tuned(y, strategy):
+    forecaster = LazyForecaster(forecasters=["Ridge_TS"], horizon_strategy=strategy,
+                                tune=True, tune_top_k=1, tune_trials=3)
+    forecaster.fit(y[:148], y[148:])
+    assert forecaster.tuned_scores_.loc["Ridge_TS", "Status"] == "tuned"
+
+
+def test_sarimax_seasonal_candidates_stay_feasible():
+    from lazypredict.ts_tuning import _seasonal_candidates
+
+    assert max(_seasonal_candidates(1200, 7, max_period=24)) <= 24
+    assert 365 in _seasonal_candidates(1200, 7)  # Holt-Winters can afford it
+
+
+def test_mase_is_scaled_by_the_benchmark_period(y, monkeypatch):
+    import lazypredict.ts_tuning as ts_tuning
+
+    periods = []
+    original = ts_tuning._temporal_cv_error
+
+    def recording(*args, **kwargs):
+        periods.append(args[5])
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(ts_tuning, "_temporal_cv_error", recording)
+    forecaster = LazyForecaster(forecasters=["HoltWinters_Add"], seasonal_period=12, tune=True,
+                                tune_top_k=1, tune_trials=6, tune_metric="MASE", tune_seasonal=True)
+    forecaster.fit(y[:148], y[148:])
+    assert periods and set(periods) == {12}
+
+
+def test_search_spaces_respect_their_libraries():
+    import optuna
+
+    study = optuna.create_study(sampler=optuna.samplers.RandomSampler(seed=0))
+    for _ in range(40):
+        params = TS_SEARCH_SPACES["AutoARIMA"](study.ask())
+        assert params["max_p"] >= 2 and params["max_q"] >= 2  # auto_arima's start_p/start_q
+    assert TS_SEARCH_SPACES["LGBMRegressor_TS"](study.ask())["subsample_freq"] == 1
+
+
+def test_equal_rolling_windows(y):
+    forecaster = LazyForecaster(forecasters=["Ridge_TS"], n_rolling=(7, 7))
+    scores, _ = forecaster.fit(y[:148], y[148:])
+    assert forecaster.errors == {} and list(scores.index) == ["Ridge_TS"]

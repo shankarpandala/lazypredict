@@ -32,6 +32,14 @@ XGBoost, LightGBM, and CatBoost (all support GPU acceleration):
 pip install lazypredict[boost]
 ```
 
+On macOS, XGBoost and LightGBM also need the OpenMP runtime:
+
+```console
+brew install libomp
+```
+
+Without it, lazypredict warns that the library could not be imported and skips its models.
+
 ### Categorical encoders
 
 Target and binary encoding (`categorical_encoder="target"` / `"binary"`) via
@@ -80,6 +88,10 @@ os.environ["MLFLOW_TRACKING_URI"] = "sqlite:///mlflow.db"
 pip install lazypredict[tune]      # Optuna backend
 pip install lazypredict[flaml]     # FLAML backend
 ```
+
+The `flaml` extra installs `flaml[automl]`, which the FLAML backend needs. Its
+dependency constraints (at the time of writing, `xgboost<3`) apply to your
+environment as well.
 
 Enable with `tune=True` in any Lazy estimator:
 

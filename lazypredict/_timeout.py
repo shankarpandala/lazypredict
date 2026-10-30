@@ -7,6 +7,10 @@ from typing import Iterator, Optional, Union
 
 from lazypredict.exceptions import TimeoutException
 
+# setitimer() overflows a little above 9.2e9 seconds; longer limits, including
+# float("inf"), cannot fire anyway and are treated as "no preemptive limit".
+_MAX_TIMER_SECONDS = 1e9
+
 
 @contextmanager
 def time_limit(seconds: Optional[Union[int, float]]) -> Iterator[bool]:
@@ -26,7 +30,7 @@ def time_limit(seconds: Optional[Union[int, float]]) -> Iterator[bool]:
     """
     can_interrupt = (
         seconds is not None
-        and seconds > 0
+        and 0 < seconds < _MAX_TIMER_SECONDS  # also False for NaN and infinity
         and hasattr(signal, "setitimer")
         and threading.current_thread() is threading.main_thread()
         and signal.getitimer(signal.ITIMER_REAL)[0] == 0
@@ -39,8 +43,8 @@ def time_limit(seconds: Optional[Union[int, float]]) -> Iterator[bool]:
         raise TimeoutException(f"Timed out after {seconds} seconds")
 
     previous_handler = signal.signal(signal.SIGALRM, _raise_timeout)
-    signal.setitimer(signal.ITIMER_REAL, float(seconds))  # type: ignore[arg-type]
     try:
+        signal.setitimer(signal.ITIMER_REAL, float(seconds))  # type: ignore[arg-type]
         yield True
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)

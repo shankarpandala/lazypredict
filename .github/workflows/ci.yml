@@ -97,6 +97,9 @@ jobs:
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v7
+      - name: Install the OpenMP runtime needed by XGBoost and LightGBM (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libomp
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
@@ -123,5 +126,15 @@ jobs:
         run: |
           python -m venv /tmp/smoke
           /tmp/smoke/bin/pip install dist/*.whl
-          cd /tmp && /tmp/smoke/bin/python -c "import lazypredict; from lazypredict import LazyClassifier, LazyRegressor, LazyForecaster; print(lazypredict.__version__)"
+          # Run outside the checkout so that the wheel, not ./lazypredict, is imported.
+          cd /tmp
+          /tmp/smoke/bin/python - << 'EOF'
+          import importlib, pkgutil, sys
+          import lazypredict
+          from lazypredict import LazyClassifier, LazyRegressor, LazyForecaster  # noqa: F401
+          assert lazypredict.__file__.startswith(sys.prefix), lazypredict.__file__
+          for module in pkgutil.walk_packages(lazypredict.__path__, "lazypredict."):
+              importlib.import_module(module.name)
+          print(lazypredict.__version__)
+          EOF
           /tmp/smoke/bin/lazypredict --version

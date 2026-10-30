@@ -34,8 +34,9 @@ models, predictions = clf.fit(X_train, X_test, y_train, y_test)
 # training data, higher is better), "Best Params" (a dict) and "Status"
 print(clf.tuned_scores_)
 
-clf.tuned_params_["RandomForestClassifier"]   # best hyperparameters
-clf.tuned_models_["RandomForestClassifier"]   # pipeline refitted with them
+# Models whose tuning succeeded: best hyperparameters and the pipeline refitted with them
+for name, pipeline in clf.tuned_models_.items():
+    print(name, clf.tuned_params_[name])
 ```
 
 Tuning is reproducible for a given `random_state`, uses `cv` folds (5 when `cv`
@@ -60,7 +61,7 @@ scores, predictions = fcst.fit(y_train, y_test)
 
 # "Best RMSE" (mean temporal-CV error, lower is better), "Best Params", "Status"
 print(fcst.tuned_scores_)
-fcst.tuned_models_["Ridge_TS"]   # forecaster refitted with the best parameters
+fcst.tuned_models_   # {name: forecaster refitted with the best parameters} for the tuned models
 ```
 
 ### Using the Tuning API Directly

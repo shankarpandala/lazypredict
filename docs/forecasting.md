@@ -67,7 +67,10 @@ print(scores)
 | `CatBoostRegressor_TS` | `MLForecaster` | CatBoost (requires `lazypredict[boost]`) |
 
 Pass any of these names (or a list of them) as `forecasters=`; unknown names
-raise a `ValueError` that suggests the closest valid name.
+raise a `ValueError` that suggests the closest valid name. `HoltWinters_Add`
+and `HoltWinters_Mul` need a seasonal period of at least 2: when none is
+detected or given, a selected Holt-Winters model is skipped and the reason is
+recorded in `errors`.
 
 ### Deep Learning Models (require `pip install lazypredict[deeplearning]`)
 
@@ -158,14 +161,23 @@ scores, predictions = fcst.fit(y_train, y_test, X_train, X_test)
 
 ## Auto Seasonal Period Detection
 
-By default the seasonal period is auto-detected via autocorrelation: the series
-is detrended, and a lag counts as a season only if its autocorrelation is a
-clear, statistically significant peak (Bartlett's standard error, 3 sigma); the
-shortest qualifying lag wins over its multiples. Series without seasonality
-(trends, random walks, white noise) are reported as non-seasonal.
+By default the seasonal period is auto-detected. The series is detrended, and a
+lag counts as a season only if:
 
-Detection needs a few full cycles of data. For short series, or when you know
-the period, set it explicitly:
+- its autocorrelation is a significant peak, measured against the series'
+  short-term autocorrelation;
+- the values grouped by phase (position within the cycle) differ
+  significantly in a one-way ANOVA;
+- that seasonal pattern explains at least 20% of the variance.
+
+The shortest qualifying period wins over its multiples. If the levels show no
+seasonality, the first differences are searched as well, which finds
+seasonality on top of a random walk. Series without seasonality (trends,
+including curved ones, random walks, white noise) are reported as
+non-seasonal.
+
+Detection needs at least three full cycles of data. For shorter series, or when
+you know the period, set it explicitly:
 
 ```python
 fcst = LazyForecaster(seasonal_period=12)   # monthly data with yearly cycle
@@ -197,6 +209,7 @@ Run only a subset of models by name:
 
 ```python
 fcst = LazyForecaster(
+    # Holt and AutoARIMA need lazypredict[timeseries], LSTM_TS lazypredict[deeplearning]
     forecasters=["Naive", "Holt", "AutoARIMA", "Ridge_TS", "LSTM_TS"],
     verbose=0,
 )

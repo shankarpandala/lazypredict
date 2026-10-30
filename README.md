@@ -274,7 +274,8 @@ from lazypredict.TimeSeriesForecasting import LazyForecaster
 # Generate sample data (or use your own)
 np.random.seed(42)
 t = np.arange(200)
-y = 10 + 0.05 * t + 3 * np.sin(2 * np.pi * t / 12) + np.random.normal(0, 1, 200)
+rng = np.random.default_rng(42)
+y = 10 + 0.05 * t + 3 * np.sin(2 * np.pi * t / 12) + rng.normal(0, 1, 200)
 
 y_train, y_test = y[:180], y[180:]
 
@@ -283,12 +284,17 @@ scores, predictions = fcst.fit(y_train, y_test)
 print(scores)
 ```
 
-| Model                         |     MAE |    RMSE |   MAPE |   SMAPE |    MASE | R-Squared | Time Taken |
-|:------------------------------|--------:|--------:|-------:|--------:|--------:|----------:|-----------:|
-| Holt                          | 0.8532  | 1.0285  | 6.3241 | 6.1758  | 0.6993  |  0.7218   |     0.03   |
-| SARIMAX                       | 0.8791  | 1.0601  | 6.5012 | 6.3414  | 0.7205  |  0.7045   |     0.12   |
-| Ridge_TS                      | 0.9124  | 1.0843  | 6.7523 | 6.5721  | 0.7478  |  0.6912   |     0.01   |
-| ...                           |   ...   |   ...   |  ...   |   ...   |   ...   |    ...    |     ...    |
+Output with `lazypredict[timeseries,boost]` installed (seasonal period 12 detected; times are machine-dependent):
+
+| Model               |    MAE |   RMSE |   MAPE |  SMAPE |   MASE | R-Squared | Time Taken |
+|:--------------------|-------:|-------:|-------:|-------:|-------:|----------:|-----------:|
+| SARIMAX             | 0.8569 | 1.0778 | 4.3024 | 4.3970 | 0.7765 |    0.7433 |       0.38 |
+| HoltWinters_Add     | 0.8759 | 1.0908 | 4.4003 | 4.4860 | 0.7937 |    0.7371 |       0.09 |
+| HoltWinters_Mul     | 0.9515 | 1.2776 | 4.8192 | 4.9717 | 0.8622 |    0.6393 |       0.08 |
+| AutoARIMA           | 1.0586 | 1.3570 | 5.3003 | 5.3961 | 0.9593 |    0.5931 |      11.65 |
+| LinearRegression_TS | 1.1409 | 1.3578 | 5.5761 | 5.7176 | 1.0339 |    0.5926 |       0.02 |
+| Ridge_TS            | 1.1716 | 1.3883 | 5.7135 | 5.8667 | 1.0617 |    0.5741 |       0.01 |
+| ...                 |    ... |    ... |    ... |    ... |    ... |       ... |        ... |
 
 ### With Exogenous Variables
 
@@ -311,7 +317,7 @@ fcst = LazyForecaster(
     cv=3,                               # Time series cross-validation
     timeout=30,                         # Max seconds per model
     sort_by="RMSE",                     # Sort metric (MAE, MAPE, SMAPE, MASE, R-Squared)
-    forecasters="all",                  # Or list: ["Holt", "AutoARIMA", "LSTM_TS"]
+    forecasters="all",                  # Or a list, e.g. ["Holt", "Ridge_TS"] (Holt needs [timeseries])
     max_models=10,                      # Limit number of models
     use_gpu=True,                       # GPU acceleration for supported models
     foundation_model_path="/path/to/timesfm-weights",  # Local model weights (offline)
@@ -446,7 +452,8 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 Each model gets its own MLflow run (nested under your active run, if any) with:
 - Model metrics (R-squared, RMSE, etc.)
 - Training time
-- The model name as a parameter
+- The model name and the estimator's hyperparameters as parameters
+- A custom metric, as `custom_metric`
 - The fitted pipeline as an artifact (not registered in the model registry)
 
 Lazy Predict does not call `mlflow.autolog()`; enable it yourself if you want

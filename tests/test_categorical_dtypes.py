@@ -91,3 +91,29 @@ def test_feature_names_out(labels):
     names = list(pre.get_feature_names_out())
     assert "numeric__num" in names
     assert any(name.startswith("categorical_low__cat_") for name in names)
+
+
+def test_equal_numeric_codes_get_equal_labels():
+    # Issue #620: integer codes turn into floats when one value is missing.
+    values = pd.DataFrame(
+        {"code": pd.Series([1, 2.0, np.nan, np.int64(3), True, 2.5, "x"], dtype=object)}
+    )
+    result = categories_as_strings(values)[:, 0]
+    assert [result[i] for i in (0, 1, 3, 4, 5, 6)] == ["1", "2", "3", "True", "2.5", "x"]
+    assert pd.isna(result[2])
+
+
+@pytest.mark.parametrize("dtype", ["object", "category"])
+def test_integer_codes_match_float_codes_in_the_test_split(dtype):
+    rng = np.random.RandomState(0)
+    store = rng.randint(1, 6, N)
+    y = (store >= 3).astype(int)
+    X = pd.DataFrame({"store": store, "noise": rng.randn(N)})
+    train, test = X.iloc[:180].copy(), X.iloc[180:].copy()
+    test["store"] = test["store"].astype(float)
+    test.loc[test.index[0], "store"] = np.nan
+    train["store"] = train["store"].astype(dtype)
+    test["store"] = test["store"].astype(dtype)
+    clf = LazyClassifier(classifiers=["LogisticRegression"])
+    scores, _ = clf.fit(train, test, y[:180], y[180:])
+    assert scores.loc["LogisticRegression", "Accuracy"] > 0.95

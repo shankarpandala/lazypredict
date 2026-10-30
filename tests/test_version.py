@@ -39,12 +39,16 @@ def test_pyproject_reads_version_from_package():
     ],
 )
 def test_version_strings_match_package(relative_path, pattern):
+    if not (ROOT / relative_path).exists():
+        pytest.skip(f"{relative_path} is not part of the source distribution")
     match = re.search(pattern, _read(relative_path), re.MULTILINE)
     assert match, f"no version found in {relative_path}"
     assert match.group(1) == lazypredict.__version__, relative_path
 
 
 def test_release_tag_check_script():
+    if not (ROOT / ".github" / "scripts" / "check_release_version.py").exists():
+        pytest.skip("the release scripts are not part of the source distribution")
     sys.path.insert(0, str(ROOT / ".github" / "scripts"))
     try:
         import check_release_version

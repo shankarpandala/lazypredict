@@ -47,6 +47,13 @@ support) are released as part of 0.4.0.
     declared dependency floors; mypy is blocking (#580)
 -   The docs preview no longer fails for pull requests from forks, and the API
     reference renders NumPy-style parameter sections (#579)
+-   An optional library that is installed but fails to load, such as XGBoost or
+    LightGBM on macOS without `libomp`, is skipped with a warning instead of
+    making `import lazypredict` fail (#611)
+-   Merging a pull request no longer cancels the docs deployment, and PR
+    previews are removed when the PR is closed (#612)
+-   Running the publish workflow manually for a pushed tag creates the GitHub
+    release once the upload to PyPI has succeeded (#613)
 
 ## Fixes: LazyClassifier and LazyRegressor
 
@@ -62,9 +69,10 @@ support) are released as part of 0.4.0.
 -   `timeout` interrupts slow models (on POSIX, in the main thread) and lists
     them in `errors` (#590)
 -   The CLI exits with status 2 when it fails (#592)
--   `tune=True` no longer crashes `fit()`; the scikit-learn and FLAML backends
-    work for every model with a search space; tuning is seeded, uses `cv`, and
-    exposes `tuned_params_` and `tuned_models_` (#604, #605)
+-   `tune=True` no longer crashes `fit()`; the scikit-learn backend works for
+    every model with a search space and the FLAML backend for the models FLAML
+    has a learner for; tuning is seeded, uses `cv`, and exposes `tuned_params_`
+    and `tuned_models_` (#604, #605)
 -   Adjusted R² is `NaN` instead of dividing by zero or inverting the ranking on
     small test sets; regressors are ranked by adjusted R², then R² (#606)
 -   `explain(method="shap")` returns SHAP values (#607)
@@ -89,6 +97,31 @@ support) are released as part of 0.4.0.
     and `timeout` applies to forecasters (#602)
 -   One-column DataFrame targets, `functools.partial` custom metrics and
     case-insensitive `sort_by` work; options are validated (#603)
+
+## Fixes from the pre-release review
+
+-   Holt-Winters models selected by name are skipped with a reason in `errors`
+    when there is no seasonal period, instead of raising "unknown name" (#615)
+-   `timeout=float("inf")` means no limit, and the SIGALRM handler is always
+    restored (#616); `n_jobs=0` is rejected (#617); ensembles work for a
+    one-step test horizon (#618)
+-   Seasonal-period detection finds seasonality from three cycles and no longer
+    reports periods for curved trends (#623)
+-   The direct and multi-output strategies use every future exogenous row
+    (#624); the stacking ensemble no longer depends on the series' units (#625)
+-   Equal numeric category codes match across splits (1 vs 1.0) (#620); object
+    NumPy arrays keep numeric columns numeric, and integer column labels work
+    (#621)
+-   The FLAML backend reports defaults as a valid result, keeps CatBoost and
+    LightGBM parameters, and the `flaml` extra installs `flaml[automl]` (#622)
+-   MLflow tracking problems no longer change benchmark results, and the
+    estimator's hyperparameters are logged (#626)
+-   `explain(method="shap")` explains classifiers through their probabilities
+    (#627)
+-   Forecaster tuning works for every horizon strategy and metric (#628)
+-   Smaller fixes: one-column targets, DataFrames after a NumPy fit, the CLI
+    exit status and seed, forecast indexes, `sort_by` validation, the publish
+    workflow's re-runs and smoke test (#619, #629); documentation (#630)
 
 ## Documentation
 

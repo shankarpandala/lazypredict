@@ -11,14 +11,17 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from lazypredict._optional import warn_if_broken
+
 logger = logging.getLogger("lazypredict")
 
 try:
     import matplotlib.pyplot as plt
 
     _MATPLOTLIB_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _MATPLOTLIB_AVAILABLE = False
+    warn_if_broken("matplotlib", exc)
 
 
 def _check_matplotlib():
@@ -299,7 +302,8 @@ def plot_error_distribution(
         error_data.append(abs_errors)
         labels.append(name)
 
-    bp = ax.boxplot(error_data, patch_artist=True, tick_labels=labels)
+    bp = ax.boxplot(error_data, patch_artist=True)
+    ax.set_xticks(range(1, len(labels) + 1), labels)  # tick_labels= needs matplotlib >= 3.9
     colors = plt.cm.Set2(np.linspace(0, 1, len(error_data)))
     for patch, color in zip(bp["boxes"], colors):
         patch.set_facecolor(color)

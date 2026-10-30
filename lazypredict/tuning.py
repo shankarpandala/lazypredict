@@ -14,6 +14,7 @@ from sklearn.base import clone
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 
 from lazypredict.search_spaces import SEARCH_SPACES, get_search_space
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -23,16 +24,18 @@ try:
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     _OPTUNA_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _OPTUNA_AVAILABLE = False
+    warn_if_broken("optuna", exc)
 
-# Optional FLAML
+# Optional FLAML (the backend needs AutoML, i.e. ``flaml[automl]``)
 try:
-    import flaml.tune  # noqa: F401
+    from flaml import AutoML  # noqa: F401
 
     _FLAML_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _FLAML_AVAILABLE = False
+    warn_if_broken("flaml", exc)
 
 
 def _check_optuna():
@@ -46,8 +49,8 @@ def _check_optuna():
 def _check_flaml():
     if not _FLAML_AVAILABLE:
         raise ImportError(
-            "flaml is required for FLAML tuning backend. "
-            "Install with: pip install lazypredict[flaml]"
+            "flaml with its AutoML dependencies is required for the FLAML tuning "
+            "backend. Install with: pip install lazypredict[flaml]"
         )
 
 
@@ -56,7 +59,9 @@ def _check_flaml():
 # ---------------------------------------------------------------------------
 
 # Keyword arguments that only control logging/parallelism, not the model.
-_NON_MODEL_PARAMS = ("n_jobs", "verbose", "verbosity", "random_state", "seed", "thread_count")
+_NON_MODEL_PARAMS = (
+    "n_jobs", "verbose", "verbosity", "random_state", "random_seed", "seed", "thread_count",
+)
 
 
 def _model_kwargs(model_class: Any, random_state: int, use_gpu: bool = False) -> Dict[str, Any]:
@@ -253,6 +258,15 @@ def _flaml_loss(scoring: str):
     return loss
 
 
+def _is_classifier_class(model_class: Any) -> bool:
+    """Whether *model_class* is a classifier, including CatBoost's."""
+    from sklearn.base import ClassifierMixin
+
+    return issubclass(model_class, ClassifierMixin) or (
+        getattr(model_class, "_estimator_type", None) == "classifier"
+    )
+
+
 def tune_supervised_flaml(
     model_name: str,
     model_class: Any,
@@ -275,8 +289,6 @@ def tune_supervised_flaml(
     Models FLAML has no learner for return ``({}, nan)``.
     """
     _check_flaml()
-    from flaml import AutoML
-    from sklearn.base import ClassifierMixin
     from sklearn.pipeline import Pipeline
 
     learner = _FLAML_LEARNERS.get(model_name)
@@ -286,7 +298,7 @@ def tune_supervised_flaml(
 
     automl = AutoML()
     settings = {
-        "task": "classification" if issubclass(model_class, ClassifierMixin) else "regression",
+        "task": "classification" if _is_classifier_class(model_class) else "regression",
         "metric": _flaml_loss(scoring),
         "estimator_list": [learner],
         "max_iter": n_trials,
@@ -305,11 +317,14 @@ def tune_supervised_flaml(
     estimator = getattr(automl.model, "estimator", None)
     if estimator is None or type(estimator).__name__ != model_class.__name__:
         return {}, float("nan")
+    # Keep what FLAML changed: values that differ from the defaults, and
+    # parameters a default instance does not report at all (LightGBM's
+    # max_bin, every CatBoost parameter).
     defaults = model_class().get_params()
     best = {
         key: value
         for key, value in estimator.get_params().items()
-        if key in defaults and key not in _NON_MODEL_PARAMS and defaults[key] != value
+        if key not in _NON_MODEL_PARAMS and (key not in defaults or defaults[key] != value)
     }
     fixed = _model_kwargs(model_class, random_state, use_gpu)
     pipe = Pipeline([("preprocessor", clone(preprocessor)), ("model", model_class(**{**fixed, **best}))])
@@ -417,7 +432,7 @@ def tune_top_k(
             logger.warning("Tuning %s failed: %s", model_name, exc)
             results.append({**row, "Status": f"failed: {exc}"})
             continue
-        if not best_params or np.isnan(best_score):
+        if np.isnan(best_score):
             results.append({**row, "Status": "failed: no successful trial"})
             continue
         results.append({**row, "Best Score": best_score, "Best Params": best_params, "Status": "tuned"})

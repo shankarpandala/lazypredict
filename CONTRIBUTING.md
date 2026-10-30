@@ -163,10 +163,21 @@ Releases are cut from `dev` and published to PyPI by
 
 The publish workflow first checks that the tag matches
 `lazypredict.__version__` and fails before building anything if it does
-not, then runs the tests, builds and smoke-tests the sdist and wheel,
+not, then runs the tests, builds the sdist and wheel, smoke-tests the wheel,
 uploads them to PyPI via Trusted Publishing and attaches them to the
 GitHub release. If an upload fails for a transient reason, re-run it from
 the Actions tab (`Publish to PyPI` > `Run workflow`, entering the tag).
+
+Instead of step 4 you can push an annotated tag on the merged commit and run
+the workflow manually for it:
+
+```shell
+git tag -a v0.4.0 -m "0.4.0" && git push origin v0.4.0
+gh workflow run publish.yml --ref v0.4.0 -f tag=v0.4.0
+```
+
+The workflow then creates the GitHub release, with generated notes, after
+the upload to PyPI has succeeded.
 
 The conda-forge feedstock picks up new PyPI releases automatically through
 the conda-forge autotick bot; `recipe/meta.yaml` is only used by CI to check

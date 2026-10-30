@@ -109,3 +109,49 @@ def test_predict_after_load_models_uses_fitted_column_names(frames, tmp_path):
     fresh.load_models(str(tmp_path))
     preds = fresh.predict(X_test.to_numpy(), model_name="LogisticRegression")
     assert len(preds) == len(X_test)
+
+
+def test_object_numpy_arrays_keep_numeric_columns_numeric():
+    # Issue #621: df.to_numpy() with a text column made every column categorical.
+    rng = np.random.RandomState(0)
+    x1, x2 = rng.randn(200), rng.randn(200)
+    df = pd.DataFrame({"x1": x1, "x2": x2, "city": rng.choice(["a", "b"], 200)})
+    y = 3 * x1 - 2 * x2 + rng.normal(scale=0.01, size=200)
+    X = df.to_numpy()
+    reg = LazyRegressor(regressors=["LinearRegression"])
+    scores, _ = reg.fit(X[:150], X[150:], y[:150], y[150:])
+    assert scores.loc["LinearRegression", "R-Squared"] > 0.99
+
+
+def test_integer_column_labels_are_not_positions():
+    # Issue #621: columns [1, 2, 3] of a headerless CSV made every model fail.
+    rng = np.random.RandomState(0)
+    data = pd.DataFrame({0: rng.randint(0, 2, 200), 1: rng.randn(200), 2: rng.randn(200), 3: rng.randn(200)})
+    data[1] += 5 * data[0]
+    X, y = data.drop(columns=[0]), data[0]
+    clf = LazyClassifier(classifiers=["LogisticRegression"])
+    scores, _ = clf.fit(X.iloc[:150], X.iloc[150:], y.iloc[:150], y.iloc[150:])
+    assert clf.errors == {}
+    assert scores.loc["LogisticRegression", "Accuracy"] > 0.9
+    predictions = clf.predict(X.iloc[150:])
+    assert len(predictions["LogisticRegression"]) == 50
+    assert list(X.columns) == [1, 2, 3]
+
+
+def test_one_column_dataframe_target_with_predictions():
+    # Issue #629: (n, 1) predictions made fit() fail after training every model.
+    X, y = load_diabetes(return_X_y=True, as_frame=True)
+    y = y.to_frame()
+    reg = LazyRegressor(regressors=["LinearRegression", "KNeighborsRegressor"], predictions=True)
+    scores, predictions = reg.fit(X.iloc[:300], X.iloc[300:], y.iloc[:300], y.iloc[300:])
+    assert len(scores) == 2 and predictions.shape == (len(X) - 300, 2)
+
+
+def test_dataframe_after_numpy_fit_is_matched_by_position(frames):
+    # Issue #629: the pipelines expect feature_i names after a NumPy fit.
+    X_train, X_test, y_train, y_test = frames
+    clf = LazyClassifier(classifiers=["LogisticRegression"])
+    clf.fit(X_train.to_numpy(), X_test.to_numpy(), y_train, y_test)
+    from_frame = clf.predict(X_test)["LogisticRegression"]
+    from_array = clf.predict(X_test.to_numpy())["LogisticRegression"]
+    np.testing.assert_array_equal(from_frame, from_array)

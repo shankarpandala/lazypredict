@@ -101,3 +101,19 @@ def test_sort_by_is_case_insensitive_and_validated(exog_series):
 def test_options_are_validated(kwargs, match):
     with pytest.raises(ValueError, match=match):
         LazyForecaster(**kwargs)
+
+
+def test_sorting_by_a_cv_column_needs_cv():
+    # Issue #629: the scores were left unsorted, so tuning picked the wrong models.
+    with pytest.raises(ValueError, match="needs cross-validation"):
+        LazyForecaster(sort_by="RMSE CV Mean")
+    LazyForecaster(sort_by="RMSE CV Mean", cv=3)
+
+
+def test_forecasts_keep_the_test_index(exog_series):
+    # Issue #629: a DatetimeIndex on y_test was replaced by 0..h-1.
+    y, _ = exog_series
+    dates = pd.date_range("2020-01-01", periods=len(y), freq="MS")
+    series = pd.Series(y, index=dates)
+    _, predictions = LazyForecaster(forecasters=["Naive"], predictions=True).fit(series[:120], series[120:])
+    assert predictions.index.equals(dates[120:])

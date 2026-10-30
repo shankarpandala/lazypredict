@@ -80,7 +80,7 @@ interpret = [
     "interpret>=0.4",
 ]
 flaml = [
-    "flaml>=2.0",
+    "flaml[automl]>=2.0",
 ]
 spark = [
     "pyspark>=3.3",

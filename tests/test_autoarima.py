@@ -31,3 +31,12 @@ def test_long_periods_fall_back_to_non_seasonal():
     model = AutoARIMAForecaster(seasonal_period=365)
     model.fit(np.random.default_rng(2).normal(size=60).cumsum())
     assert model._model.seasonal_order[-1] in (0, 1)
+
+
+def test_models_saved_by_0_3_still_fit():
+    # Issue #628: 0.3 objects have neither ``seasonal_period`` nor ``params``.
+    model = AutoARIMAForecaster(seasonal_period=4)
+    del model.seasonal_period, model.params
+    y = 10 + np.sin(np.arange(60) / 2.0) + np.random.default_rng(0).normal(0, 0.1, 60)
+    model.fit(y)
+    assert np.isfinite(model.predict(5)).all()

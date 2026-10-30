@@ -15,6 +15,7 @@ from sklearn.model_selection import TimeSeriesSplit
 
 from lazypredict.metrics import compute_forecast_metrics
 from lazypredict.ts_search_spaces import get_ts_search_space
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -24,8 +25,9 @@ try:
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     _OPTUNA_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _OPTUNA_AVAILABLE = False
+    warn_if_broken("optuna", exc)
 
 
 # Valid forecast metrics (lower is better for all except R-Squared)
@@ -45,6 +47,7 @@ def tune_forecaster_optuna(
     timeout: Optional[float] = None,
     random_state: int = 42,
     tune_seasonal: bool = False,
+    horizon: Optional[int] = None,
 ) -> Tuple[Dict[str, Any], float]:
     """Tune a single forecasting model using Optuna.
 
@@ -72,6 +75,8 @@ def tune_forecaster_optuna(
         Random seed.
     tune_seasonal : bool
         If True, also search over seasonal_period values.
+    horizon : int or None
+        Forecast horizon; each CV fold forecasts this many steps.
 
     Returns
     -------
@@ -86,6 +91,8 @@ def tune_forecaster_optuna(
             "optuna is required for tuning. Install with: pip install lazypredict[tune]"
         )
 
+    from lazypredict.TimeSeriesForecasting import AutoARIMAForecaster
+
     space_fn = get_ts_search_space(model_name)
     if space_fn is None:
         logger.info("No search space for %s, skipping tuning.", model_name)
@@ -94,13 +101,20 @@ def tune_forecaster_optuna(
     def objective(trial):
         params = space_fn(trial)
         if tune_seasonal and model_name in ("SARIMAX", "HoltWinters_Add", "HoltWinters_Mul"):
-            candidates = _seasonal_candidates(len(y_train), seasonal_period)
+            candidates = _seasonal_candidates(
+                len(y_train), seasonal_period,
+                # A SARIMAX state space grows with the period; longer ones
+                # need minutes and gigabytes per fit.
+                max_period=AutoARIMAForecaster.MAX_SEASONAL_PERIOD if model_name == "SARIMAX" else None,
+            )
             if candidates:
                 params["seasonal_period"] = trial.suggest_categorical("seasonal_period", candidates)
         trial.set_user_attr("params", params)
+        # MASE is scaled by the benchmark's seasonal period, not the trial's:
+        # otherwise a period with a large naive error looks best.
         return _temporal_cv_error(
             wrapper, model_name, params, y_train, X_train,
-            params.get("seasonal_period", seasonal_period), tune_metric.lower(), cv,
+            seasonal_period, tune_metric.lower(), cv, horizon=horizon,
         )
 
     study = optuna.create_study(
@@ -121,20 +135,29 @@ def tune_forecaster_optuna(
     return dict(best.user_attrs.get("params", best.params)), best_value
 
 
-def _seasonal_candidates(n_obs: int, seasonal_period: Optional[int]) -> List[int]:
+def _seasonal_candidates(
+    n_obs: int, seasonal_period: Optional[int], max_period: Optional[int] = None
+) -> List[int]:
     """Seasonal periods worth trying for a series of *n_obs* values."""
-    candidates = [p for p in CANDIDATE_SEASONAL_PERIODS if p < n_obs // 3]
-    if seasonal_period and seasonal_period not in candidates:
+    limit = min(n_obs // 3, max_period + 1) if max_period else n_obs // 3
+    candidates = [p for p in CANDIDATE_SEASONAL_PERIODS if p < limit]
+    if seasonal_period and seasonal_period < limit and seasonal_period not in candidates:
         candidates.append(seasonal_period)
     return sorted(candidates)
 
 
 def _temporal_cv_error(
-    wrapper, model_name, params, y_train, X_train, seasonal_period, metric_key, cv
+    wrapper, model_name, params, y_train, X_train, seasonal_period, metric_key, cv,
+    horizon: Optional[int] = None,
 ) -> float:
-    """Mean expanding-window CV error of *wrapper* configured with *params*."""
+    """Mean expanding-window CV error of *wrapper* configured with *params*.
+
+    With *horizon*, every fold forecasts that many steps, as the benchmark
+    does; otherwise the folds split the series evenly.
+    """
+    test_size = min(horizon, len(y_train) // (cv + 1)) if horizon else None
     scores = []
-    for train_idx, val_idx in TimeSeriesSplit(n_splits=cv).split(y_train):
+    for train_idx, val_idx in TimeSeriesSplit(n_splits=cv, test_size=test_size).split(y_train):
         y_cv_train = y_train[train_idx]
         X_cv_train = X_train[train_idx] if X_train is not None else None
         X_cv_val = X_train[val_idx] if X_train is not None else None
@@ -210,6 +233,7 @@ def tune_top_k_forecasters(
     random_state: int = 42,
     tune_seasonal: bool = False,
     refit: bool = True,
+    horizon: Optional[int] = None,
 ) -> Tuple["pd.DataFrame", Dict[str, Any]]:
     """Tune the top-k forecasters from initial ranking.
 
@@ -282,7 +306,7 @@ def tune_top_k_forecasters(
                 model_name, wrapper, y_train, X_train, seasonal_period,
                 tune_metric=tune_metric, cv=cv, n_trials=n_trials,
                 timeout=timeout, random_state=random_state,
-                tune_seasonal=tune_seasonal,
+                tune_seasonal=tune_seasonal, horizon=horizon,
             )
         except Exception as exc:
             logger.warning("Tuning %s failed: %s", model_name, exc)

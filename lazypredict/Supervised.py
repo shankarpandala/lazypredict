@@ -59,6 +59,7 @@ from lazypredict.preprocessing import (  # noqa: F401
     numeric_transformer,
     prepare_dataframes,
 )
+from lazypredict._optional import warn_if_broken
 
 # Module-level logger — users can configure via logging.getLogger("lazypredict")
 logger = logging.getLogger("lazypredict")
@@ -76,29 +77,33 @@ _build_preprocessor = build_preprocessor
 try:
     import xgboost
     _XGBOOST_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _XGBOOST_AVAILABLE = False
+    warn_if_broken("xgboost", exc)
 
 # Optional lightgbm
 try:
     import lightgbm
     _LIGHTGBM_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _LIGHTGBM_AVAILABLE = False
+    warn_if_broken("lightgbm", exc)
 
 # Optional catboost
 try:
     import catboost
     _CATBOOST_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _CATBOOST_AVAILABLE = False
+    warn_if_broken("catboost", exc)
 
 # Optional perpetual
 try:
     from perpetual import PerpetualBooster
     PERPETUAL_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     PERPETUAL_AVAILABLE = False
+    warn_if_broken("perpetual", exc)
 
 # Optional InterpretML (EBM)
 try:
@@ -107,8 +112,9 @@ try:
         ExplainableBoostingRegressor,
     )
     _INTERPRET_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     _INTERPRET_AVAILABLE = False
+    warn_if_broken("interpret", exc)
 
 # Intel Extension for Scikit-learn: only report whether it is installed.
 # Patching scikit-learn is the user's decision; doing it at import time
@@ -118,8 +124,9 @@ INTEL_EXTENSION_AVAILABLE = importlib.util.find_spec("sklearnex") is not None
 # Optional MLflow
 try:
     import mlflow
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     mlflow = None  # type: ignore[assignment]
+    warn_if_broken("mlflow", exc)
 
 # Kept as module-level lists for backward compatibility but built fresh
 CLASSIFIERS: List[Tuple[str, Any]] = [

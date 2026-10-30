@@ -53,3 +53,31 @@ def test_n_jobs_is_validated_and_used_for_cv():
     parallel = LazyForecaster(forecasters=["Ridge_TS", "Naive"], cv=3, n_jobs=2).fit(y[:100], y[100:])[0]
     cv_columns = [c for c in serial.columns if "CV" in c]
     np.testing.assert_allclose(serial[cv_columns].to_numpy(), parallel.loc[serial.index, cv_columns].to_numpy())
+
+
+@pytest.mark.parametrize("strategy", ["direct", "multi_output"])
+def test_every_future_exogenous_row_is_used(strategy):
+    # Issue #624: only the first row of X_future reached the models.
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(150, 1))
+    y = 50 + 5 * X[:, 0] + rng.normal(scale=0.1, size=150)
+    forecaster = LazyForecaster(forecasters=["Ridge_TS"], horizon_strategy=strategy, predictions=True)
+    scores, predictions = forecaster.fit(y[:130], y[130:], X[:130], X[130:])
+    assert scores.loc["Ridge_TS", "RMSE"] < 0.5
+    changed = X[130:].copy()
+    changed[1:] += 3.0
+    shifted = forecaster.predict(y[:130], horizon=20, model_name="Ridge_TS", X_history=X[:130], X_test=changed)
+    # y moves by 5 * 3 = 15 wherever X was shifted.
+    assert np.all(np.abs(shifted[1:] - predictions["Ridge_TS"].to_numpy()[1:]) > 10)
+    if strategy == "direct":  # step 1 only sees the first row
+        assert np.isclose(shifted[0], predictions["Ridge_TS"].iloc[0])
+
+
+@pytest.mark.parametrize("strategy", [direct_forecast, multi_output_forecast])
+def test_short_future_exogenous_data_raises(strategy):
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(130, 1))
+    y = 10 + 3 * X[:, 0]
+    with pytest.raises(ValueError, match="X_future has 3 rows"):
+        strategy(LinearRegression, y[:120], horizon=5, n_lags=3, n_rolling=(3,),
+                 X_exog=X[:120], X_future=X[120:123])

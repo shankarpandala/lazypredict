@@ -1,7 +1,8 @@
 """Preprocessing utilities — encoders, transformers, and cardinality splitting."""
 
 import logging
-from typing import Tuple, Union
+import numbers
+from typing import Any, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,7 @@ from sklearn.preprocessing import (
 )
 
 from lazypredict.config import VALID_ENCODERS
+from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
 
@@ -23,8 +25,9 @@ logger = logging.getLogger("lazypredict")
 try:
     from category_encoders import BinaryEncoder, TargetEncoder
     CATEGORY_ENCODERS_AVAILABLE = True
-except ImportError:
+except Exception as exc:  # missing, or installed but broken
     CATEGORY_ENCODERS_AVAILABLE = False
+    warn_if_broken("category_encoders", exc)
 
 # ---------------------------------------------------------------------------
 # Default preprocessing pipelines
@@ -57,6 +60,23 @@ def _is_categorical_dtype(dtype) -> bool:
     )
 
 
+def _category_label(value: Any) -> str:
+    """String label of a category value; equal numbers get equal labels.
+
+    A column of integer codes becomes float as soon as one value is missing,
+    so ``1`` and ``1.0`` must map to the same label for the categories learnt
+    on the training data to be recognised in the test data.
+    """
+    if isinstance(value, (bool, np.bool_)):
+        return str(bool(value))
+    if isinstance(value, numbers.Integral):
+        return str(int(value))
+    if isinstance(value, numbers.Real):
+        number = float(value)
+        return str(int(number)) if number.is_integer() else repr(number)
+    return str(value)
+
+
 def _column_as_strings(column: pd.Series) -> pd.Series:
     """Return *column* as ``object`` values of ``str``, with ``np.nan`` for missing."""
     missing = column.isna()
@@ -64,11 +84,11 @@ def _column_as_strings(column: pd.Series) -> pd.Series:
         labels = column.cat.categories
         values = column.astype(object)
         if pd.api.types.infer_dtype(labels, skipna=True) != "string":
-            values = values.map(str, na_action="ignore")
+            values = values.map(_category_label, na_action="ignore")
     elif pd.api.types.infer_dtype(column, skipna=True) in ("string", "empty"):
         values = column.astype(object)
     else:
-        values = column.astype(object).map(str, na_action="ignore")
+        values = column.astype(object).map(_category_label, na_action="ignore")
     return values.where(~missing, np.nan)
 
 
@@ -201,22 +221,43 @@ def prepare_dataframes(
     Array-likes (NumPy arrays, lists) take the training DataFrame's column
     names, or ``feature_0 .. feature_n`` when the training data has none; in
     that case a DataFrame ``X_test`` is relabelled by position. ``X_test``
-    keeps its index whenever it is a DataFrame.
+    keeps its index whenever it is a DataFrame. Numeric columns of ``object``
+    arrays (e.g. ``df.to_numpy()`` with a text column) get numeric dtypes, and
+    non-string column labels become strings.
     """
     if isinstance(X_train, pd.DataFrame):
-        columns = X_train.columns
-        if not isinstance(X_test, pd.DataFrame):
-            X_test = pd.DataFrame(np.asarray(X_test), columns=columns)
+        X_train = with_string_column_names(X_train)
+        if isinstance(X_test, pd.DataFrame):
+            X_test = with_string_column_names(X_test)
+        else:
+            X_test = _array_to_frame(X_test, X_train.columns)
         return X_train, X_test
 
-    X_train = pd.DataFrame(np.asarray(X_train))
+    X_train = _array_to_frame(X_train)
     columns = pd.Index([f"feature_{i}" for i in range(X_train.shape[1])])
     X_train.columns = columns
     if isinstance(X_test, pd.DataFrame):
         X_test = X_test.set_axis(columns, axis=1)
     else:
-        X_test = pd.DataFrame(np.asarray(X_test), columns=columns)
+        X_test = _array_to_frame(X_test, columns)
     return X_train, X_test
+
+
+def _array_to_frame(X: Any, columns: Any = None) -> pd.DataFrame:
+    """DataFrame from an array-like, with numeric dtypes for numeric columns."""
+    return pd.DataFrame(np.asarray(X), columns=columns).infer_objects()
+
+
+def with_string_column_names(X: pd.DataFrame) -> pd.DataFrame:
+    """Return *X* with ``str`` column labels.
+
+    scikit-learn's ``ColumnTransformer`` treats integer labels as positions,
+    so the columns ``[1, 2, 3]`` of a headerless CSV would select the wrong
+    columns or fail.
+    """
+    if all(isinstance(column, str) for column in X.columns):
+        return X
+    return X.rename(columns=str)
 
 
 def build_preprocessor(

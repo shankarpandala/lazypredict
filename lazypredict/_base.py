@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
@@ -215,6 +216,7 @@ class LazyEstimator:
         self.tune_timeout = tune_timeout
         self.tune_backend = tune_backend
         self.tuned_scores_: Optional[Any] = None
+        self._feature_columns: Optional[List[Any]] = None
         self.mlflow_enabled = setup_mlflow()
 
         if self.use_gpu:
@@ -233,6 +235,9 @@ class LazyEstimator:
 
     def _estimator_step_name(self) -> str:
         raise NotImplementedError
+
+    def _validate_target(self, y_train: Any) -> None:
+        """Reject targets the estimator type cannot handle (optional hook)."""
 
     def _compute_metrics(
         self, pipe: Pipeline, X_test: pd.DataFrame, y_test: Any, X_train: pd.DataFrame
@@ -280,6 +285,11 @@ class LazyEstimator:
             Only returned when ``self.predictions`` is True.
             Prediction rows preserve the index of ``X_test``.
         """
+        # Results of a previous fit() must not leak into this one.
+        self.models = {}
+        self.errors = {}
+        self.tuned_scores_ = None
+
         # Auto-convert PySpark/Dask DataFrames
         X_train, X_test, y_train, y_test = _auto_convert_inputs(
             X_train, X_test, y_train, y_test
@@ -302,7 +312,9 @@ class LazyEstimator:
                 )
 
         _validate_fit_inputs(X_train, X_test, y_train, y_test)
+        self._validate_target(y_train)
         X_train, X_test = prepare_dataframes(X_train, X_test)
+        self._feature_columns = list(X_train.columns)
         preprocessor = build_preprocessor(X_train, self.categorical_encoder)
 
         estimator_list = self._get_estimator_list()
@@ -370,7 +382,7 @@ class LazyEstimator:
                         model_kwargs.setdefault("verbosity", 0)
                     pipe = Pipeline(
                         steps=[
-                            ("preprocessor", preprocessor),
+                            ("preprocessor", clone(preprocessor)),
                             (step_name, model(**model_kwargs)),
                         ]
                     )
@@ -539,10 +551,7 @@ class LazyEstimator:
             raise ValueError("No models fitted. Call fit() first.")
 
         X_test, y_test = _auto_convert_inputs(X_test, y_test)
-
-        if isinstance(X_test, np.ndarray):
-            cols = [f"feature_{i}" for i in range(X_test.shape[1])]
-            X_test = pd.DataFrame(X_test, columns=cols)
+        X_test = self._to_frame(X_test)
 
         if method == "permutation":
             from lazypredict.explainability import explain_permutation
@@ -618,6 +627,20 @@ class LazyEstimator:
             if not self.ignore_warnings:
                 logger.warning("Failed to log model %s to MLflow: %s", name, mlflow_exc)
 
+    def _to_frame(self, X: Any) -> pd.DataFrame:
+        """Convert array-like input to a DataFrame with the training column names."""
+        if isinstance(X, pd.DataFrame):
+            return X
+        X = np.asarray(X)
+        columns = self._feature_columns
+        if columns is None and self.models:
+            # Models loaded with load_models(): ask the fitted pipeline.
+            first = next(iter(self.models.values()))
+            columns = getattr(first, "feature_names_in_", None)
+        if columns is None or len(columns) != X.shape[1]:
+            columns = [f"feature_{i}" for i in range(X.shape[1])]
+        return pd.DataFrame(X, columns=columns)
+
     def provide_models(
         self,
         X_train: Union[pd.DataFrame, np.ndarray],
@@ -655,9 +678,7 @@ class LazyEstimator:
         if len(self.models) == 0:
             raise ValueError("No models have been fitted yet. Please call fit() first.")
 
-        if isinstance(X_test, np.ndarray):
-            cols = [f"feature_{i}" for i in range(X_test.shape[1])]
-            X_test = pd.DataFrame(X_test, columns=cols)
+        X_test = self._to_frame(X_test)
 
         if model_name is not None:
             if model_name not in self.models:

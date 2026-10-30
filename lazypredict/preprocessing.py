@@ -196,11 +196,26 @@ def prepare_dataframes(
     X_train: Union[pd.DataFrame, np.ndarray],
     X_test: Union[pd.DataFrame, np.ndarray],
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Convert ndarrays to DataFrames with consistent column names."""
-    if isinstance(X_train, np.ndarray):
-        cols = [f"feature_{i}" for i in range(X_train.shape[1])]
-        X_train = pd.DataFrame(X_train, columns=cols)
-        X_test = pd.DataFrame(X_test, columns=cols)
+    """Return ``X_train`` and ``X_test`` as DataFrames with the same column names.
+
+    Array-likes (NumPy arrays, lists) take the training DataFrame's column
+    names, or ``feature_0 .. feature_n`` when the training data has none; in
+    that case a DataFrame ``X_test`` is relabelled by position. ``X_test``
+    keeps its index whenever it is a DataFrame.
+    """
+    if isinstance(X_train, pd.DataFrame):
+        columns = X_train.columns
+        if not isinstance(X_test, pd.DataFrame):
+            X_test = pd.DataFrame(np.asarray(X_test), columns=columns)
+        return X_train, X_test
+
+    X_train = pd.DataFrame(np.asarray(X_train))
+    columns = pd.Index([f"feature_{i}" for i in range(X_train.shape[1])])
+    X_train.columns = columns
+    if isinstance(X_test, pd.DataFrame):
+        X_test = X_test.set_axis(columns, axis=1)
+    else:
+        X_test = pd.DataFrame(np.asarray(X_test), columns=columns)
     return X_train, X_test
 
 

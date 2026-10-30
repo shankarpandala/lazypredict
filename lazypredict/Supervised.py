@@ -9,6 +9,7 @@ perform best on a given dataset.
 
 import logging
 import signal
+import warnings
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -297,6 +298,26 @@ class LazyClassifier(LazyEstimator):
 
     def _estimator_step_name(self) -> str:
         return "classifier"
+
+    def _validate_target(self, y_train: Any) -> None:
+        target_type = type_of_target(y_train)
+        if target_type.startswith("continuous"):
+            raise ValueError(
+                "LazyClassifier needs class labels, but y_train looks like a "
+                f"continuous target (type_of_target: {target_type!r}). "
+                "Use LazyRegressor for regression problems."
+            )
+        if target_type == "multiclass":
+            n_samples = len(y_train)
+            n_classes = len(np.unique(np.asarray(y_train)))
+            if n_classes > 20 and n_classes > 0.5 * n_samples:
+                warnings.warn(
+                    f"y_train has {n_classes} distinct labels for {n_samples} samples, "
+                    "so most classes have a single example. If this is a numeric "
+                    "regression target, use LazyRegressor instead.",
+                    UserWarning,
+                    stacklevel=3,
+                )
 
     def _get_estimator_list(self) -> List[Tuple[str, Any]]:
         return _resolve_estimators(self.classifiers, CLASSIFIERS, "classifier")

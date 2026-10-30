@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1530,7 +1530,7 @@
 
 
   
-    <a href="https://github.com/shankarpandala/lazypredict/edit/master/docs/forecasting.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/shankarpandala/lazypredict/edit/dev/docs/forecasting.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1539,7 +1539,7 @@
     
       
     
-    <a href="https://github.com/shankarpandala/lazypredict/raw/master/docs/forecasting.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/shankarpandala/lazypredict/raw/dev/docs/forecasting.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
     </a>
@@ -1667,32 +1667,32 @@ models on your time series in a single call.</p>
 <td>ElasticNet with lag features</td>
 </tr>
 <tr>
-<td><code>RandomForest_TS</code></td>
+<td><code>RandomForestRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>Random forest with lag features</td>
 </tr>
 <tr>
-<td><code>ExtraTrees_TS</code></td>
+<td><code>ExtraTreesRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>Extra trees with lag features</td>
 </tr>
 <tr>
-<td><code>GradientBoosting_TS</code></td>
+<td><code>GradientBoostingRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>Gradient boosting with lag features</td>
 </tr>
 <tr>
-<td><code>AdaBoost_TS</code></td>
+<td><code>AdaBoostRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>AdaBoost with lag features</td>
 </tr>
 <tr>
-<td><code>Bagging_TS</code></td>
+<td><code>BaggingRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>Bagging regressor with lag features</td>
 </tr>
 <tr>
-<td><code>KNeighbors_TS</code></td>
+<td><code>KNeighborsRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>k-NN regression with lag features</td>
 </tr>
@@ -1702,27 +1702,32 @@ models on your time series in a single call.</p>
 <td>Support vector regression</td>
 </tr>
 <tr>
-<td><code>DecisionTree_TS</code></td>
+<td><code>DecisionTreeRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>Decision tree with lag features</td>
 </tr>
 <tr>
-<td><code>XGBoost_TS</code></td>
+<td><code>XGBRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>XGBoost (requires <code>lazypredict[boost]</code>)</td>
 </tr>
 <tr>
-<td><code>LightGBM_TS</code></td>
+<td><code>LGBMRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>LightGBM (requires <code>lazypredict[boost]</code>)</td>
 </tr>
 <tr>
-<td><code>CatBoost_TS</code></td>
+<td><code>CatBoostRegressor_TS</code></td>
 <td><code>MLForecaster</code></td>
 <td>CatBoost (requires <code>lazypredict[boost]</code>)</td>
 </tr>
 </tbody>
 </table>
+<p>Pass any of these names (or a list of them) as <code>forecasters=</code>; unknown names
+raise a <code>ValueError</code> that suggests the closest valid name. <code>HoltWinters_Add</code>
+and <code>HoltWinters_Mul</code> need a seasonal period of at least 2: when none is
+detected or given, a selected Holt-Winters model is skipped and the reason is
+recorded in <code>errors</code>.</p>
 <h3 id="deep-learning-models-require-pip-install-lazypredictdeeplearning">Deep Learning Models (require <code>pip install lazypredict[deeplearning]</code>)<a class="headerlink" href="#deep-learning-models-require-pip-install-lazypredictdeeplearning" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1763,8 +1768,9 @@ models on your time series in a single call.</p>
 </tbody>
 </table>
 <div class="admonition note">
-<p class="admonition-title">Python version restriction</p>
-<p>TimesFM requires Python 3.10 or 3.11.</p>
+<p class="admonition-title">Note</p>
+<p><code>pip install lazypredict[foundation]</code> installs <code>timesfm[torch]</code>; TimesFM 2.5
+is loaded through its PyTorch implementation.</p>
 </div>
 <hr />
 <h2 id="parameters-reference">Parameters Reference<a class="headerlink" href="#parameters-reference" title="Permanent link">&para;</a></h2>
@@ -1774,13 +1780,13 @@ models on your time series in a single call.</p>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">custom_metric</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">predictions</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">forecasters</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span>       <span class="c1"># list of model names, or &quot;all&quot;</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">forecasters</span><span class="o">=</span><span class="s2">"all"</span><span class="p">,</span>       <span class="c1"># list of model names, or "all"</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">cv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>                 <span class="c1"># int &gt;= 2 for cross-validation</span>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>            <span class="c1"># seconds per model</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">n_lags</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>               <span class="c1"># lag features for ML models</span>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">n_rolling</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span>        <span class="c1"># rolling window sizes for ML models</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">seasonal_period</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>    <span class="c1"># override auto-detection (None = auto)</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">sort_by</span><span class="o">=</span><span class="s2">&quot;RMSE&quot;</span><span class="p">,</span>          <span class="c1"># metric to sort results by</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">sort_by</span><span class="o">=</span><span class="s2">"RMSE"</span><span class="p">,</span>          <span class="c1"># metric to sort results by</span>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">max_models</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -1790,10 +1796,10 @@ models on your time series in a single call.</p>
 </span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">tune_top_k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
 </span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">tune_trials</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
 </span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="n">tune_timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="n">tune_metric</span><span class="o">=</span><span class="s2">&quot;RMSE&quot;</span><span class="p">,</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="n">tune_metric</span><span class="o">=</span><span class="s2">"RMSE"</span><span class="p">,</span>
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="n">tune_seasonal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="c1"># Horizon strategy</span>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    <span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">&quot;recursive&quot;</span><span class="p">,</span>  <span class="c1"># &quot;recursive&quot;, &quot;direct&quot;, &quot;multi_output&quot;</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    <span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">"recursive"</span><span class="p">,</span>  <span class="c1"># "recursive", "direct", "multi_output"</span>
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="p">)</span>
 </span></code></pre></div>
 <hr />
@@ -1850,25 +1856,44 @@ models on your time series in a single call.</p>
 </span></code></pre></div>
 <hr />
 <h2 id="auto-seasonal-period-detection">Auto Seasonal Period Detection<a class="headerlink" href="#auto-seasonal-period-detection" title="Permanent link">&para;</a></h2>
-<p>By default the seasonal period is auto-detected via autocorrelation. Override manually:</p>
+<p>By default the seasonal period is auto-detected. The series is detrended, and a
+lag counts as a season only if:</p>
+<ul>
+<li>its autocorrelation is a significant peak, measured against the series'
+  short-term autocorrelation;</li>
+<li>the values grouped by phase (position within the cycle) differ
+  significantly in a one-way ANOVA;</li>
+<li>that seasonal pattern explains at least 20% of the variance.</li>
+</ul>
+<p>The shortest qualifying period wins over its multiples. If the levels show no
+seasonality, the first differences are searched as well, which finds
+seasonality on top of a random walk. Series without seasonality (trends,
+including curved ones, random walks, white noise) are reported as
+non-seasonal.</p>
+<p>Detection needs at least three full cycles of data. For shorter series, or when
+you know the period, set it explicitly:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">seasonal_period</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>   <span class="c1"># monthly data with yearly cycle</span>
 </span></code></pre></div>
 <p>Set <code>seasonal_period=1</code> to disable seasonal models.</p>
+<p>The exogenous arrays must have one row per value of <code>y_train</code> / <code>y_test</code>, and
+<code>X_train</code> and <code>X_test</code> must be passed together; targets with missing values are
+rejected, so fill or drop them first.</p>
 <hr />
 <h2 id="cross-validation">Cross-Validation<a class="headerlink" href="#cross-validation" title="Permanent link">&para;</a></h2>
 <p>Use <code>TimeSeriesSplit</code> expanding-window cross-validation:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># scores includes &quot;MAE CV Mean&quot;, &quot;RMSE CV Mean&quot;, etc.</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># scores includes "MAE CV Mean", "RMSE CV Mean", etc.</span>
 </span></code></pre></div>
 <hr />
 <h2 id="selecting-specific-models">Selecting Specific Models<a class="headerlink" href="#selecting-specific-models" title="Permanent link">&para;</a></h2>
 <p>Run only a subset of models by name:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">forecasters</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Naive&quot;</span><span class="p">,</span> <span class="s2">&quot;Holt&quot;</span><span class="p">,</span> <span class="s2">&quot;AutoARIMA&quot;</span><span class="p">,</span> <span class="s2">&quot;Ridge_TS&quot;</span><span class="p">,</span> <span class="s2">&quot;LSTM_TS&quot;</span><span class="p">],</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">)</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="c1"># Holt and AutoARIMA need lazypredict[timeseries], LSTM_TS lazypredict[deeplearning]</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">forecasters</span><span class="o">=</span><span class="p">[</span><span class="s2">"Naive"</span><span class="p">,</span> <span class="s2">"Holt"</span><span class="p">,</span> <span class="s2">"AutoARIMA"</span><span class="p">,</span> <span class="s2">"Ridge_TS"</span><span class="p">,</span> <span class="s2">"LSTM_TS"</span><span class="p">],</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="custom-metric">Custom Metric<a class="headerlink" href="#custom-metric" title="Permanent link">&para;</a></h2>
@@ -1877,19 +1902,19 @@ models on your time series in a single call.</p>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">custom_metric</span><span class="o">=</span><span class="n">median_absolute_error</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># scores includes a &quot;median_absolute_error&quot; column</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># scores includes a "median_absolute_error" column</span>
 </span></code></pre></div>
 <hr />
 <h2 id="horizon-strategies-for-ml-models">Horizon Strategies for ML Models<a class="headerlink" href="#horizon-strategies-for-ml-models" title="Permanent link">&para;</a></h2>
 <p>Control how ML models forecast multiple steps ahead:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Recursive (default): single model, autoregressively forecasts step by step</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">&quot;recursive&quot;</span><span class="p">)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">"recursive"</span><span class="p">)</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Direct: one model per horizon step (more accurate for longer horizons)</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">&quot;direct&quot;</span><span class="p">)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">"direct"</span><span class="p">)</span>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Multi-output: MultiOutputRegressor wrapper</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">&quot;multi_output&quot;</span><span class="p">)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">horizon_strategy</span><span class="o">=</span><span class="s2">"multi_output"</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="ensemble-predictions">Ensemble Predictions<a class="headerlink" href="#ensemble-predictions" title="Permanent link">&para;</a></h2>
@@ -1898,22 +1923,25 @@ models on your time series in a single call.</p>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">scores</span><span class="p">,</span> <span class="n">pred_df</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Simple average of all model predictions</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">avg</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;simple_average&quot;</span><span class="p">)</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">avg</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"simple_average"</span><span class="p">)</span>
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Inverse-error weighted average (lower error = higher weight)</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">weighted</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;weighted_average&quot;</span><span class="p">,</span> <span class="n">y_true</span><span class="o">=</span><span class="n">y_test</span><span class="p">)</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Inverse-error weighted average (lower validation RMSE = higher weight)</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">weighted</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"weighted_average"</span><span class="p">)</span>
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># Stacking (linear meta-learner on top)</span>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">stacked</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;stacking&quot;</span><span class="p">,</span> <span class="n">y_true</span><span class="o">=</span><span class="n">y_test</span><span class="p">)</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># Stacking (Ridge meta-learner on top)</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">stacked</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"stacking"</span><span class="p">)</span>
 </span></code></pre></div>
+<p>Weights and the stacking meta-model are learned on a validation window held
+out from the end of <code>y_train</code>, so <code>y_test</code> stays untouched for evaluation.
+(<code>y_true=</code> is no longer needed and emits a <code>FutureWarning</code>.)</p>
 <hr />
 <h2 id="saving-and-loading-models">Saving and Loading Models<a class="headerlink" href="#saving-and-loading-models" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Save fitted models to disk</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">fcst</span><span class="o">.</span><span class="n">save_models</span><span class="p">(</span><span class="s2">&quot;./my_forecasters&quot;</span><span class="p">)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">fcst</span><span class="o">.</span><span class="n">save_models</span><span class="p">(</span><span class="s2">"./my_forecasters"</span><span class="p">)</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Load in a new session</span>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">fcst2</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">()</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">fcst2</span><span class="o">.</span><span class="n">load_models</span><span class="p">(</span><span class="s2">&quot;./my_forecasters&quot;</span><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">fcst2</span><span class="o">.</span><span class="n">load_models</span><span class="p">(</span><span class="s2">"./my_forecasters"</span><span class="p">)</span>
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
 </span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1"># Forecast with loaded models</span>
 </span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">forecasts</span> <span class="o">=</span> <span class="n">fcst2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">y_history</span><span class="o">=</span><span class="n">y_train</span><span class="p">,</span> <span class="n">horizon</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
@@ -1925,29 +1953,29 @@ models on your time series in a single call.</p>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">scores</span><span class="p">,</span> <span class="n">pred_df</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Plot forecasts vs actuals for all models</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">y_train</span><span class="o">=</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span> <span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;forecast&quot;</span><span class="p">)</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">y_train</span><span class="o">=</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="o">=</span><span class="n">y_test</span><span class="p">,</span> <span class="n">plot_type</span><span class="o">=</span><span class="s2">"forecast"</span><span class="p">)</span>
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Bar chart comparison of model errors</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;comparison&quot;</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;RMSE&quot;</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">"comparison"</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">"RMSE"</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
 </span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="c1"># Residual diagnostics for a single model</span>
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;residuals&quot;</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;HoltWinters_Add&quot;</span><span class="p">)</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">"residuals"</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="s2">"HoltWinters_Add"</span><span class="p">)</span>
 </span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
 </span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="c1"># Error distribution violin plot</span>
-</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;errors&quot;</span><span class="p">)</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">"errors"</span><span class="p">)</span>
 </span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>
 </span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="c1"># Metrics heatmap across all models</span>
-</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">&quot;heatmap&quot;</span><span class="p">)</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="n">fcst</span><span class="o">.</span><span class="n">plot_results</span><span class="p">(</span><span class="n">plot_type</span><span class="o">=</span><span class="s2">"heatmap"</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="offline-air-gapped-timesfm">Offline / Air-Gapped TimesFM<a class="headerlink" href="#offline-air-gapped-timesfm" title="Permanent link">&para;</a></h2>
 <p>If you cannot download the TimesFM weights at runtime:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Pre-download once (requires internet)</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">snapshot_download</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">snapshot_download</span><span class="p">(</span><span class="s2">&quot;google/timesfm-2.5-200m-pytorch&quot;</span><span class="p">,</span> <span class="n">local_dir</span><span class="o">=</span><span class="s2">&quot;./timesfm-local&quot;</span><span class="p">)</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">snapshot_download</span><span class="p">(</span><span class="s2">"google/timesfm-2.5-200m-pytorch"</span><span class="p">,</span> <span class="n">local_dir</span><span class="o">=</span><span class="s2">"./timesfm-local"</span><span class="p">)</span>
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># Use locally in air-gapped environments</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">foundation_model_path</span><span class="o">=</span><span class="s2">&quot;./timesfm-local&quot;</span><span class="p">)</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">foundation_model_path</span><span class="o">=</span><span class="s2">"./timesfm-local"</span><span class="p">)</span>
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
@@ -1957,7 +1985,7 @@ models on your time series in a single call.</p>
 </span></code></pre></div>
 <p>GPU-accelerated forecasting models:</p>
 <ul>
-<li>XGBoost_TS, LightGBM_TS, CatBoost_TS</li>
+<li>XGBRegressor_TS, LGBMRegressor_TS, CatBoostRegressor_TS</li>
 <li>LSTM_TS, GRU_TS (PyTorch CUDA)</li>
 <li>TimesFM (PyTorch CUDA)</li>
 </ul>
@@ -1969,7 +1997,7 @@ All models fall back to CPU automatically if CUDA is not detected.</p>
 <hr />
 <h2 id="mlflow-tracking">MLflow Tracking<a class="headerlink" href="#mlflow-tracking" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MLFLOW_TRACKING_URI&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;sqlite:///mlflow.db&quot;</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"MLFLOW_TRACKING_URI"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"sqlite:///mlflow.db"</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">fcst</span> <span class="o">=</span> <span class="n">LazyForecaster</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">scores</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">fcst</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
@@ -2063,10 +2091,10 @@ All models fall back to CPU automatically if CUDA is not detected.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit", "content.action.view"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit", "content.action.view"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

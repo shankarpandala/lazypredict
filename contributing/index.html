@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1054,10 +1054,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#deploying" class="md-nav__link">
+  <a href="#releasing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deploying
+        Releasing
       
     </span>
   </a>
@@ -1277,10 +1277,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#deploying" class="md-nav__link">
+  <a href="#releasing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deploying
+        Releasing
       
     </span>
   </a>
@@ -1304,7 +1304,7 @@
 
 
   
-    <a href="https://github.com/shankarpandala/lazypredict/edit/master/docs/contributing.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/shankarpandala/lazypredict/edit/dev/docs/contributing.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1313,7 +1313,7 @@
     
       
     
-    <a href="https://github.com/shankarpandala/lazypredict/raw/master/docs/contributing.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/shankarpandala/lazypredict/raw/dev/docs/contributing.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
     </a>
@@ -1375,7 +1375,7 @@ local development.</p>
 <div class="language-shell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>lazypredict/
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">source</span><span class="w"> </span>venv/bin/activate<span class="w">   </span><span class="c1"># On Windows: venv\Scripts\activate</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
 </span></code></pre></div>
 </li>
 <li>
@@ -1390,7 +1390,7 @@ local development.</p>
 <div class="language-shell highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>flake8<span class="w"> </span>lazypredict<span class="w"> </span>tests
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pytest
 </span></code></pre></div>
-<p>You can also run the full test matrix across Python versions with tox:</p>
+<p>You can also run the test suite on every supported Python version with tox:</p>
 <div class="language-shell highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>tox
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>tox
 </span></code></pre></div>
@@ -1398,7 +1398,7 @@ local development.</p>
 <li>
 <p>Commit your changes and push your branch to GitHub:</p>
 <div class="language-shell highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>add<span class="w"> </span>.
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Your detailed description of your changes.&quot;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"Your detailed description of your changes."</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>name-of-your-bugfix-or-feature
 </span></code></pre></div>
 </li>
@@ -1413,7 +1413,7 @@ local development.</p>
 <li>If the pull request adds functionality, the docs should be updated.
     Put your new functionality into a function with a docstring, and add
     the feature to the list in README.md.</li>
-<li>The pull request should work for Python 3.9 through 3.14. GitHub
+<li>The pull request should work for Python 3.10 through 3.14. GitHub
     Actions CI will automatically run the tests for all supported
     Python versions.</li>
 </ol>
@@ -1424,14 +1424,52 @@ local development.</p>
 <p>To run tests with coverage:</p>
 <div class="language-shell highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pytest<span class="w"> </span>--cov<span class="o">=</span>lazypredict<span class="w"> </span>--cov-report<span class="o">=</span>term-missing
 </span></code></pre></div>
-<h1 id="deploying">Deploying<a class="headerlink" href="#deploying" title="Permanent link">&para;</a></h1>
-<p>A reminder for the maintainers on how to deploy. Make sure all your
-changes are committed (including an entry in HISTORY.md). Then run:</p>
-<div class="language-shell highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>bump2version<span class="w"> </span>patch<span class="w">  </span><span class="c1"># possible: major / minor / patch</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>git<span class="w"> </span>push
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>git<span class="w"> </span>push<span class="w"> </span>--tags
+<h1 id="releasing">Releasing<a class="headerlink" href="#releasing" title="Permanent link">&para;</a></h1>
+<p>Releases are cut from <code>dev</code> and published to PyPI by
+<code>.github/workflows/publish.yml</code>, which runs when a GitHub release is
+<strong>published</strong> (pushing a tag on its own does not publish anything).</p>
+<ol>
+<li>
+<p>Bump the version. <code>lazypredict/__init__.py</code> is the single source of
+    truth (<code>pyproject.toml</code> reads it); <code>recipe/meta.yaml</code>, <code>CITATION.cff</code>
+    and <code>.bumpversion.cfg</code> must carry the same string, which
+    <code>tests/test_version.py</code> enforces:</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>bump-my-version
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>bump-my-version<span class="w"> </span>bump<span class="w"> </span>minor<span class="w">        </span><span class="c1"># or: patch / major</span>
 </span></code></pre></div>
-<p>GitHub Actions will then build and deploy to PyPI if tests pass.</p>
+<p>For a pre-release, pass the exact version instead, e.g.
+<code>bump-my-version bump --new-version 0.5.0a1</code>; <code>bump-my-version bump pre_n</code>
+then goes to <code>0.5.0a2</code>, and <code>--new-version 0.5.0</code> finalizes it.</p>
+</li>
+<li>
+<p>Move the "Unreleased" notes in <code>HISTORY.md</code> under the new version and
+    update <code>date-released</code> in <code>CITATION.cff</code>.</p>
+</li>
+<li>
+<p>Open a pull request into <code>dev</code>, wait for CI to pass, and merge it.</p>
+</li>
+<li>
+<p>On GitHub, draft a new release <strong>on the merged commit</strong> with tag
+    <code>v&lt;version&gt;</code> (for example <code>v0.4.0</code>; tick "Set as a pre-release" for
+    <code>a</code>/<code>b</code>/<code>rc</code> versions) and publish it.</p>
+</li>
+</ol>
+<p>The publish workflow first checks that the tag matches
+<code>lazypredict.__version__</code> and fails before building anything if it does
+not, then runs the tests, builds the sdist and wheel, smoke-tests the wheel,
+uploads them to PyPI via Trusted Publishing and attaches them to the
+GitHub release. If an upload fails for a transient reason, re-run it from
+the Actions tab (<code>Publish to PyPI</code> &gt; <code>Run workflow</code>, entering the tag).</p>
+<p>Instead of step 4 you can push an annotated tag on the merged commit and run
+the workflow manually for it:</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span>v0.4.0<span class="w"> </span>-m<span class="w"> </span><span class="s2">"0.4.0"</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.4.0
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>gh<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span>publish.yml<span class="w"> </span>--ref<span class="w"> </span>v0.4.0<span class="w"> </span>-f<span class="w"> </span><span class="nv">tag</span><span class="o">=</span>v0.4.0
+</span></code></pre></div>
+<p>The workflow then creates the GitHub release, with generated notes, after
+the upload to PyPI has succeeded.</p>
+<p>The conda-forge feedstock picks up new PyPI releases automatically through
+the conda-forge autotick bot; <code>recipe/meta.yaml</code> is only used by CI to check
+that the package still builds with conda.</p>
 
 
 
@@ -1523,10 +1561,10 @@ changes are committed (including an entry in HISTORY.md). Then run:</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit", "content.action.view"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.action.edit", "content.action.view"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

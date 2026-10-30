@@ -2,6 +2,7 @@
 
 import pytest
 from sklearn.datasets import load_breast_cancer, load_diabetes, load_iris
+from sklearn.linear_model import LogisticRegression, Ridge
 
 import lazypredict.tuning as tuning
 from lazypredict.search_spaces import SEARCH_SPACES
@@ -107,3 +108,27 @@ def test_flaml_backend():
     assert status["SVC"] == "no search space"  # FLAML has no SVC learner mapping
     assert status["RandomForestClassifier"] == "tuned"
     assert 0 < clf.tuned_scores_.loc["RandomForestClassifier", "Best Score"] <= 1
+
+
+def test_flaml_defaults_as_best_config_count_as_tuned():
+    # Issue #622: an empty "Best Params" (FLAML's best config equals the
+    # defaults) was reported as "failed: no successful trial".
+    pytest.importorskip("flaml.automl")
+    clf = LazyClassifier(classifiers=["LogisticRegression"], tune=True, tune_backend="flaml",
+                         tune_top_k=1, tune_trials=1, tune_timeout=30, n_jobs=1)
+    clf.fit(*_split(load_breast_cancer, 400))
+    row = clf.tuned_scores_.loc["LogisticRegression"]
+    assert row["Status"] == "tuned"
+    assert 0 < row["Best Score"] <= 1
+    assert "LogisticRegression" in clf.tuned_models_
+
+
+def test_flaml_task_detection_covers_catboost_style_classifiers():
+    from lazypredict.tuning import _is_classifier_class
+
+    class CatBoostLikeClassifier:  # does not subclass ClassifierMixin
+        _estimator_type = "classifier"
+
+    assert _is_classifier_class(CatBoostLikeClassifier)
+    assert _is_classifier_class(LogisticRegression)
+    assert not _is_classifier_class(Ridge)

@@ -89,6 +89,10 @@ pip install lazypredict[tune]      # Optuna backend
 pip install lazypredict[flaml]     # FLAML backend
 ```
 
+The `flaml` extra installs `flaml[automl]`, which the FLAML backend needs. Its
+dependency constraints (at the time of writing, `xgboost<3`) apply to your
+environment as well.
+
 Enable with `tune=True` in any Lazy estimator:
 
 ```python

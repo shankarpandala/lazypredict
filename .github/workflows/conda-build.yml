@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [dev, master]
 
+permissions:
+  contents: read
+
 concurrency:
   group: conda-${{ github.ref }}
   cancel-in-progress: true
@@ -17,18 +20,21 @@ jobs:
       run:
         shell: bash -el {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Set up Miniconda
-        uses: conda-incubator/setup-miniconda@v3
+      - name: Set up Miniforge (conda-forge only)
+        uses: conda-incubator/setup-miniconda@v4
         with:
-          auto-update-conda: true
+          miniforge-version: latest
           python-version: '3.12'
-          channels: conda-forge,defaults
-          channel-priority: strict
+          channels: conda-forge
+          conda-remove-defaults: 'true'
 
-      - name: Install conda-build
-        run: conda install -y conda-build
+      # Since conda 26.3.1, `conda build` is only available when the
+      # conda-build plugin lives in the *base* environment; conda no longer
+      # discovers `conda-*` executables from the activated environment's PATH.
+      - name: Install conda-build into the base environment
+        run: conda install -n base -y conda-build
 
       - name: Build conda package
         run: conda build recipe/ --no-anaconda-upload

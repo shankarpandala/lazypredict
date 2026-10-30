@@ -103,6 +103,6 @@ def ensemble_stacking(
 
     if pred_test is not None:
         X_test_stack = np.column_stack([pred_test[n] for n in names])
-        return meta.predict(X_test_stack)
+        return np.asarray(meta.predict(X_test_stack))
 
-    return meta.predict(X_stack)
+    return np.asarray(meta.predict(X_stack))

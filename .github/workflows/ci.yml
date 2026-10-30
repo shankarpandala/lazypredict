@@ -5,6 +5,13 @@ on:
     branches: [dev, master]
   pull_request:
     branches: [dev, master]
+  schedule:
+    # Weekly run of the full matrix to catch breakage from new upstream releases.
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -14,66 +21,107 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.13'
       - run: pip install flake8
       - name: Lint (syntax errors and undefined names)
         run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-      - name: Lint (style warnings)
-        run: flake8 . --count --max-complexity=10 --max-line-length=120 --statistics
+      - name: Lint (style, configured in setup.cfg)
+        run: flake8 . --count --statistics
 
   type-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           cache: 'pip'
-      - run: pip install -r requirements.txt mypy
+      - run: pip install -e . "mypy>=1.0"
       - name: Run mypy
-        run: mypy lazypredict/ --ignore-missing-imports
-        continue-on-error: true
+        run: mypy lazypredict/
 
-  test-fast:
+  test:
     needs: lint
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ['3.10', '3.13']
+        python-version: ['3.10', '3.14']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - run: pip install -r requirements.txt pytest pytest-cov
+      - run: pip install -e ".[test]"
       - name: Run tests with coverage
-        run: pytest --cov=lazypredict --cov-report=xml --cov-fail-under=60 -x
+        run: pytest --cov=lazypredict --cov-report=xml --cov-report=term
       - name: Upload coverage
-        if: matrix.python-version == '3.13'
-        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.14'
+        uses: codecov/codecov-action@v7
         with:
-          file: coverage.xml
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
         continue-on-error: true
 
+  test-min-deps:
+    # Install the lowest versions allowed by pyproject.toml so that the
+    # declared dependency floors stay truthful.
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+      - run: pip install uv
+      - name: Install lowest direct dependencies
+        run: uv pip install --system --resolution lowest-direct -e . "pytest>=7"
+      - run: pip list
+      - name: Run tests
+        run: pytest
+
   test-full:
-    if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
+    # Cross-platform matrix: every push to dev/master, weekly, and on demand.
+    if: github.event_name != 'pull_request'
     needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.9', '3.11', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-      - run: pip install -r requirements.txt pytest
+      - run: pip install -e ".[test]"
       - name: Run tests
         run: pytest
+
+  package:
+    # Build the sdist/wheel and make sure the installed wheel works.
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - run: pip install build twine
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Validate distributions
+        run: twine check --strict dist/*
+      - name: Smoke-test the built wheel
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install dist/*.whl
+          cd /tmp && /tmp/smoke/bin/python -c "import lazypredict; from lazypredict import LazyClassifier, LazyRegressor, LazyForecaster; print(lazypredict.__version__)"
+          /tmp/smoke/bin/lazypredict --version

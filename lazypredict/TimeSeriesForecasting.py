@@ -1482,7 +1482,7 @@ class LazyForecaster:
             raise ValueError(
                 f"Unknown method: {method}. Use {', '.join(repr(k) for k in handlers)}."
             )
-        return handler(preds, y_true)
+        return np.asarray(handler(preds, y_true))
 
     def _ensemble_simple(self, preds, y_true):
         from lazypredict.ensemble import ensemble_simple_average

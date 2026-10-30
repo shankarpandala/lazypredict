@@ -6,8 +6,11 @@ before any compiled extension initialises OpenMP avoids the contention.
 """
 
 import os
+import sys
 
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("LOKY_START_METHOD", "fork")
+# "fork" does not exist on Windows and is unsafe on macOS; only use it on Linux.
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("LOKY_START_METHOD", "fork")

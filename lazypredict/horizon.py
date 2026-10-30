@@ -174,4 +174,4 @@ def multi_output_forecast(
     last_features = X_scaled[n_samples - 1:n_samples]
     predictions = multi_model.predict(last_features)[0]
 
-    return predictions[:horizon]
+    return np.asarray(predictions[:horizon])

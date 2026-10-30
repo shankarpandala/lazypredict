@@ -601,7 +601,7 @@ class LazyEstimator:
                     f"Model '{model_name}' not found. "
                     f"Available models: {list(self.models.keys())}"
                 )
-            return self.models[model_name].predict(X_test)
+            return np.asarray(self.models[model_name].predict(X_test))
 
         return {name: model.predict(X_test) for name, model in self.models.items()}
 

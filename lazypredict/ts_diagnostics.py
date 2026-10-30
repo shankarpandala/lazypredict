@@ -87,7 +87,7 @@ def _compute_acf(residuals: np.ndarray, max_lags: int) -> np.ndarray:
     if not (_STATSMODELS_AVAILABLE and n > 1):
         return _compute_acf_numpy(residuals, max_lags)
     try:
-        return sm_acf(residuals, nlags=max_lags, fft=True)
+        return np.asarray(sm_acf(residuals, nlags=max_lags, fft=True))
     except Exception:
         # Edge cases may cause statsmodels to fail; fall back to numpy
         return _compute_acf_numpy(residuals, max_lags)

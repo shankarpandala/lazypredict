@@ -80,7 +80,7 @@ def is_gpu_available() -> bool:
     """
     try:
         import torch
-        return torch.cuda.is_available()
+        return bool(torch.cuda.is_available())
     except ImportError:
         return False
 

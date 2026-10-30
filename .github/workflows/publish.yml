@@ -2,14 +2,16 @@ name: Publish to PyPI
 
 # Runs when a GitHub release is published (the tag must match
 # lazypredict.__version__, see CONTRIBUTING.md "Releasing"). It can also be
-# re-run manually for an existing tag, e.g. after a transient PyPI outage.
+# run manually for an existing tag: to retry after a transient PyPI outage,
+# or to release a pushed tag, in which case the GitHub release is created
+# once the upload has succeeded.
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to publish, e.g. v0.4.0"
+        description: "Existing tag to publish, e.g. v0.4.0"
         required: true
         type: string
 
@@ -107,4 +109,15 @@ jobs:
       - name: Attach distributions to the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$RELEASE_TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            # Manual run for a pushed tag: create the release now that the
+            # package is on PyPI. Releases created with GITHUB_TOKEN do not
+            # trigger this workflow again.
+            flags=()
+            if [[ "${RELEASE_TAG#v}" =~ (a|b|rc)[0-9]+$ ]]; then flags+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" dist/* --verify-tag --generate-notes \
+              --title "${RELEASE_TAG#v}" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
+          fi

@@ -15,7 +15,12 @@ class ModelFitError(LazyPredictError):
     def __init__(self, model_name: str, original_error: Exception):
         self.model_name = model_name
         self.original_error = original_error
-        super().__init__(f"Model '{model_name}' failed: {original_error}")
+        # Keep the constructor arguments in ``args`` so the exception can be
+        # pickled, e.g. when it crosses a joblib worker boundary.
+        super().__init__(model_name, original_error)
+
+    def __str__(self) -> str:
+        return f"Model '{self.model_name}' failed: {self.original_error}"
 
 
 class InvalidParameterError(LazyPredictError, ValueError):

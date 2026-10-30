@@ -568,8 +568,9 @@ class LazyRegressor(LazyEstimator):
         self, cv_results: Dict[str, Any], X_train: pd.DataFrame
     ) -> Dict[str, Optional[float]]:
         rmse_cv = np.sqrt(-cv_results["test_neg_mean_squared_error"])
+        fold_size = X_train.shape[0] // self.cv  # observations in each validation fold
         adj_r2_cv = [
-            adjusted_rsquared(r2, X_train.shape[0], X_train.shape[1])
+            adjusted_rsquared(r2, fold_size, X_train.shape[1])
             for r2 in cv_results["test_r2"]
         ]
         return {
@@ -618,7 +619,11 @@ class LazyRegressor(LazyEstimator):
             rows.append(row)
 
         scores = pd.DataFrame(rows)
-        scores = scores.sort_values(by="Adjusted R-Squared", ascending=False).set_index("Model")
+        # Adjusted R² is NaN when the test set has no more rows than features;
+        # R² then decides the order.
+        scores = scores.sort_values(
+            by=["Adjusted R-Squared", "R-Squared"], ascending=False, na_position="last"
+        ).set_index("Model")
         return scores
 
     def _log_verbose(self, name: str, metrics: Dict[str, Any]) -> None:

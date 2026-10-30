@@ -27,7 +27,11 @@ from lazypredict.integrations.mlflow import (
     start_run,
 )
 from lazypredict.metrics import metric_name
-from lazypredict.preprocessing import build_preprocessor, prepare_dataframes
+from lazypredict.preprocessing import (
+    build_preprocessor,
+    prepare_dataframes,
+    with_string_column_names,
+)
 from lazypredict._optional import warn_if_broken
 
 logger = logging.getLogger("lazypredict")
@@ -680,7 +684,7 @@ class LazyEstimator:
     def _to_frame(self, X: Any) -> pd.DataFrame:
         """Convert array-like input to a DataFrame with the training column names."""
         if isinstance(X, pd.DataFrame):
-            return X
+            return with_string_column_names(X)
         X = np.asarray(X)
         columns = self._feature_columns
         if columns is None and self.models:
@@ -689,7 +693,7 @@ class LazyEstimator:
             columns = getattr(first, "feature_names_in_", None)
         if columns is None or len(columns) != X.shape[1]:
             columns = [f"feature_{i}" for i in range(X.shape[1])]
-        return pd.DataFrame(X, columns=columns)
+        return pd.DataFrame(X, columns=columns).infer_objects()
 
     def provide_models(
         self,

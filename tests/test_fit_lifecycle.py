@@ -109,3 +109,30 @@ def test_predict_after_load_models_uses_fitted_column_names(frames, tmp_path):
     fresh.load_models(str(tmp_path))
     preds = fresh.predict(X_test.to_numpy(), model_name="LogisticRegression")
     assert len(preds) == len(X_test)
+
+
+def test_object_numpy_arrays_keep_numeric_columns_numeric():
+    # Issue #621: df.to_numpy() with a text column made every column categorical.
+    rng = np.random.RandomState(0)
+    x1, x2 = rng.randn(200), rng.randn(200)
+    df = pd.DataFrame({"x1": x1, "x2": x2, "city": rng.choice(["a", "b"], 200)})
+    y = 3 * x1 - 2 * x2 + rng.normal(scale=0.01, size=200)
+    X = df.to_numpy()
+    reg = LazyRegressor(regressors=["LinearRegression"])
+    scores, _ = reg.fit(X[:150], X[150:], y[:150], y[150:])
+    assert scores.loc["LinearRegression", "R-Squared"] > 0.99
+
+
+def test_integer_column_labels_are_not_positions():
+    # Issue #621: columns [1, 2, 3] of a headerless CSV made every model fail.
+    rng = np.random.RandomState(0)
+    data = pd.DataFrame({0: rng.randint(0, 2, 200), 1: rng.randn(200), 2: rng.randn(200), 3: rng.randn(200)})
+    data[1] += 5 * data[0]
+    X, y = data.drop(columns=[0]), data[0]
+    clf = LazyClassifier(classifiers=["LogisticRegression"])
+    scores, _ = clf.fit(X.iloc[:150], X.iloc[150:], y.iloc[:150], y.iloc[150:])
+    assert clf.errors == {}
+    assert scores.loc["LogisticRegression", "Accuracy"] > 0.9
+    predictions = clf.predict(X.iloc[150:])
+    assert len(predictions["LogisticRegression"]) == 50
+    assert list(X.columns) == [1, 2, 3]

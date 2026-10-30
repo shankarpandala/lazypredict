@@ -426,25 +426,46 @@ class AutoARIMAForecaster(ForecasterWrapper):
     Performs a stepwise search over ARIMA orders to minimise information
     criteria.  Supports exogenous features.
 
+    Parameters
+    ----------
+    seasonal_period : int or None, optional (default=None)
+        Seasonal period passed to ``auto_arima`` as ``m``. Seasonal models
+        are only searched for periods between 2 and
+        ``MAX_SEASONAL_PERIOD``; pmdarima's seasonal search becomes
+        impractically slow for longer periods.
+
     Notes
     -----
     Requires ``pmdarima``.
     """
 
+    MAX_SEASONAL_PERIOD = 24
+
+    def __init__(self, seasonal_period: Optional[int] = None):
+        self.seasonal_period = seasonal_period
+        # Extra ``auto_arima`` keyword arguments (e.g. set by tuning).
+        self.params: Dict[str, Any] = {}
+
     def fit(self, y_train, X_train=None):
         from pmdarima import auto_arima
 
-        self._model = auto_arima(
-            y_train,
-            exogenous=X_train,
-            suppress_warnings=True,
-            error_action="ignore",
-            stepwise=True,
-        )
+        m = self.seasonal_period or 1
+        seasonal = 2 <= m <= self.MAX_SEASONAL_PERIOD
+        kwargs: Dict[str, Any] = {
+            "seasonal": seasonal,
+            "m": m if seasonal else 1,
+            "suppress_warnings": True,
+            "error_action": "ignore",
+            "stepwise": True,
+        }
+        kwargs.update(self.params)
+        # pmdarima >= 2 takes exogenous regressors as ``X`` (``exogenous``
+        # was silently ignored).
+        self._model = auto_arima(y_train, X=X_train, **kwargs)
 
     def predict(self, horizon, X_test=None):
         return np.asarray(
-            self._model.predict(n_periods=horizon, exogenous=X_test), dtype=float
+            self._model.predict(n_periods=horizon, X=X_test), dtype=float
         )
 
     @property
@@ -917,7 +938,7 @@ def _build_forecaster_list(
 
     # -- pmdarima -------------------------------------------------------------
     if _PMDARIMA_AVAILABLE:
-        forecasters.append(("AutoARIMA", AutoARIMAForecaster()))
+        forecasters.append(("AutoARIMA", AutoARIMAForecaster(seasonal_period=seasonal_period)))
     else:
         logger.info(
             "pmdarima not installed — AutoARIMA unavailable. "

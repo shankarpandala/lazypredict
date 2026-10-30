@@ -21,6 +21,17 @@ SEASONAL = {
         12, lambda r: np.cumsum(r.normal(0, 0.3, 200)) + 3 * np.sin(2 * np.pi * np.arange(200) / 12)
         + r.normal(0, 0.5, 200),
     ),
+    # Issue #623: short series, which a Bartlett band inflated by the
+    # seasonal pattern itself could not detect.
+    "monthly_7_years_trend": (
+        12, lambda r: 200 + 1.5 * np.arange(84) + 25 * np.sin(2 * np.pi * np.arange(84) / 12)
+        + r.normal(0, 4, 84),
+    ),
+    "monthly_4_years": (12, lambda r: 100 + 10 * np.sin(2 * np.pi * np.arange(48) / 12) + r.normal(0, 2, 48)),
+    "weekly_7_four_weeks": (7, lambda r: 50 + np.where(np.arange(28) % 7 >= 5, 20, 0) + r.normal(0, 2, 28)),
+    "weekly_data_yearly_52": (
+        52, lambda r: 100 + 10 * np.sin(2 * np.pi * np.arange(416) / 52) + r.normal(0, 1, 416),
+    ),
 }
 
 NON_SEASONAL = {
@@ -28,6 +39,10 @@ NON_SEASONAL = {
     "trend_plus_noise": lambda r: 0.05 * np.arange(200) + r.normal(size=200),
     "random_walk": lambda r: np.cumsum(r.normal(size=200)),
     "ar1": lambda r: _ar1(r, 300, 0.8),
+    # Issue #623: smooth curves used to be differenced into spurious periods.
+    "quadratic_trend": lambda r: 0.001 * (np.arange(300) - 150) ** 2 + r.normal(size=300),
+    "exponential_trend": lambda r: 10 * np.exp(np.arange(300) / 100) + r.normal(size=300),
+    "logistic_trend": lambda r: 100 / (1 + np.exp(-(np.arange(300) - 150) / 20)) + r.normal(size=300),
 }
 
 

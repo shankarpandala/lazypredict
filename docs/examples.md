@@ -202,10 +202,10 @@ The following metrics and artifacts will be automatically logged to MLflow:
 
 - Model metrics (R-squared, RMSE, etc.)
 - Training time
-- Model parameters
+- The model name and the estimator's hyperparameters
 - Model signatures
-- Custom metrics (if provided)
-- Model artifacts for each trained model
+- A custom metric, as `custom_metric` (if provided)
+- Model artifacts for each trained model (not registered in the model registry)
 
 You can view the results in the MLflow UI:
 

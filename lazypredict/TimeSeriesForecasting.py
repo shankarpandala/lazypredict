@@ -43,7 +43,7 @@ from lazypredict.config import (
 from lazypredict._base import _resolve_estimators
 from lazypredict._timeout import time_limit
 from lazypredict.exceptions import InsufficientDataError, TimeoutException
-from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, setup_mlflow, start_run
+from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, RunTracker, setup_mlflow
 from lazypredict.metrics import compute_forecast_metrics, metric_name
 from lazypredict.ts_preprocessing import (
     create_lag_features,
@@ -1358,16 +1358,12 @@ class LazyForecaster:
 
     def _fit_single_model(
         self, fname, wrapper, y_train, y_test, X_train, X_test,
-        horizon, seasonal_period, results, predictions_dict,
+        horizon, seasonal_period, results, predictions_dict, tracker,
     ):
         """Fit, predict, and score a single forecaster model."""
         start = time.perf_counter()
-        mlflow_active_run = None
+        run_started = tracker.start(f"LazyForecaster-{fname}", model_name=fname)
         try:
-            if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                mlflow_active_run = start_run(_mlflow, run_name=f"LazyForecaster-{fname}")
-                _mlflow.log_param("model_name", fname)
-
             wrapper_copy = copy.deepcopy(wrapper)
             with time_limit(self.timeout):
                 wrapper_copy.fit(y_train, X_train)
@@ -1394,8 +1390,14 @@ class LazyForecaster:
                 metrics.update(cv_metrics)
 
             self._compute_custom_metric(metrics, y_test, y_pred, fname)
-            self._log_mlflow_metrics(mlflow_active_run, metrics)
-
+        except Exception as exc:
+            self.errors[fname] = exc
+            if isinstance(exc, TimeoutException):
+                logger.info("%s skipped: %s", fname, exc)
+            elif not self.ignore_warnings:
+                logger.warning("%s model failed: %s", fname, exc)
+            return None
+        else:
             # Only models that produced scores are kept.
             self.models[fname] = wrapper_copy
             results.append(metrics)
@@ -1403,18 +1405,12 @@ class LazyForecaster:
                 self._log_verbose(fname, metrics)
             # Always store predictions internally for ensemble/plotting/diagnostics
             predictions_dict[fname] = y_pred
-
-            self._end_mlflow_run(mlflow_active_run)
+            if run_started:
+                tracker.call(self._log_mlflow_metrics, metrics)
             return metrics
-
-        except Exception as exc:
-            self._end_mlflow_run(mlflow_active_run)
-            self.errors[fname] = exc
-            if isinstance(exc, TimeoutException):
-                logger.info("%s skipped: %s", fname, exc)
-            elif not self.ignore_warnings:
-                logger.warning("%s model failed: %s", fname, exc)
-            return None
+        finally:
+            if run_started:
+                tracker.end()
 
     def _compute_custom_metric(self, metrics, y_test, y_pred, fname):
         """Run user-supplied custom metric if configured."""
@@ -1430,15 +1426,9 @@ class LazyForecaster:
                 )
 
     @staticmethod
-    def _end_mlflow_run(mlflow_active_run):
-        """End an MLflow run if one is active."""
-        if mlflow_active_run and _mlflow is not None:
-            _mlflow.end_run()
-
-    @staticmethod
-    def _log_mlflow_metrics(mlflow_active_run, metrics):
-        """Log all numeric metrics to MLflow if a run is active."""
-        if not (mlflow_active_run and _mlflow is not None):
+    def _log_mlflow_metrics(metrics):
+        """Log all finite numeric metrics to the active MLflow run."""
+        if _mlflow is None:
             return
         for key, val in metrics.items():
             if isinstance(val, (int, float, np.number)) and np.isfinite(val):
@@ -1563,6 +1553,7 @@ class LazyForecaster:
     ):
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(all_forecasters)
+        tracker = RunTracker(_mlflow if self.mlflow_enabled and MLFLOW_AVAILABLE else None)
         with warnings.catch_warnings():
             if self.ignore_warnings:
                 warnings.simplefilter("ignore")
@@ -1571,7 +1562,7 @@ class LazyForecaster:
             ):
                 metrics = self._fit_single_model(
                     fname, wrapper, y_train, y_test, X_train, X_test,
-                    horizon, seasonal_period, results, predictions_dict,
+                    horizon, seasonal_period, results, predictions_dict, tracker,
                 )
                 if self.progress_callback is not None:
                     self.progress_callback(fname, idx + 1, total, metrics)

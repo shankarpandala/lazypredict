@@ -22,9 +22,9 @@ from lazypredict._timeout import time_limit
 from lazypredict.exceptions import ModelFitError, TimeoutException  # noqa: F401
 from lazypredict.integrations.mlflow import (
     MLFLOW_AVAILABLE,
+    RunTracker,
     log_sklearn_model,
     setup_mlflow,
-    start_run,
 )
 from lazypredict.metrics import metric_name
 from lazypredict.preprocessing import (
@@ -378,6 +378,7 @@ class LazyEstimator:
 
         progress_bar = notebook_tqdm if _use_notebook_tqdm else tqdm
         total = len(estimator_list)
+        tracker = RunTracker(_mlflow if self.mlflow_enabled and MLFLOW_AVAILABLE else None)
         with warnings.catch_warnings():
             if self.ignore_warnings:
                 warnings.simplefilter("ignore")
@@ -385,14 +386,9 @@ class LazyEstimator:
                 progress_bar(estimator_list, disable=(self.verbose == 0))
             ):
                 start = time.perf_counter()
-                mlflow_active_run = None
+                run_started = tracker.start(f"{self.__class__.__name__}-{name}", model_name=name)
+                metrics: Optional[Dict[str, Any]] = None
                 try:
-                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None:
-                        mlflow_active_run = start_run(
-                            _mlflow, run_name=f"{self.__class__.__name__}-{name}"
-                        )
-                        _mlflow.log_param("model_name", name)
-
                     model_kwargs = self._model_kwargs(model)
                     pipe = Pipeline(
                         steps=[
@@ -411,65 +407,38 @@ class LazyEstimator:
                             f"Training took {fit_time:.2f}s, exceeding timeout={self.timeout}s"
                         )
 
-                    self.models[name] = pipe
-
-                    # Cross-validation
-                    cv_metrics: Dict[str, Optional[float]] = {}
-                    if self.cv:
-                        cv_metrics = self._run_cv(pipe, X_train, y_train, name)
-
-                    # Test-set metrics
+                    cv_metrics = self._run_cv(pipe, X_train, y_train, name) if self.cv else {}
                     metrics = self._compute_metrics(pipe, X_test, y_test, X_train)
                     metrics["name"] = name
                     metrics["time"] = time.perf_counter() - start
                     metrics.update(cv_metrics)
-
-                    # MLflow logging
-                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                        self._log_mlflow_metrics(metrics, pipe, X_train, name)
-
-                    # Custom metric
                     if self.custom_metric is not None:
-                        y_pred = pipe.predict(X_test)
-                        try:
-                            custom_val = self.custom_metric(y_test, y_pred)
-                            metrics["custom_metric"] = custom_val
-                            if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                                _mlflow.log_metric(metric_name(self.custom_metric), custom_val)
-                        except Exception as custom_exc:
-                            metrics["custom_metric"] = np.nan
-                            if not self.ignore_warnings:
-                                logger.warning(
-                                    "Custom metric %s failed for %s: %s",
-                                    metric_name(self.custom_metric), name, custom_exc,
-                                )
-
-                    results.append(metrics)
-
-                    if self.verbose > 0:
-                        self._log_verbose(name, metrics)
-
+                        metrics["custom_metric"] = self._custom_metric_value(
+                            y_test, pipe.predict(X_test), name
+                        )
                     if self.predictions:
                         predictions_dict[name] = pipe.predict(X_test)
-
-                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                        _mlflow.end_run()
-
-                    # Progress callback
-                    if self.progress_callback is not None:
-                        self.progress_callback(name, idx + 1, total, metrics)
-
                 except Exception as exc:
-                    if self.mlflow_enabled and MLFLOW_AVAILABLE and _mlflow is not None and mlflow_active_run:
-                        _mlflow.end_run()
+                    metrics = None
                     self.errors[name] = exc
                     if isinstance(exc, TimeoutException):
                         logger.info("%s skipped: %s", name, exc)
                     elif not self.ignore_warnings:
                         logger.warning("%s model failed to execute: %s", name, exc)
+                else:
+                    # Only models that produced scores are kept.
+                    self.models[name] = pipe
+                    results.append(metrics)
+                    if self.verbose > 0:
+                        self._log_verbose(name, metrics)
+                    if run_started:
+                        tracker.call(self._log_mlflow_metrics, metrics, pipe, X_train, name)
+                finally:
+                    if run_started:
+                        tracker.end()
 
-                    if self.progress_callback is not None:
-                        self.progress_callback(name, idx + 1, total, None)
+                if self.progress_callback is not None:
+                    self.progress_callback(name, idx + 1, total, metrics)
 
         scores = self._build_scores_dataframe(results)
 
@@ -664,12 +633,27 @@ class LazyEstimator:
         """Log per-model metrics when verbose > 0."""
         raise NotImplementedError
 
+    def _custom_metric_value(self, y_test: Any, y_pred: Any, name: str) -> Any:
+        """The custom metric for one model, or NaN if it fails."""
+        try:
+            return self.custom_metric(y_test, y_pred)  # type: ignore[misc]
+        except Exception as exc:
+            if not self.ignore_warnings:
+                logger.warning(
+                    "Custom metric %s failed for %s: %s", metric_name(self.custom_metric), name, exc
+                )
+            return np.nan
+
     def _log_mlflow_metrics(
         self, metrics: Dict[str, Any], pipe: Pipeline, X_train: pd.DataFrame, name: str
     ) -> None:
-        """Log metrics and model to MLflow."""
+        """Log the estimator's hyperparameters, the metrics and the model to MLflow."""
         if _mlflow is None:
             return
+        estimator = pipe.steps[-1][1]
+        _mlflow.log_params(
+            {key: str(value)[:500] for key, value in estimator.get_params(deep=False).items()}
+        )
         for key, val in metrics.items():
             if isinstance(val, (int, float, np.number)) and np.isfinite(val):
                 _mlflow.log_metric(key, val)

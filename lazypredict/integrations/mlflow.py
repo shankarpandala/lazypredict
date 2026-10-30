@@ -3,7 +3,7 @@
 import inspect
 import logging
 import os
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from lazypredict._optional import warn_if_broken
 
@@ -43,6 +43,47 @@ def setup_mlflow() -> bool:
 def start_run(mlflow_module: Any, run_name: str) -> Any:
     """Start a run for one model, nested under the caller's run if one is active."""
     return mlflow_module.start_run(run_name=run_name, nested=True)
+
+
+class RunTracker:
+    """Best-effort MLflow tracking during one ``fit()``.
+
+    Tracking never changes the benchmark: the first MLflow error is logged
+    and turns tracking off for the rest of the fit, so an unreachable server
+    or a rejected metric cannot make models fail, and every run that was
+    started is ended exactly once.
+    """
+
+    def __init__(self, mlflow_module: Any = None) -> None:
+        self._mlflow = mlflow_module
+        self.enabled = mlflow_module is not None
+
+    def call(self, function: Callable[..., Any], *args: Any) -> bool:
+        """Run one tracking call; False if tracking is off or the call failed."""
+        if not self.enabled:
+            return False
+        try:
+            function(*args)
+        except Exception as exc:
+            logger.warning("MLflow tracking failed and is turned off for this fit(): %s", exc)
+            self.enabled = False
+            return False
+        return True
+
+    def start(self, run_name: str, **params: Any) -> bool:
+        """Start a nested run and log *params*; True if a run was started."""
+        if not self.call(start_run, self._mlflow, run_name):
+            return False
+        for key, value in params.items():
+            self.call(self._mlflow.log_param, key, value)
+        return True
+
+    def end(self) -> None:
+        """End the run ``start()`` started, even if tracking was turned off since."""
+        try:
+            self._mlflow.end_run()
+        except Exception as exc:
+            logger.warning("Ending the MLflow run failed: %s", exc)
 
 
 def log_sklearn_model(

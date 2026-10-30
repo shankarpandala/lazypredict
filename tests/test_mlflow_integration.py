@@ -42,6 +42,9 @@ class FakeMlflow:
     def log_param(self, key, value):
         self.calls.append(("log_param", key, value))
 
+    def log_params(self, params):
+        self.calls.append(("log_params", dict(params)))
+
     def log_metric(self, key, value):
         assert np.isfinite(value), (key, value)
         self.metrics[key] = value
@@ -102,3 +105,74 @@ def test_forecaster_runs_are_nested(fake_mlflow):
     assert len(scores) == 2
     runs = [c for c in fake_mlflow.calls if c[0] == "start_run" and c[1] != "user-run"]
     assert runs and all(nested for _, _, nested in runs)
+
+
+# -- Tracking never changes the benchmark (issue #626) ---------------------------
+
+MODELS = ["LogisticRegression", "DecisionTreeClassifier"]
+
+
+def test_unreachable_tracking_server_does_not_fail_models(fake_mlflow, monkeypatch):
+    def refuse(*args, **kwargs):
+        raise ConnectionError("tracking server unreachable")
+
+    monkeypatch.setattr(fake_mlflow, "start_run", refuse)
+    clf = LazyClassifier(classifiers=MODELS)
+    scores, _ = clf.fit(*_split())
+    assert sorted(scores.index) == sorted(MODELS)
+    assert clf.errors == {}
+
+
+def test_failed_metric_logging_keeps_the_model_and_ends_its_run(fake_mlflow, monkeypatch):
+    def refuse(key, value):
+        raise RuntimeError("503 Service Unavailable")
+
+    monkeypatch.setattr(fake_mlflow, "log_metric", refuse)
+    clf = LazyClassifier(classifiers=MODELS)
+    scores, _ = clf.fit(*_split())
+    assert sorted(scores.index) == sorted(MODELS) and clf.errors == {}
+    assert fake_mlflow.active == []
+    # Tracking was turned off after the failure: only the first model got a run.
+    assert [c[1] for c in fake_mlflow.calls if c[0] == "start_run"] == [f"LazyClassifier-{MODELS[0]}"]
+
+
+def test_lambda_custom_metric_is_kept_and_logged_under_a_valid_key(fake_mlflow, monkeypatch):
+    def log_metric(key, value):
+        if any(ch in key for ch in "<>"):
+            raise ValueError(f"Invalid metric name: {key!r}")
+        fake_mlflow.metrics[key] = value
+
+    monkeypatch.setattr(fake_mlflow, "log_metric", log_metric)
+    clf = LazyClassifier(classifiers=MODELS, custom_metric=lambda y, p: float(np.mean(y == p)))
+    scores, _ = clf.fit(*_split())
+    assert scores["<lambda>"].notna().all()
+    assert "custom_metric" in fake_mlflow.metrics
+
+
+def test_failing_progress_callback_does_not_end_the_users_run(fake_mlflow):
+    def callback(name, done, total, metrics):
+        raise KeyError("Accuracy")
+
+    fake_mlflow.start_run(run_name="user run")
+    clf = LazyClassifier(classifiers=MODELS, progress_callback=callback)
+    with pytest.raises(KeyError):
+        clf.fit(*_split())
+    assert fake_mlflow.active == ["user run"]
+
+
+def test_forecaster_keeps_models_when_tracking_fails(fake_mlflow, monkeypatch):
+    def refuse(*args, **kwargs):
+        raise ConnectionError("tracking server unreachable")
+
+    monkeypatch.setattr(fake_mlflow, "start_run", refuse)
+    y = np.sin(np.arange(120) / 3.0) + np.arange(120) * 0.05
+    forecaster = LazyForecaster(forecasters=["Naive", "Ridge_TS"])
+    scores, _ = forecaster.fit(y[:100], y[100:])
+    assert sorted(scores.index) == ["Naive", "Ridge_TS"]
+    assert forecaster.errors == {}
+
+
+def test_estimator_hyperparameters_are_logged(fake_mlflow):
+    LazyClassifier(classifiers=["LogisticRegression"]).fit(*_split())
+    logged = [c[1] for c in fake_mlflow.calls if c[0] == "log_params"]
+    assert logged and logged[0]["C"] == "1.0"

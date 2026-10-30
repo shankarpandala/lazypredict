@@ -446,7 +446,8 @@ models, predictions = reg.fit(X_train, X_test, y_train, y_test)
 Each model gets its own MLflow run (nested under your active run, if any) with:
 - Model metrics (R-squared, RMSE, etc.)
 - Training time
-- The model name as a parameter
+- The model name and the estimator's hyperparameters as parameters
+- A custom metric, as `custom_metric`
 - The fitted pipeline as an artifact (not registered in the model registry)
 
 Lazy Predict does not call `mlflow.autolog()`; enable it yourself if you want

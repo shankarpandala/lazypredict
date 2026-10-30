@@ -76,9 +76,10 @@ def tune_forecaster_optuna(
     Returns
     -------
     best_params : dict
-        Best hyperparameters found.
+        Best hyperparameters found (the full search-space dict, e.g. SARIMAX
+        ``order``); empty when no trial produced a finite score.
     best_score : float
-        Best metric score (lower is better).
+        Best metric score (lower is better); ``inf`` when no trial succeeded.
     """
     if not _OPTUNA_AVAILABLE:
         raise ImportError(
@@ -90,96 +91,108 @@ def tune_forecaster_optuna(
         logger.info("No search space for %s, skipping tuning.", model_name)
         return {}, float("inf")
 
-    metric_key = tune_metric.lower()
-    tscv = TimeSeriesSplit(n_splits=cv)
-
     def objective(trial):
         params = space_fn(trial)
-
-        # Optional seasonal period search
         if tune_seasonal and model_name in ("SARIMAX", "HoltWinters_Add", "HoltWinters_Mul"):
-            candidates = [p for p in CANDIDATE_SEASONAL_PERIODS if p < len(y_train) // 3]
-            if seasonal_period and seasonal_period not in candidates:
-                candidates.append(seasonal_period)
+            candidates = _seasonal_candidates(len(y_train), seasonal_period)
             if candidates:
-                params["seasonal_period"] = trial.suggest_categorical(
-                    "seasonal_period", sorted(candidates)
-                )
+                params["seasonal_period"] = trial.suggest_categorical("seasonal_period", candidates)
+        trial.set_user_attr("params", params)
+        return _temporal_cv_error(
+            wrapper, model_name, params, y_train, X_train,
+            params.get("seasonal_period", seasonal_period), tune_metric.lower(), cv,
+        )
 
-        # Extract feature-engineering params for ML/DL models
-        n_lags = params.pop("n_lags", None)
-        n_rolling_1 = params.pop("n_rolling_1", None)
-        n_rolling_2 = params.pop("n_rolling_2", None)
-        sp_trial = params.pop("seasonal_period", seasonal_period)
+    study = optuna.create_study(
+        direction="minimize", sampler=optuna.samplers.TPESampler(seed=random_state)
+    )
+    study.optimize(objective, n_trials=n_trials, timeout=timeout, catch=(Exception,))
 
-        scores = []
-        for train_idx, val_idx in tscv.split(y_train):
-            y_cv_train = y_train[train_idx]
-            y_cv_val = y_train[val_idx]
-            X_cv_train = X_train[train_idx] if X_train is not None else None
-            X_cv_val = X_train[val_idx] if X_train is not None else None
-
-            try:
-                w = copy.deepcopy(wrapper)
-                # Apply tuned params to wrapper
-                _apply_params_to_wrapper(
-                    w, model_name, params, n_lags, n_rolling_1, n_rolling_2, sp_trial
-                )
-                w.fit(y_cv_train, X_cv_train)
-                y_pred = w.predict(len(val_idx), X_cv_val)
-                sp = sp_trial or 1
-                fold_metrics = compute_forecast_metrics(
-                    y_cv_val, y_pred, y_cv_train, seasonal_period=sp
-                )
-                scores.append(fold_metrics[metric_key])
-            except Exception:
-                scores.append(float("inf"))
-
-        return np.mean(scores)
-
-    study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=n_trials, timeout=timeout)
-
-    return study.best_params, study.best_value
+    finished = [
+        (float(t.value), t)
+        for t in study.trials
+        if t.state == optuna.trial.TrialState.COMPLETE
+        and t.value is not None
+        and np.isfinite(t.value)
+    ]
+    if not finished:
+        return {}, float("inf")
+    best_value, best = min(finished, key=lambda item: item[0])
+    return dict(best.user_attrs.get("params", best.params)), best_value
 
 
-def _apply_params_to_wrapper(wrapper, model_name, params, n_lags, n_rolling_1, n_rolling_2, sp):
-    """Apply tuned parameters to a forecaster wrapper instance."""
-    from lazypredict.TimeSeriesForecasting import MLForecaster, _TorchRNNForecaster
+def _seasonal_candidates(n_obs: int, seasonal_period: Optional[int]) -> List[int]:
+    """Seasonal periods worth trying for a series of *n_obs* values."""
+    candidates = [p for p in CANDIDATE_SEASONAL_PERIODS if p < n_obs // 3]
+    if seasonal_period and seasonal_period not in candidates:
+        candidates.append(seasonal_period)
+    return sorted(candidates)
 
-    _apply_feature_engineering_params(wrapper, n_lags, n_rolling_1, n_rolling_2)
-    _apply_stat_model_params(wrapper, model_name, params, sp)
 
+def _temporal_cv_error(
+    wrapper, model_name, params, y_train, X_train, seasonal_period, metric_key, cv
+) -> float:
+    """Mean expanding-window CV error of *wrapper* configured with *params*."""
+    scores = []
+    for train_idx, val_idx in TimeSeriesSplit(n_splits=cv).split(y_train):
+        y_cv_train = y_train[train_idx]
+        X_cv_train = X_train[train_idx] if X_train is not None else None
+        X_cv_val = X_train[val_idx] if X_train is not None else None
+        try:
+            w = copy.deepcopy(wrapper)
+            _apply_params_to_wrapper(w, model_name, params)
+            w.fit(y_cv_train, X_cv_train)
+            y_pred = w.predict(len(val_idx), X_cv_val)
+            fold_metrics = compute_forecast_metrics(
+                y_train[val_idx], y_pred, y_cv_train, seasonal_period=seasonal_period or 1
+            )
+            scores.append(fold_metrics[metric_key])
+        except Exception:
+            scores.append(float("inf"))
+    return float(np.mean(scores))
+
+
+def _apply_params_to_wrapper(
+    wrapper, model_name, params, n_lags=None, n_rolling_1=None, n_rolling_2=None, sp=None
+):
+    """Apply tuned parameters to a forecaster wrapper instance.
+
+    *params* is a search-space dict: ``n_lags``/``n_rolling_1``/``n_rolling_2``
+    configure the lag features of ML/DL forecasters, ``seasonal_period``
+    the seasonal models, and everything else is stored in the wrapper's
+    ``params`` (applied by its ``fit``/``predict``) or, for LSTM/GRU, set as
+    attributes. Explicit keyword arguments override the dict entries.
+    """
+    from lazypredict.TimeSeriesForecasting import (
+        HoltWintersForecaster,
+        MLForecaster,
+        _TorchRNNForecaster,
+    )
+
+    params = dict(params)
+    feature_params = {
+        key: params.pop(key, None)
+        for key in ("n_lags", "n_rolling_1", "n_rolling_2", "seasonal_period")
+    }
+    n_lags = n_lags if n_lags is not None else feature_params["n_lags"]
+    n_rolling_1 = n_rolling_1 if n_rolling_1 is not None else feature_params["n_rolling_1"]
+    n_rolling_2 = n_rolling_2 if n_rolling_2 is not None else feature_params["n_rolling_2"]
+    sp = sp if sp is not None else feature_params["seasonal_period"]
+
+    if isinstance(wrapper, (MLForecaster, _TorchRNNForecaster)):
+        if n_lags is not None:
+            wrapper.n_lags = n_lags
+        if n_rolling_1 is not None and n_rolling_2 is not None:
+            wrapper.n_rolling = (n_rolling_1, n_rolling_2)
+    if sp is not None:
+        attribute = "seasonal_periods" if isinstance(wrapper, HoltWintersForecaster) else "seasonal_period"
+        if hasattr(wrapper, attribute):
+            setattr(wrapper, attribute, sp)
     if isinstance(wrapper, _TorchRNNForecaster):
         for key in ("hidden_size", "learning_rate", "batch_size", "n_epochs"):
             if key in params:
-                setattr(wrapper, key, params[key])
-
-    if isinstance(wrapper, MLForecaster):
-        model_params = {k: v for k, v in params.items()
-                        if k not in ("order", "seasonal_period")}
-        if model_params:
-            wrapper._tune_params = model_params
-
-
-def _apply_feature_engineering_params(wrapper, n_lags, n_rolling_1, n_rolling_2):
-    """Set lag/rolling params on ML/DL wrappers."""
-    from lazypredict.TimeSeriesForecasting import MLForecaster, _TorchRNNForecaster
-
-    if not isinstance(wrapper, (MLForecaster, _TorchRNNForecaster)):
-        return
-    if n_lags is not None:
-        wrapper.n_lags = n_lags
-    if n_rolling_1 is not None and n_rolling_2 is not None:
-        wrapper.n_rolling = (n_rolling_1, n_rolling_2)
-
-
-def _apply_stat_model_params(wrapper, model_name, params, sp):
-    """Set statistical model-specific parameters."""
-    if model_name == "SARIMAX" and "order" in params:
-        wrapper.order = params["order"]
-    if model_name in ("HoltWinters_Add", "HoltWinters_Mul") and sp is not None:
-        wrapper.seasonal_periods = sp
+                setattr(wrapper, key, params.pop(key))
+    wrapper.params = params
 
 
 def tune_top_k_forecasters(
@@ -235,7 +248,10 @@ def tune_top_k_forecasters(
     Returns
     -------
     tune_results : pd.DataFrame
-        Tuning results: Model, Best Score, Best Params.
+        One row per model (index ``Model``) with ``Best <tune_metric>`` (mean
+        temporal-CV error of the best trial, lower is better), ``Best Params``
+        (a dict) and ``Status`` (``"tuned"``, ``"no search space"`` or
+        ``"failed: ..."``).
     tuned_models : dict
         ``{model_name: fitted_wrapper}`` when ``refit=True``,
         empty dict otherwise.
@@ -244,6 +260,7 @@ def tune_top_k_forecasters(
 
     top_model_names = list(scores_df.index[:top_k])
     name_to_wrapper = {name: w for name, w in all_wrappers}
+    score_column = f"Best {tune_metric}"
 
     results = []
     tuned_models: Dict[str, Any] = {}
@@ -252,42 +269,37 @@ def tune_top_k_forecasters(
         wrapper = name_to_wrapper.get(model_name)
         if wrapper is None:
             continue
+        row = {"Model": model_name, score_column: float("nan"), "Best Params": {}}
 
-        space_fn = get_ts_search_space(model_name)
-        if space_fn is None:
+        if get_ts_search_space(model_name) is None:
             logger.info("No search space for %s, skipping.", model_name)
-            results.append({
-                "Model": model_name,
-                "Best Score": None,
-                "Best Params": "N/A (no search space)",
-            })
+            results.append({**row, "Status": "no search space"})
             continue
 
         logger.info("Tuning forecaster %s...", model_name)
-        best_params, best_score = tune_forecaster_optuna(
-            model_name, wrapper, y_train, X_train, seasonal_period,
-            tune_metric=tune_metric, cv=cv, n_trials=n_trials,
-            timeout=timeout, random_state=random_state,
-            tune_seasonal=tune_seasonal,
-        )
+        try:
+            best_params, best_score = tune_forecaster_optuna(
+                model_name, wrapper, y_train, X_train, seasonal_period,
+                tune_metric=tune_metric, cv=cv, n_trials=n_trials,
+                timeout=timeout, random_state=random_state,
+                tune_seasonal=tune_seasonal,
+            )
+        except Exception as exc:
+            logger.warning("Tuning %s failed: %s", model_name, exc)
+            results.append({**row, "Status": f"failed: {exc}"})
+            continue
+        if not best_params:
+            results.append({**row, "Status": "failed: no successful trial"})
+            continue
         results.append({
-            "Model": model_name,
-            f"Best {tune_metric}": best_score,
-            "Best Params": str(best_params),
+            **row, score_column: best_score, "Best Params": best_params, "Status": "tuned",
         })
 
         # Refit with best params on full training data
-        if refit and best_params:
+        if refit:
             try:
                 w = copy.deepcopy(wrapper)
-                n_lags = best_params.pop("n_lags", None)
-                n_rolling_1 = best_params.pop("n_rolling_1", None)
-                n_rolling_2 = best_params.pop("n_rolling_2", None)
-                sp = best_params.pop("seasonal_period", seasonal_period)
-                _apply_params_to_wrapper(
-                    w, model_name, best_params,
-                    n_lags, n_rolling_1, n_rolling_2, sp,
-                )
+                _apply_params_to_wrapper(w, model_name, best_params)
                 w.fit(y_train, X_train)
                 tuned_models[model_name] = w
                 logger.info("Refit %s with best params.", model_name)
@@ -296,4 +308,5 @@ def tune_top_k_forecasters(
                     "Failed to refit %s with best params: %s", model_name, exc
                 )
 
-    return pd.DataFrame(results).set_index("Model"), tuned_models
+    columns = ["Model", score_column, "Best Params", "Status"]
+    return pd.DataFrame(results, columns=columns).set_index("Model"), tuned_models

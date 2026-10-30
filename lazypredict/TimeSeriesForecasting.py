@@ -261,20 +261,28 @@ class HoltForecaster(ForecasterWrapper):
     """Holt's linear trend method (double exponential smoothing).
 
     Captures level and trend components but ignores seasonality.
+
     Notes
     -----
     Requires ``statsmodels``.
     """
 
+    def __init__(self):
+        # Tuned settings: smoothing_level, smoothing_trend, damped_trend.
+        self.params: Dict[str, Any] = {}
+
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
+        params = dict(getattr(self, "params", {}))
+        damped_trend = params.pop("damped_trend", False)
         self._model = ExponentialSmoothing(
             y_train,
             trend="add",
+            damped_trend=damped_trend,
             seasonal=None,
             initialization_method="estimated",
-        ).fit(optimized=True)
+        ).fit(optimized=True, **params)
 
     def predict(self, horizon, X_test=None):
         return np.asarray(self._model.forecast(horizon), dtype=float)
@@ -311,6 +319,8 @@ class HoltWintersForecaster(ForecasterWrapper):
         self.seasonal = seasonal
         self.seasonal_periods = seasonal_periods
         self._label_suffix = label_suffix
+        # Tuned settings: smoothing_level/trend/seasonal, damped_trend.
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.holtwinters import ExponentialSmoothing
@@ -323,13 +333,16 @@ class HoltWintersForecaster(ForecasterWrapper):
                 f"Need at least 2 * seasonal_periods ({2 * sp}) observations, "
                 f"got {len(y_train)}"
             )
+        params = dict(getattr(self, "params", {}))
+        damped_trend = params.pop("damped_trend", False)
         self._model = ExponentialSmoothing(
             y_train,
             trend="add",
+            damped_trend=damped_trend,
             seasonal=self.seasonal,
             seasonal_periods=sp,
             initialization_method="estimated",
-        ).fit(optimized=True)
+        ).fit(optimized=True, **params)
 
     def predict(self, horizon, X_test=None):
         return np.asarray(self._model.forecast(horizon), dtype=float)
@@ -358,6 +371,8 @@ class ThetaForecaster(ForecasterWrapper):
 
     def __init__(self, seasonal_period: Optional[int] = None):
         self.seasonal_period = seasonal_period
+        # Tuned settings: theta (>= 1, statsmodels' default is 2).
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.forecasting.theta import ThetaModel
@@ -366,7 +381,8 @@ class ThetaForecaster(ForecasterWrapper):
         self._model = ThetaModel(y_train, period=period).fit()
 
     def predict(self, horizon, X_test=None):
-        return np.asarray(self._model.forecast(horizon), dtype=float)
+        theta = getattr(self, "params", {}).get("theta", 2.0)
+        return np.asarray(self._model.forecast(horizon, theta=theta), dtype=float)
 
     @property
     def name(self):
@@ -376,7 +392,7 @@ class ThetaForecaster(ForecasterWrapper):
 class SARIMAXForecaster(ForecasterWrapper):
     """Seasonal ARIMA with eXogenous regressors (SARIMAX).
 
-    Uses a default order of ``(1,1,1)`` with seasonal order
+    Uses order ``(1,1,1)`` (or a tuned ``order``) with seasonal order
     ``(1,1,1,sp)`` when a seasonal period is detected.  Supports
     exogenous features via ``X_train`` / ``X_test``.
 
@@ -392,6 +408,8 @@ class SARIMAXForecaster(ForecasterWrapper):
 
     def __init__(self, seasonal_period: Optional[int] = None):
         self.seasonal_period = seasonal_period
+        # Tuned settings: order.
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -401,7 +419,7 @@ class SARIMAXForecaster(ForecasterWrapper):
         self._model = SARIMAX(
             y_train,
             exog=X_train,
-            order=(1, 1, 1),
+            order=tuple(getattr(self, "params", {}).get("order", (1, 1, 1))),
             seasonal_order=seasonal_order,
             enforce_stationarity=False,
             enforce_invertibility=False,
@@ -517,6 +535,8 @@ class MLForecaster(ForecasterWrapper):
         self.n_rolling = n_rolling
         self.random_state = random_state
         self.use_gpu = use_gpu
+        # Tuned estimator hyperparameters (override the defaults below).
+        self.params: Dict[str, Any] = {}
 
     def fit(self, y_train, X_train=None):
         X_feat, y_feat = create_lag_features(
@@ -537,6 +557,7 @@ class MLForecaster(ForecasterWrapper):
             params.setdefault("verbosity", -1)
         if "xgboost" in module:
             params.setdefault("verbosity", 0)
+        params.update(getattr(self, "params", {}))
         self._estimator = self.estimator_class(**params)
         self._scaler = StandardScaler()
         X_scaled = self._scaler.fit_transform(X_feat)

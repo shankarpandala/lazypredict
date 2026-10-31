@@ -260,11 +260,44 @@ def with_string_column_names(X: pd.DataFrame) -> pd.DataFrame:
     return X.rename(columns=str)
 
 
+def _is_temporal_dtype(dtype: Any) -> bool:
+    return bool(pd.api.types.is_datetime64_any_dtype(dtype) or pd.api.types.is_timedelta64_dtype(dtype))
+
+
+def times_as_numbers(X) -> np.ndarray:
+    """Encode datetime columns as days since 1970 and timedeltas as seconds.
+
+    Missing values (``NaT``) become ``np.nan`` for the imputer that follows.
+    """
+    frame = X if isinstance(X, pd.DataFrame) else pd.DataFrame(X)
+    columns = []
+    for i in range(frame.shape[1]):
+        column = frame.iloc[:, i]
+        if pd.api.types.is_timedelta64_dtype(column.dtype):
+            values = pd.to_timedelta(column).dt.total_seconds()
+        else:
+            moments = pd.to_datetime(column, utc=True)
+            values = (moments - pd.Timestamp(0, tz="UTC")) / pd.Timedelta(days=1)
+        columns.append(np.asarray(values, dtype=float))
+    return np.column_stack(columns) if columns else np.empty((len(frame), 0))
+
+
 def build_preprocessor(
     X_train: pd.DataFrame, categorical_encoder: str
 ) -> ColumnTransformer:
-    """Build a ColumnTransformer for the given data."""
-    numeric_features = X_train.select_dtypes(include=[np.number, "bool"]).columns
+    """Build a ColumnTransformer for the given data.
+
+    Numeric and boolean columns are imputed and scaled, categorical columns
+    are imputed and encoded, and datetime/timedelta columns are converted to
+    numbers (days since 1970, seconds) and then treated as numeric.
+    """
+    temporal_features = pd.Index(
+        [col for col, dtype in X_train.dtypes.items() if _is_temporal_dtype(dtype)]
+    )
+    # timedelta64 counts as np.number in pandas; it goes to the temporal branch.
+    numeric_features = X_train.select_dtypes(include=[np.number, "bool"]).columns.difference(
+        temporal_features, sort=False
+    )
     categorical_features = pd.Index(
         [col for col, dtype in X_train.dtypes.items() if _is_categorical_dtype(dtype)]
     )
@@ -277,6 +310,17 @@ def build_preprocessor(
     return ColumnTransformer(
         transformers=[
             ("numeric", numeric_transformer, numeric_features),
+            (
+                "temporal",
+                Pipeline(
+                    steps=[
+                        ("as_numbers", FunctionTransformer(times_as_numbers, feature_names_out="one-to-one")),
+                        ("imputer", SimpleImputer(strategy="mean")),
+                        ("scaler", StandardScaler()),
+                    ]
+                ),
+                temporal_features,
+            ),
             ("categorical_low", cat_low, categorical_low),
             ("categorical_high", cat_high, categorical_high),
         ]

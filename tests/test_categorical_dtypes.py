@@ -117,3 +117,23 @@ def test_integer_codes_match_float_codes_in_the_test_split(dtype):
     clf = LazyClassifier(classifiers=["LogisticRegression"])
     scores, _ = clf.fit(train, test, y[:180], y[180:])
     assert scores.loc["LogisticRegression", "Accuracy"] > 0.95
+
+
+def test_datetime_and_timedelta_columns_are_used():
+    # Issue #632: datetime columns were dropped and timedelta columns broke every model.
+    rng = np.random.RandomState(0)
+    start = pd.Timestamp("2020-01-01")
+    days = rng.randint(0, 1000, N)
+    X = pd.DataFrame({
+        "when": start + pd.to_timedelta(days, unit="D"),
+        "duration": pd.to_timedelta(rng.randint(0, 100, N), unit="h"),
+        "noise": rng.randn(N),
+    })
+    X.loc[0, "when"] = pd.NaT
+    y = (days > 500).astype(int)  # only the date carries the signal
+    clf = LazyClassifier(classifiers=["DecisionTreeClassifier"])
+    scores, _ = clf.fit(X.iloc[:180], X.iloc[180:], y[:180], y[180:])
+    assert clf.errors == {}
+    assert scores.loc["DecisionTreeClassifier", "Accuracy"] > 0.9
+    preprocessor = clf.models["DecisionTreeClassifier"].named_steps["preprocessor"]
+    assert preprocessor.transform(X.iloc[:5]).shape[1] == 3

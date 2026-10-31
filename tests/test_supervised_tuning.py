@@ -148,3 +148,23 @@ def test_tuned_models_predict_and_explain_numpy_input():
     with pytest.raises(ValueError, match="No tuned models"):
         untuned.predict(X[400:], tuned=True)
 
+
+def test_sklearn_backend_respects_tune_timeout(monkeypatch):
+    # Issue #632: tune_timeout was ignored by tune_backend="sklearn".
+    import time as time_module
+
+    calls = []
+    original = tuning._cv_score
+
+    def slow_cv_score(*args, **kwargs):
+        calls.append(1)
+        time_module.sleep(0.3)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(tuning, "_cv_score", slow_cv_score)
+    X_train, X_test, y_train, y_test = _split(load_breast_cancer, 300)
+    clf = LazyClassifier(classifiers=["LogisticRegression"], tune=True, tune_backend="sklearn",
+                         tune_top_k=1, tune_trials=50, tune_timeout=1)
+    clf.fit(X_train, X_test, y_train, y_test)
+    assert 1 <= len(calls) < 10  # stopped after about 1 s of 0.3 s candidates
+    assert clf.tuned_scores_.loc["LogisticRegression", "Status"] == "tuned"

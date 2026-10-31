@@ -25,7 +25,7 @@ clf = LazyClassifier(
     tune=True,
     tune_top_k=5,          # tune the 5 best models
     tune_trials=50,         # 50 Optuna trials per model
-    tune_timeout=120,       # max 2 minutes per model
+    tune_timeout=120,       # max 2 minutes per model (no new trial starts after it)
     tune_backend="optuna",  # "optuna", "sklearn", or "flaml"
 )
 models, predictions = clf.fit(X_train, X_test, y_train, y_test)
@@ -37,6 +37,11 @@ print(clf.tuned_scores_)
 # Models whose tuning succeeded: best hyperparameters and the pipeline refitted with them
 for name, pipeline in clf.tuned_models_.items():
     print(name, clf.tuned_params_[name])
+
+# predict() and explain() use the tuned models with tuned=True, and convert
+# NumPy input to the training columns as for the benchmarked models
+clf.predict(X_test, tuned=True)
+clf.explain(X_test, y_test, tuned=True)
 ```
 
 Tuning is reproducible for a given `random_state`, uses `cv` folds (5 when `cv`

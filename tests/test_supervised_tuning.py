@@ -132,3 +132,19 @@ def test_flaml_task_detection_covers_catboost_style_classifiers():
     assert _is_classifier_class(CatBoostLikeClassifier)
     assert _is_classifier_class(LogisticRegression)
     assert not _is_classifier_class(Ridge)
+
+
+def test_tuned_models_predict_and_explain_numpy_input():
+    # Issue #631: tuned pipelines rejected NumPy input and predict() could not use them.
+    X, y = load_breast_cancer(return_X_y=True)
+    clf = LazyClassifier(classifiers=["LogisticRegression"], tune=True, tune_top_k=1, tune_trials=3)
+    clf.fit(X[:400], X[400:], y[:400], y[400:])
+    tuned = clf.predict(X[400:], model_name="LogisticRegression", tuned=True)
+    assert tuned.shape == (len(X) - 400,)
+    importance = clf.explain(X[400:], y[400:], n_repeats=2, tuned=True)
+    assert list(importance.columns) == ["LogisticRegression"]
+    untuned = LazyClassifier(classifiers=["LogisticRegression"])
+    untuned.fit(X[:400], X[400:], y[:400], y[400:])
+    with pytest.raises(ValueError, match="No tuned models"):
+        untuned.predict(X[400:], tuned=True)
+

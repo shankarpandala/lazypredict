@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy.stats import f as f_distribution
+from scipy.special import fdtrc
 from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger("lazypredict")
@@ -92,7 +92,9 @@ def _phase_anova(x: np.ndarray, period: int) -> Tuple[float, float]:
         return 0.0, 1.0
     ms_within = within / (n - period)
     statistic = between / (period - 1) / ms_within
-    p_value = float(f_distribution.sf(statistic, period - 1, n - period))
+    # fdtrc is the F survival function behind scipy.stats.f.sf, without its
+    # per-call argument checking.
+    p_value = float(fdtrc(period - 1, n - period, statistic))
     return p_value, (between - (period - 1) * ms_within) / total
 
 
@@ -102,8 +104,7 @@ def _seasonal_period_of(x: np.ndarray, max_period: int) -> Optional[int]:
     max_lag = min(max_period, n // _SEASONAL_MIN_CYCLES)
     if max_lag < 3:
         return None
-    lags = np.arange(1, max_lag + 1)
-    acf = np.array([np.dot(x[lag:], x[:-lag]) for lag in lags]) / np.dot(x, x)
+    acf = np.array([np.dot(x[lag:], x[:-lag]) for lag in range(1, max_lag + 1)]) / np.dot(x, x)
     peaks = [
         i
         for i in range(1, max_lag - 1)
@@ -121,7 +122,7 @@ def _seasonal_period_of(x: np.ndarray, max_period: int) -> Optional[int]:
             continue
         # The ACF peak of a long period is flat, so noise easily moves it by a
         # lag or two; settle on the nearby lag whose phase groups differ most.
-        lag = int(lags[i])
+        lag = i + 1
         delta = max(1, lag // 10)
         scored = [
             (period, *_phase_anova(x, period))

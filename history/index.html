@@ -1003,6 +1003,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#041-unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.1 (unreleased)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#040-2026-10-30" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1335,6 +1346,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#041-unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.1 (unreleased)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#040-2026-10-30" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1650,6 +1672,15 @@
 
 <hr />
 <h2 id="title-history">title: History<a class="headerlink" href="#title-history" title="Permanent link">&para;</a></h2>
+<h1 id="041-unreleased">0.4.1 (unreleased)<a class="headerlink" href="#041-unreleased" title="Permanent link">&para;</a></h1>
+<ul>
+<li><code>predict()</code> and <code>explain()</code> take <code>tuned=True</code> to use <code>tuned_models_</code>, with the
+    same NumPy-to-DataFrame conversion as the benchmarked models (#631)</li>
+<li><code>datetime64</code> and <code>timedelta64</code> feature columns are used (as days since 1970
+    and seconds) instead of being dropped or breaking every model (#632)</li>
+<li><code>tune_timeout</code> also limits <code>tune_backend="sklearn"</code>: no new candidate starts
+    after it (#632)</li>
+</ul>
 <h1 id="040-2026-10-30">0.4.0 (2026-10-30)<a class="headerlink" href="#040-2026-10-30" title="Permanent link">&para;</a></h1>
 <p>The v0.3.1 GitHub release was created on a commit still versioned 0.3.0, so it
 never reached PyPI. Its changes (documentation on Material for MkDocs and GitHub

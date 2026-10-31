@@ -1454,32 +1454,15 @@ and foundation models with a single call:</p>
 <td><code>'onehot'</code></td>
 <td>Encoder: <code>'onehot'</code>, <code>'ordinal'</code>, <code>'target'</code>, <code>'binary'</code></td>
 </tr>
-<tr>
-<td><code>tune</code></td>
-<td>bool</td>
-<td>False</td>
-<td>Tune top-k models after benchmarking (results in <code>tuned_scores_</code>, <code>tuned_params_</code>, <code>tuned_models_</code>)</td>
-</tr>
-<tr>
-<td><code>tune_top_k</code></td>
-<td>int</td>
-<td>5</td>
-<td>Number of models to tune</td>
-</tr>
-<tr>
-<td><code>tune_trials</code></td>
-<td>int</td>
-<td>50</td>
-<td>Optuna trials per model</td>
-</tr>
-<tr>
-<td><code>tune_backend</code></td>
-<td>str</td>
-<td><code>'optuna'</code></td>
-<td>Tuning backend: <code>'optuna'</code>, <code>'sklearn'</code>, <code>'flaml'</code></td>
-</tr>
 </tbody>
 </table>
+<p>Numeric and boolean columns are imputed and scaled, <code>object</code>/<code>string</code>/<code>category</code>
+columns are encoded, and <code>datetime64</code> and <code>timedelta64</code> columns are converted to
+numbers (days since 1970 and seconds) and then imputed and scaled.
+| <code>tune</code> | bool | False | Tune top-k models after benchmarking (results in <code>tuned_scores_</code>, <code>tuned_params_</code>, <code>tuned_models_</code>) |
+| <code>tune_top_k</code> | int | 5 | Number of models to tune |
+| <code>tune_trials</code> | int | 50 | Optuna trials per model |
+| <code>tune_backend</code> | str | <code>'optuna'</code> | Tuning backend: <code>'optuna'</code>, <code>'sklearn'</code>, <code>'flaml'</code> |</p>
 <hr />
 <h2 id="getting-trained-model-objects">Getting Trained Model Objects<a class="headerlink" href="#getting-trained-model-objects" title="Permanent link">&para;</a></h2>
 <p>Access the fitted model pipelines after calling <code>fit()</code>:</p>

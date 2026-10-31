@@ -40,7 +40,7 @@ from lazypredict.config import (
     get_gpu_model_params,
     is_gpu_available,
 )
-from lazypredict._base import _resolve_estimators
+from lazypredict._base import _resolve_estimators, _validate_tune_timeout
 from lazypredict._timeout import time_limit
 from lazypredict.exceptions import InsufficientDataError, TimeoutException
 from lazypredict.integrations.mlflow import MLFLOW_AVAILABLE, RunTracker, setup_mlflow
@@ -1223,6 +1223,7 @@ class LazyForecaster:
                 f"horizon_strategy must be 'recursive', 'direct', or 'multi_output', got {horizon_strategy!r}"
             )
         self._validate_tuning_and_season(tune_top_k, tune_trials, seasonal_period, n_jobs)
+        _validate_tune_timeout(tune_timeout)
         sort_by = self._canonical_sort_by(sort_by, custom_metric)
         if sort_by in self._cv_column_names() and not cv:
             raise ValueError(

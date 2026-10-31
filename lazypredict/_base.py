@@ -112,6 +112,14 @@ def _validate_fit_inputs(
         raise ValueError("X_test is empty")
 
 
+def _validate_tune_timeout(tune_timeout: Any) -> None:
+    """``tune_timeout`` is a positive number of seconds, or None for no limit."""
+    if tune_timeout is not None and (
+        isinstance(tune_timeout, bool) or not isinstance(tune_timeout, (int, float)) or not tune_timeout > 0
+    ):
+        raise ValueError(f"tune_timeout must be a positive number or None, got {tune_timeout!r}")
+
+
 def _resolve_estimators(
     selection: Union[str, List[Any]],
     available: List[Tuple[str, Any]],
@@ -216,6 +224,7 @@ class LazyEstimator:
         for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
                 raise ValueError(f"{option} must be a positive integer, got {value!r}")
+        _validate_tune_timeout(tune_timeout)
         if tune_backend not in ("optuna", "sklearn", "flaml"):
             raise ValueError(f"tune_backend must be 'optuna', 'sklearn', or 'flaml', got {tune_backend!r}")
         self.verbose = verbose
@@ -558,6 +567,7 @@ class LazyEstimator:
         method: str = "permutation",
         n_repeats: int = 10,
         max_samples: int = 100,
+        tuned: bool = False,
     ) -> Union[pd.DataFrame, Dict[str, np.ndarray]]:
         """Explain model predictions with feature importance.
 
@@ -573,6 +583,8 @@ class LazyEstimator:
             Repeats for permutation importance.
         max_samples : int, optional (default=100)
             Max samples for SHAP explanations.
+        tuned : bool, optional (default=False)
+            Explain the tuned models (``tuned_models_``) instead.
 
         Returns
         -------
@@ -580,9 +592,7 @@ class LazyEstimator:
             For 'permutation': DataFrame with features as rows, models as columns.
             For 'shap': dict mapping model name to SHAP values array.
         """
-        if len(self.models) == 0:
-            raise ValueError("No models fitted. Call fit() first.")
-
+        models = self._models_for(tuned, "No models fitted. Call fit() first.")
         X_test, y_test = _auto_convert_inputs(X_test, y_test)
         X_test = self._to_frame(X_test)
 
@@ -590,7 +600,7 @@ class LazyEstimator:
             from lazypredict.explainability import explain_permutation
 
             return explain_permutation(
-                self.models, X_test, y_test,
+                models, X_test, y_test,
                 n_repeats=n_repeats,
                 random_state=self.random_state,
                 n_jobs=self.n_jobs,
@@ -599,7 +609,7 @@ class LazyEstimator:
             from lazypredict.explainability import explain_shap
 
             return explain_shap(
-                self.models, X_test,
+                models, X_test,
                 step_name=self._estimator_step_name(),
                 max_samples=max_samples,
             )
@@ -714,35 +724,47 @@ class LazyEstimator:
         self,
         X_test: Union[pd.DataFrame, np.ndarray],
         model_name: Optional[str] = None,
+        tuned: bool = False,
     ) -> Union[Dict[str, np.ndarray], np.ndarray]:
         """Make predictions using fitted models.
 
         Parameters
         ----------
         X_test : array-like
-            Test feature matrix.
+            Test feature matrix (NumPy input gets the training column names).
         model_name : str or None, optional (default=None)
             Specific model to use. If None, returns predictions from all models.
+        tuned : bool, optional (default=False)
+            Use the tuned models (``tuned_models_``, filled by ``tune=True``)
+            instead of the benchmarked ones.
 
         Returns
         -------
         dict or numpy.ndarray
             Dictionary of predictions keyed by model name, or a single array.
         """
-        if len(self.models) == 0:
-            raise ValueError("No models have been fitted yet. Please call fit() first.")
-
+        models = self._models_for(tuned, "No models have been fitted yet. Please call fit() first.")
         X_test = self._to_frame(X_test)
 
         if model_name is not None:
-            if model_name not in self.models:
+            if model_name not in models:
                 raise ValueError(
                     f"Model '{model_name}' not found. "
-                    f"Available models: {list(self.models.keys())}"
+                    f"Available models: {list(models.keys())}"
                 )
-            return np.asarray(self.models[model_name].predict(X_test))
+            return np.asarray(models[model_name].predict(X_test))
 
-        return {name: model.predict(X_test) for name, model in self.models.items()}
+        return {name: model.predict(X_test) for name, model in models.items()}
+
+    def _models_for(self, tuned: bool, untrained_message: str) -> Dict[str, Pipeline]:
+        """The benchmarked models, or the tuned ones when *tuned* is True."""
+        if tuned:
+            if not self.tuned_models_:
+                raise ValueError("No tuned models: fit() with tune=True first.")
+            return self.tuned_models_
+        if len(self.models) == 0:
+            raise ValueError(untrained_message)
+        return self.models
 
     def save_models(self, path: str) -> None:
         """Save all fitted models to disk using joblib.

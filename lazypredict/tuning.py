@@ -5,13 +5,14 @@ supervised models and time series forecasters.
 """
 
 import logging
+import time
 import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.model_selection import RandomizedSearchCV, cross_val_score
+from sklearn.model_selection import ParameterSampler, cross_val_score
 
 from lazypredict.search_spaces import SEARCH_SPACES, get_search_space
 from lazypredict._optional import warn_if_broken
@@ -192,12 +193,15 @@ def tune_supervised_sklearn(
     random_state: int = 42,
     n_jobs: int = -1,
     use_gpu: bool = False,
+    timeout: Optional[float] = None,
 ) -> Tuple[Dict[str, Any], float]:
-    """Tune a single supervised model using scikit-learn's RandomizedSearchCV.
+    """Tune a single supervised model by random search.
 
-    Distributions are derived from the model's Optuna search space.
-    Candidates that fail (e.g. ``n_neighbors`` larger than a fold) score NaN
-    instead of aborting the search.
+    Candidates are sampled (``ParameterSampler``) from distributions derived
+    from the model's Optuna search space and scored by cross-validation, like
+    ``RandomizedSearchCV``. Candidates that fail (e.g. ``n_neighbors`` larger
+    than a fold) score NaN instead of aborting the search. With *timeout*, no
+    new candidate is started once that many seconds have passed.
     """
     from sklearn.pipeline import Pipeline
 
@@ -205,26 +209,25 @@ def tune_supervised_sklearn(
     if not param_dist:
         return {}, float("nan")
 
-    model = model_class(**_model_kwargs(model_class, random_state, use_gpu))
-    pipe = Pipeline([("preprocessor", clone(preprocessor)), ("model", model)])
-    prefixed = {f"model__{k}": v for k, v in param_dist.items()}
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        search = RandomizedSearchCV(
-            pipe,
-            prefixed,
-            n_iter=n_iter,
-            cv=cv,
-            scoring=scoring,
-            n_jobs=n_jobs,
-            random_state=random_state,
-            error_score=np.nan,
-        )
-        search.fit(X_train, y_train)
-
-    best = {k[len("model__"):]: v for k, v in search.best_params_.items()}
-    return best, float(search.best_score_)
+    fixed = _model_kwargs(model_class, random_state, use_gpu)
+    deadline = time.monotonic() + timeout if timeout is not None else None
+    best: Dict[str, Any] = {}
+    best_score = float("nan")
+    for params in ParameterSampler(param_dist, n_iter=n_iter, random_state=random_state):
+        if deadline is not None and time.monotonic() >= deadline:
+            break
+        pipe = Pipeline([
+            ("preprocessor", clone(preprocessor)),
+            ("model", model_class(**{**fixed, **params})),
+        ])
+        try:
+            score = _cv_score(pipe, X_train, y_train, cv, scoring, n_jobs)
+        except Exception as exc:  # invalid parameter combination
+            logger.debug("%s candidate %s failed: %s", model_name, params, exc)
+            continue
+        if np.isfinite(score) and not score <= best_score:
+            best, best_score = dict(params), score
+    return best, best_score
 
 
 # scikit-learn / boosting class name -> FLAML learner name
@@ -402,7 +405,7 @@ def tune_top_k(
         ),
         "sklearn": lambda name, cls: tune_supervised_sklearn(
             name, cls, X_train, y_train, preprocessor, scoring, cv=cv, n_iter=n_trials,
-            random_state=random_state, n_jobs=n_jobs, use_gpu=use_gpu,
+            random_state=random_state, n_jobs=n_jobs, use_gpu=use_gpu, timeout=timeout,
         ),
         "flaml": lambda name, cls: tune_supervised_flaml(
             name, cls, X_train, y_train, preprocessor, scoring, cv=cv, n_trials=n_trials,

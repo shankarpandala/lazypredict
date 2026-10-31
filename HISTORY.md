@@ -2,6 +2,15 @@
 title: History
 ---
 
+# 0.4.1 (unreleased)
+
+-   `predict()` and `explain()` take `tuned=True` to use `tuned_models_`, with the
+    same NumPy-to-DataFrame conversion as the benchmarked models (#631)
+-   `datetime64` and `timedelta64` feature columns are used (as days since 1970
+    and seconds) instead of being dropped or breaking every model (#632)
+-   `tune_timeout` also limits `tune_backend="sklearn"`: no new candidate starts
+    after it (#632)
+
 # 0.4.0 (2026-10-30)
 
 The v0.3.1 GitHub release was created on a commit still versioned 0.3.0, so it

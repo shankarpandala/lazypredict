@@ -107,6 +107,10 @@ Classifier/Regressor-only:
 |-----------|------|---------|-------------|
 | `classifiers` / `regressors` | str or list | `'all'` | Model names (exact, case-sensitive) and/or estimator classes; unknown names raise `ValueError` |
 | `categorical_encoder` | str | `'onehot'` | Encoder: `'onehot'`, `'ordinal'`, `'target'`, `'binary'` |
+
+Numeric and boolean columns are imputed and scaled, `object`/`string`/`category`
+columns are encoded, and `datetime64` and `timedelta64` columns are converted to
+numbers (days since 1970 and seconds) and then imputed and scaled.
 | `tune` | bool | False | Tune top-k models after benchmarking (results in `tuned_scores_`, `tuned_params_`, `tuned_models_`) |
 | `tune_top_k` | int | 5 | Number of models to tune |
 | `tune_trials` | int | 50 | Optuna trials per model |

@@ -168,3 +168,13 @@ def test_sklearn_backend_respects_tune_timeout(monkeypatch):
     clf.fit(X_train, X_test, y_train, y_test)
     assert 1 <= len(calls) < 10  # stopped after about 1 s of 0.3 s candidates
     assert clf.tuned_scores_.loc["LogisticRegression", "Status"] == "tuned"
+
+
+@pytest.mark.parametrize("value", [0, -1, float("nan"), "60"])
+def test_tune_timeout_must_be_positive(value):
+    from lazypredict.TimeSeriesForecasting import LazyForecaster
+
+    with pytest.raises(ValueError, match="tune_timeout must be a positive number"):
+        LazyClassifier(tune_timeout=value)
+    with pytest.raises(ValueError, match="tune_timeout must be a positive number"):
+        LazyForecaster(tune_timeout=value)

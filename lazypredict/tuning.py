@@ -210,7 +210,7 @@ def tune_supervised_sklearn(
         return {}, float("nan")
 
     fixed = _model_kwargs(model_class, random_state, use_gpu)
-    deadline = time.monotonic() + timeout if timeout else None
+    deadline = time.monotonic() + timeout if timeout is not None else None
     best: Dict[str, Any] = {}
     best_score = float("nan")
     for params in ParameterSampler(param_dist, n_iter=n_iter, random_state=random_state):

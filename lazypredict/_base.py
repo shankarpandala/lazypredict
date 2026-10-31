@@ -112,6 +112,14 @@ def _validate_fit_inputs(
         raise ValueError("X_test is empty")
 
 
+def _validate_tune_timeout(tune_timeout: Any) -> None:
+    """``tune_timeout`` is a positive number of seconds, or None for no limit."""
+    if tune_timeout is not None and (
+        isinstance(tune_timeout, bool) or not isinstance(tune_timeout, (int, float)) or not tune_timeout > 0
+    ):
+        raise ValueError(f"tune_timeout must be a positive number or None, got {tune_timeout!r}")
+
+
 def _resolve_estimators(
     selection: Union[str, List[Any]],
     available: List[Tuple[str, Any]],
@@ -216,6 +224,7 @@ class LazyEstimator:
         for option, value in (("tune_top_k", tune_top_k), ("tune_trials", tune_trials)):
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
                 raise ValueError(f"{option} must be a positive integer, got {value!r}")
+        _validate_tune_timeout(tune_timeout)
         if tune_backend not in ("optuna", "sklearn", "flaml"):
             raise ValueError(f"tune_backend must be 'optuna', 'sklearn', or 'flaml', got {tune_backend!r}")
         self.verbose = verbose

@@ -10,6 +10,8 @@ title: History
     and seconds) instead of being dropped or breaking every model (#632)
 -   `tune_timeout` also limits `tune_backend="sklearn"`: no new candidate starts
     after it (#632)
+-   Seasonal period detection is about 2-3x faster, with identical results
+    (#636, thanks to dexhunter)
 
 # 0.4.0 (2026-10-30)
 
